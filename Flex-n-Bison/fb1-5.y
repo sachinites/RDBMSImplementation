@@ -7,7 +7,6 @@ int yylex();
 %}
 
 /* declare tokens */
-%name parse
 
 %token NUMBER
 %token ADD SUB MUL DIV ABS
