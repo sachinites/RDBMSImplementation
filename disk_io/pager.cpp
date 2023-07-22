@@ -5,7 +5,7 @@
 #include "pager.h"
 
 /* Offset to page no & Vice-versa conversion functions*/
-static pg_offset_t
+pg_offset_t
 db_page_get_offset (pg_no_t pg_no) {
 
     pg_offset_t offset = 0;
@@ -21,7 +21,7 @@ db_page_get_offset (pg_no_t pg_no) {
     return offset;
 }
 
-static pg_no_t
+pg_no_t
 db_get_page_from_offset (pg_offset_t offset) {
 
     pg_no_t pg_no;
@@ -79,7 +79,7 @@ pg_no_t
 db_file_alloc_db_page (fd_t fd) {
 
     int i;
-    int pos = 0;
+    pg_no_t pos = 0;
     uint64_t var;
     uint64_t msb = 1 << 63;
 
@@ -122,6 +122,7 @@ db_file_free_db_page (fd_t fd, pg_no_t pg_no) {
 
     db_hdr->allocated_pg_bitmap[block_no] &= ~(1 << bit_no);
     disk_file_unmap ( (void *)db_hdr, sizeof (db_file_hdr_t));
+    return true;
 }
 
 void *
@@ -135,6 +136,16 @@ void
 db_file_munmap_db_page (void *addr) {
 
     disk_file_unmap (addr, DB_PAGE_DEF_SIZE);
+}
+
+pg_no_t
+db_get_container_page_from_offset (uint64_t db_file_offset) {
+
+
+    if (db_file_offset < sizeof (db_file_hdr_t)) return INVALID_DB_PG_NO;
+    pg_no_t pg_no = (db_file_offset / DB_PAGE_DEF_SIZE ) - 1;
+    if ((db_file_offset % DB_PAGE_DEF_SIZE) >= sizeof (db_file_hdr_t)) pg_no += 1;
+    return pg_no;
 }
 
 

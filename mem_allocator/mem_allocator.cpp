@@ -3,125 +3,36 @@
 #include <stdlib.h>
 #include "mem_allocator.h"
 
+glthread_t free_block_list_head = {NULL, NULL};
+
+static int
+free_blocks_comparison_function(
+        void *_block_meta_data1,
+        void *_block_meta_data2){
+
+    block_meta_data_t *block_meta_data1 = 
+        (block_meta_data_t *)_block_meta_data1;
+
+    block_meta_data_t *block_meta_data2 = 
+        (block_meta_data_t *)_block_meta_data2;
+
+    if(block_meta_data1->block_size > block_meta_data2->block_size)
+        return -1;
+    else if(block_meta_data1->block_size < block_meta_data2->block_size)
+        return 1;
+    return 0;
+}
+
 static void 
 meta_block_init (block_meta_data_t *block) {
 
     block->is_free = true;
     block->block_size = 0;
     block->offset = UINT64_MAX;
-    block->prev_block_pq = UINT64_MAX;
-    block->next_block_pq = UINT64_MAX;
+    block->base_address = 0;
     block->prev_block = UINT64_MAX;
     block->next_block = UINT64_MAX;
-}
-
-static void
-allocator_add_block_before_current_block 
-                (
-                char *base_address,
-                 block_meta_data_t *curr_block, 
-                 block_meta_data_t *new_block){
-        
-    if(curr_block->prev_block_pq == UINT64_MAX){
-        new_block->prev_block_pq = UINT64_MAX;
-        new_block->next_block_pq = curr_block->offset;
-        curr_block->prev_block_pq = new_block->offset;
-        return;
-    }
-    
-    block_meta_data_t  *temp = block_addr(base_address, curr_block->prev_block_pq);
-    temp->next_block_pq = new_block->offset;
-    new_block->prev_block_pq = temp->offset;
-    new_block->next_block_pq = curr_block->offset;
-    curr_block->prev_block_pq = new_block->offset;
-}
-
-static void
-allocator_add_block_after_current_block 
-                (
-                 char *base_address,
-                 block_meta_data_t *curr_block, 
-                 block_meta_data_t *new_block){
-        
-    if(curr_block->next_block_pq == UINT64_MAX){
-        curr_block->next_block_pq = new_block->offset;
-        new_block->prev_block_pq = curr_block->offset;
-        return;
-    }
-
-    block_meta_data_t *temp = block_addr(base_address, curr_block->next_block_pq);
-    curr_block->next_block_pq = new_block->offset;
-    new_block->prev_block_pq = curr_block->offset;
-    new_block->next_block_pq = temp->offset;
-    temp->prev_block_pq = new_block->offset;
-}
-
-static void
-allocator_remove_block_from_free_list (char *base_address, block_meta_data_t *curr_block){
-    
-    block_meta_data_t *temp;
-
-    if(curr_block->prev_block_pq == UINT64_MAX){
-        if(curr_block->next_block_pq != UINT64_MAX){
-            block_addr(base_address, curr_block->next_block_pq)->prev_block_pq = UINT64_MAX;
-            curr_block->next_block_pq = UINT64_MAX;
-            return;
-        }
-        return;
-    }
-    
-    if(curr_block->next_block_pq == UINT64_MAX){
-        block_addr(base_address, curr_block->prev_block_pq)->next_block_pq = UINT64_MAX;
-        curr_block->prev_block_pq = UINT64_MAX;
-        return;
-    }
-
-    block_addr(base_address, curr_block->prev_block_pq)->next_block_pq = curr_block->next_block_pq;
-    block_addr(base_address, curr_block->next_block_pq)->prev_block_pq = curr_block->prev_block_pq;
-    curr_block->prev_block_pq = UINT64_MAX;
-    curr_block->next_block_pq = UINT64_MAX;
-}
-
-static void
-allocator_add_block_to_free_block_list (
-        char *base_address,
-        block_meta_data_t *block_list,
-        block_meta_data_t *block_to_add) {
-
-    if (block_list->next_block_pq == UINT64_MAX) {
-        allocator_add_block_after_current_block(base_address, block_list, block_to_add);
-        return;
-    }
-
-    uint64_t curr_block, prev_block;
-
-    for (curr_block = block_list->next_block_pq; 
-            curr_block != UINT64_MAX; 
-            curr_block = block_addr(base_address, curr_block)->next_block_pq) {
-
-        prev_block = curr_block;
-
-        if (block_addr(base_address, curr_block)->block_size >= block_to_add->block_size) continue;
-
-        allocator_add_block_before_current_block(base_address, 
-                block_addr(base_address, curr_block), block_to_add);
-        return;
-    }
-
-    allocator_add_block_after_current_block(base_address, 
-        block_addr(base_address, prev_block), block_to_add);
-}
-
-static block_meta_data_t *
-allocator_deque_block_from_free_block_list (
-        char *base_address,
-        block_meta_data_t *block_list) {
-    
-    block_meta_data_t *first_block;
-    if (block_list->next_block_pq == UINT64_MAX) return NULL;
-    first_block = block_addr(base_address, block_list->next_block_pq);
-    allocator_remove_block_from_free_list(base_address, first_block);
-    return first_block;
+    init_glthread (&block->pq_glue);
 }
 
 static void
@@ -132,9 +43,21 @@ mm_union_free_blocks(
 
     assert(first->is_free == true &&
                 second->is_free == true);
-    allocator_remove_block_from_free_list(base_address, first);
-    allocator_remove_block_from_free_list(base_address, second);
+
+    remove_glthread(&first->pq_glue);
+    remove_glthread(&second->pq_glue);
     mm_bind_blocks_for_deallocation(base_address, first, second);
+}
+
+static void
+allocator_add_block_to_free_block_list(
+        block_meta_data_t *free_block){
+
+    assert (free_block->is_free == true);
+    glthread_priority_insert(&free_block_list_head, 
+            &free_block->pq_glue,
+            free_blocks_comparison_function,
+             (size_t)&(((block_meta_data_t *)0)->pq_glue));
 }
 
 void
@@ -143,21 +66,13 @@ allocator_init (void *base_address, uint32_t size) {
     vm_page_hdr_t *vm_page_hdr = (vm_page_hdr_t *)base_address;
     vm_page_hdr->page_size = size;
     vm_page_hdr->block.is_free = true;
+    meta_block_init (&vm_page_hdr->block);
     vm_page_hdr->block.block_size = size - sizeof(vm_page_hdr_t);
     vm_page_hdr->block.offset = offsetof(vm_page_hdr_t, block);
+    vm_page_hdr->block.base_address = (uintptr_t)base_address;
     vm_page_hdr->block.prev_block = UINT64_MAX;
     vm_page_hdr->block.next_block = UINT64_MAX;
-    vm_page_hdr->block.prev_block_pq = UINT64_MAX;
-    vm_page_hdr->block.next_block_pq = UINT64_MAX;
-    vm_page_hdr->free_block_pq_head.next_block = UINT64_MAX;
-    vm_page_hdr->free_block_pq_head.next_block_pq = UINT64_MAX;
-    vm_page_hdr->free_block_pq_head.prev_block = UINT64_MAX;
-    vm_page_hdr->free_block_pq_head.prev_block_pq = UINT64_MAX;
-    vm_page_hdr->free_block_pq_head.offset = offsetof(vm_page_hdr_t, free_block_pq_head);
-    allocator_add_block_to_free_block_list(
-                (char *)base_address,
-                &vm_page_hdr->free_block_pq_head,
-                &vm_page_hdr->block);
+    allocator_add_block_to_free_block_list(&vm_page_hdr->block);
 }
 
 static bool
@@ -183,7 +98,7 @@ allocator_split_free_data_block_for_allocation (
 
     /* Since this block of memory is going to be allocated to the application, 
      * remove it from priority list of free blocks*/
-    allocator_remove_block_from_free_list(base_address, block_meta_data);
+    remove_glthread (&block_meta_data->pq_glue);
     
     /*Case 1 : No Split*/
     if(!remaining_size){
@@ -203,10 +118,7 @@ allocator_split_free_data_block_for_allocation (
     next_block_meta_data->offset = block_meta_data->offset +
                                    sizeof(block_meta_data_t) + block_meta_data->block_size;
     
-    allocator_add_block_to_free_block_list(
-        base_address,
-        &vm_page->free_block_pq_head,
-        next_block_meta_data);
+    allocator_add_block_to_free_block_list(next_block_meta_data);
     mm_bind_blocks_for_allocation(base_address, block_meta_data, next_block_meta_data);
     return true;
 }
@@ -214,14 +126,15 @@ allocator_split_free_data_block_for_allocation (
 void *
 allocator_alloc_mem (void *base_address, uint32_t req_size) {
 
+    glthread_t *curr;
     vm_page_hdr_t *vm_page_hdr = (vm_page_hdr_t *)base_address;
-    block_meta_data_t *block_meta_data = allocator_deque_block_from_free_block_list(
-                (char *)base_address, &vm_page_hdr->free_block_pq_head);
-    if (!block_meta_data) return NULL;
+    curr = dequeue_glthread_first(&free_block_list_head);
+    if (!curr) return NULL;
+    block_meta_data_t *block_meta_data = pq_glue_to_block_meta_data(curr);
     assert(block_meta_data->is_free);
     if (block_meta_data->block_size < req_size) return NULL;
     if (!allocator_split_free_data_block_for_allocation(
-            base_address, vm_page_hdr, block_meta_data, req_size)) {
+            (char *)base_address, vm_page_hdr, block_meta_data, req_size)) {
         return NULL;
     }
 
@@ -289,10 +202,7 @@ allocator_free_block (char *base_address, block_meta_data_t *to_be_free_block) {
         return_block = prev_block;
     }
    
-    allocator_add_block_to_free_block_list(
-                base_address,
-                &vm_page->free_block_pq_head,
-                return_block);
+    allocator_add_block_to_free_block_list(return_block);
 }
 
 void
@@ -308,12 +218,13 @@ allocator_free_mem (void *base_address, void *addr) {
 bool
 allocator_is_vm_page_empty (void *base_address) {
 
+    glthread_t *curr;
+
     vm_page_hdr_t *vm_page = (vm_page_hdr_t *)base_address;
 
     if ((vm_page->page_size !=
          (vm_page->block.block_size +
           sizeof(block_meta_data_t) +
-          sizeof(vm_page->free_block_pq_head) +
           sizeof(vm_page->page_size)))
         ||
         !vm_page->block.is_free) {
@@ -321,21 +232,30 @@ allocator_is_vm_page_empty (void *base_address) {
         return false;
     }
 
-    block_meta_data_t *block_meta_data = 
-        block_addr(base_address, vm_page->free_block_pq_head.next_block_pq);
-    
-    assert(block_meta_data);
+    curr = glthread_get_next (&free_block_list_head);
 
+    if (!curr) return false;
+
+    block_meta_data_t *block_meta_data = pq_glue_to_block_meta_data(curr);
+       
     if (block_meta_data != &vm_page->block) return false;
 
-    if ((block_meta_data->next_block_pq != UINT64_MAX) || 
-            (block_addr(base_address, block_meta_data->prev_block_pq) != &vm_page->free_block_pq_head)) {
-
+    if (glthread_get_next (&block_meta_data->pq_glue)) {
         return false;
     }
 
     return true;
 }
+
+void 
+allocator_deinit (void *base_address) {
+
+
+    assert(allocator_is_vm_page_empty (base_address));
+    vm_page_hdr_t *vm_page = (vm_page_hdr_t *)base_address;
+    remove_glthread (&vm_page->block.pq_glue);
+}
+
 
 void
 allocator_print_vm_page (void *base_address) {
@@ -343,7 +263,8 @@ allocator_print_vm_page (void *base_address) {
 
 }
 
-#if 1
+
+#if 0
 int
 main(int argc, char **argv) {
 

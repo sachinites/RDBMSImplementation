@@ -2,7 +2,7 @@
 #define __DISK_FILE_MGMT__
 
 #define DB_PAGE_DEF_SIZE    1024
-#define DB_FILE_DEF_PAGE_CNT    4
+#define DB_FILE_DEF_PAGE_CNT    64
 
 #include "disk_io.h"
 
@@ -12,7 +12,7 @@ typedef uint64_t pg_no_t;
 #define INVALID_DB_PG_NO    UINT64_MAX
 
 #define free_pg_bitmap_size \
-    (DB_FILE_DEF_PAGE_CNT / sizeof (uint64_t))
+    (DB_FILE_DEF_PAGE_CNT / 64)
 
 #pragma pack (push,1)
 
@@ -46,5 +46,14 @@ db_file_munmap_db_page (void *addr);
 
 void 
 db_file_print_stats (fd_t fd);
+
+pg_offset_t
+db_page_get_offset (pg_no_t pg_no) ;
+
+pg_no_t
+db_get_page_from_offset (pg_offset_t offset);
+
+pg_no_t
+db_get_container_page_from_offset (uint64_t db_file_offset);
 
 #endif 

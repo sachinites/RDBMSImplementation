@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include "../gluethread/glthread.h"
 
 #pragma pack (push,1)
 
@@ -12,16 +13,15 @@ typedef struct block_meta_data_{
     bool is_free;
     uint32_t block_size;
     uint64_t offset;    /*offset from the start of the page*/
-    uint64_t prev_block_pq;
-    uint64_t next_block_pq;
+    uintptr_t base_address;
     uint64_t prev_block;
     uint64_t next_block;
+    glthread_t pq_glue;
 } block_meta_data_t;
-
+GLTHREAD_TO_STRUCT (pq_glue_to_block_meta_data, block_meta_data_t, pq_glue);
 typedef struct vm_page_hdr_ {
 
     uint32_t page_size;
-    block_meta_data_t free_block_pq_head;
     block_meta_data_t block;  // must be last member
 } vm_page_hdr_t;
 
@@ -40,6 +40,9 @@ typedef struct vm_page_xmit_ {
 
 void
 allocator_init (void *base_address, uint32_t size);
+
+void 
+allocator_deinit (void *base_address);
 
 void *
 allocator_alloc_mem (void *base_address, uint32_t req_size);

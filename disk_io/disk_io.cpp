@@ -84,6 +84,7 @@ disk_file_unmap (void *pptr, uint64_t len) {
     munmap (pptr, len);
 }
 
+#if 0
 int 
 main (int argc, char **argv) {
 
@@ -103,3 +104,4 @@ main (int argc, char **argv) {
 
     return 0;
 }
+#endif
