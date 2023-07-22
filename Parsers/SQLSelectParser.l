@@ -17,9 +17,7 @@
 
     <conditions> ::= <condition> | <condition> <lop> <conditions>
 
-    <condition>  ::= <column> <mop> <value>
-
-    <value> ::=  <digits> | <'string'>
+    <condition>  ::= <column> <mop> <digits> 
 
     <function>     ::= COUNT | SUM | AVG | MIN | MAX
 
@@ -46,7 +44,6 @@
 #define COMMA 1003
 #define INTEGER 1004
 #define WILDCARD 1005
-#define SINGLE_QUOTE 1006
 
 #define PARSER_ERROR_EXIT(code, expected_code) \
     if (code != expected_code) yyerror (code, expected_code, yytext, yylineno)
@@ -105,10 +102,6 @@
 
 "!=" {
     return SQL_NOT_EQ;
-}
-
-"'" {
-    return SINGLE_QUOTE;
 }
 
 "and" {
@@ -271,32 +264,6 @@ parse_columns () {
     return token_code;
 }
 
-static int 
-parse_value () {
-
-    char value[32];
-    char *ptr1, *ptr2;
-    int token_code = yylex();
-    switch (token_code) {
-        case INTEGER:
-            printf ("value is : %d\n", atoi (yytext));
-            break;
-        case SINGLE_QUOTE:
-            token_code = yylex();
-            PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
-            ptr1 = yytext;
-            token_code = yylex();
-            PARSER_ERROR_EXIT(token_code, SINGLE_QUOTE);
-            ptr2 = yytext ;
-            strncpy (value, ptr1, (int) (ptr2 - ptr1));
-            printf ("value is : %s\n", value);
-            break;
-        default:
-            PARSER_ERROR_EXIT(token_code, INTEGER);
-            break;
-    }
-    return yylex();
-}
 
 static int 
 parse_where_condition() {
@@ -318,8 +285,11 @@ parse_where_condition() {
 
         op_code = token_code;
 
-        printf ("Condition : %s %s ", col_name, yytext);
-        token_code = parse_value();        
+        token_code = yylex();
+        PARSER_ERROR_EXIT(token_code, INTEGER);
+        value = atoi (yytext);
+
+        printf ("Condition : %s %d %d\n", col_name, op_code, value);
     }
 
     else if (token_code == SQL_IN) {
@@ -328,7 +298,7 @@ parse_where_condition() {
     }
 
     /* What follows after condition : Logical Operators */
-    return token_code;
+    return yylex();
 }
 
 static int
@@ -373,7 +343,7 @@ parse_tables() {
 static void 
 parse_select_query () {
 
-  int token_code;
+    int token_code;
 
   //token_code = yylex();
   //PARSER_ERROR_EXIT(token_code, SQL_SELECT_Q);
@@ -419,7 +389,7 @@ parse_sql_query () {
             parse_select_query  ();
             break;
         case SQL_UPDATE_Q:
-            //yyless(yyleng);
+           // yyless(yyleng);
             parse_update_query ();
             break;
         default:
