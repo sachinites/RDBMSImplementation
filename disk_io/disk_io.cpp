@@ -8,24 +8,37 @@ void
 disk_io_create_disk_file (const char* path, fsize size) {
 
     fd_t fd;
-    
-    FILE *file = fopen (path, "w+");
+    FILE *file;
+
+    if (access(path, F_OK) == -1) {
+        /* File do not exist or we dont have permissions, 
+            then create the file*/
+        file = fopen(path, "w+");
+    }
+    else {
+        file = fopen(path, "r+");
+    }
 
     if (!file) assert(0);
 
     fd = fileno (file);
 
+#if 1
     if (ftruncate(fd, size) == -1) {
-        assert(0);
+        assert(0); 
     }
+#else 
+    disk_io_expand_file_size (fd, size);
+#endif 
 
+    assert (fsync(fd) != -1);
     fclose (file);
 }
 
 fd_t 
 disk_io_open_file (const char* path) {
 
-    FILE *file = fopen (path, "w+");
+    FILE *file = fopen (path, "r+");
 
     if (!file) assert(0);
 
@@ -73,8 +86,6 @@ disk_io_file_mmap (fd_t fd, uint64_t start_offset, uint64_t end_offset) {
     void *pptr = mmap (NULL, end_offset - start_offset, 
                                         PROT_READ | PROT_WRITE, MAP_SHARED, 
                                         fd, start_offset);
-
-    assert (pptr);
     return pptr;
 }
 

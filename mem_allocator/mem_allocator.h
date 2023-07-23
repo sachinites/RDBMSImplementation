@@ -56,6 +56,12 @@ allocator_is_vm_page_empty(void *base_address);
 void
 allocator_print_vm_page (void *base_address);
 
+void 
+allocator_reinit (void *base_address) ;
+
+void 
+allocator_deinit (void *base_address) ;
+
 /* Helping Macros */
 #define MM_GET_PAGE_FROM_META_BLOCK(block_meta_data_ptr)    \
     ((vm_page_hdr_t *)((char *)block_meta_data_ptr - block_meta_data_ptr->offset))

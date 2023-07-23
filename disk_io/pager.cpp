@@ -2,7 +2,13 @@
 
 #include <assert.h>
 #include <sys/stat.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <stdlib.h>
+#include <errno.h>
 #include "pager.h"
+#include "../c-hashtable/hashtable.h"
+#include "../c-hashtable/hashtable_itr.h"
 
 /* Offset to page no & Vice-versa conversion functions*/
 pg_offset_t
@@ -43,13 +49,14 @@ db_file_init_hdr (fd_t fd) {
     int i;
 
     db_file_hdr_t *db_hdr = (db_file_hdr_t *)disk_io_file_mmap 
-                                                            (fd, 0, sizeof (db_file_hdr_t));
-
+                                                    (fd, 0, sizeof (db_file_hdr_t));
+                                                  
     for (i = 0 ; i < free_pg_bitmap_size; i++) {
+
         db_hdr->allocated_pg_bitmap[i] = 0;
     }
-
-    disk_file_unmap ( (void *)db_hdr, sizeof (db_file_hdr_t));
+    
+   disk_file_unmap ( (void *)db_hdr, sizeof (db_file_hdr_t));
 }
 
 void
@@ -129,7 +136,12 @@ void *
 db_file_mmap_db_page (fd_t fd, pg_no_t pg_no) {
 
     pg_offset_t offset = db_page_get_offset (pg_no);
-    return disk_io_file_mmap (fd, offset, offset + DB_PAGE_DEF_SIZE );
+    void *ptr = disk_io_file_mmap (fd, offset, offset + DB_PAGE_DEF_SIZE );
+    if (ptr == MAP_FAILED) {
+        printf ("mmap failed with err : %d\n", errno);
+        exit(0);
+    }
+    return ptr;
 }
 
 void 
@@ -175,4 +187,36 @@ db_file_print_stats (fd_t fd) {
     }
 
     disk_file_unmap ( (void *)db_hdr, sizeof (db_file_hdr_t));
+}
+
+extern void  allocator_reinit (void *base_address) ;
+extern void  allocator_deinit (void *base_address) ;
+extern void  pg_mapped_addr_to_pg_no_ht_insert (void *mapped_addr, pg_no_t pg_no);
+extern void  pg_pgno_to_mapped_addr_ht_insert (pg_no_t pg_no, void *mapped_addr) ;
+extern hashtable_t *pg_mapped_addr_to_pg_no_ht;
+extern hashtable_t *pg_pgno_to_mapped_addr_ht;
+
+/* Swipe in the DB page again into main-memory, Dont use this API
+    to swipe in the page for the first time*/
+void 
+db_page_memory_swipe_in (fd_t fd, pg_no_t pg_no) {
+
+    /* This page should be allocated in DB file*/
+
+    /* Load the page in Main-memory*/
+    void *base_address = db_file_mmap_db_page (fd, pg_no);
+    allocator_reinit (base_address);
+    pg_mapped_addr_to_pg_no_ht_insert (base_address, pg_no);
+    pg_pgno_to_mapped_addr_ht_insert (pg_no, base_address);
+}
+
+void 
+db_page_memory_swipe_out (void *base_address) {
+
+    pg_no_t pg_no;
+    allocator_deinit (base_address);
+    db_file_munmap_db_page(base_address);
+    pg_no = (pg_no_t)hashtable_search(pg_mapped_addr_to_pg_no_ht, &base_address);
+    hashtable_remove(pg_mapped_addr_to_pg_no_ht, &base_address);
+    hashtable_remove(pg_pgno_to_mapped_addr_ht, &pg_no);
 }

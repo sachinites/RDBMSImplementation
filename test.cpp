@@ -16,6 +16,7 @@ main (int argc, char **argv) {
 
     /* Create a DB file on disk*/
     db_file_create_db_file ("sample1.db", 0);
+       
     /* Open the DB file*/
     fd_t fd = db_file_open ("sample1.db");
     /* Allocate the DB page to use*/

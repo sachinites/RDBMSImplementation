@@ -16,6 +16,9 @@ extern glthread_t free_block_list_head;
 hashtable_t *pg_mapped_addr_to_pg_no_ht;
 hashtable_t *pg_pgno_to_mapped_addr_ht;
 
+void pg_mapped_addr_to_pg_no_ht_insert (void *mapped_addr, pg_no_t pg_no);
+void  pg_pgno_to_mapped_addr_ht_insert (pg_no_t pg_no, void *mapped_addr) ;
+
 static unsigned int
 hashfromkey(void *key) {
 
@@ -53,7 +56,7 @@ void mem_mgr_destroy () {
 
 }
 
-static void 
+void 
 pg_mapped_addr_to_pg_no_ht_insert (void *mapped_addr, pg_no_t pg_no) {
 
     unsigned char *key = (unsigned char *) calloc (1, sizeof (uintptr_t));
@@ -61,7 +64,7 @@ pg_mapped_addr_to_pg_no_ht_insert (void *mapped_addr, pg_no_t pg_no) {
     assert (!hashtable_insert (pg_mapped_addr_to_pg_no_ht, (void *)key, (void *)&pg_no));
 }
 
-static void 
+void 
 pg_pgno_to_mapped_addr_ht_insert (pg_no_t pg_no, void *mapped_addr) {
 
     unsigned char *key = (unsigned char *) calloc (1, sizeof (uintptr_t));
@@ -136,17 +139,14 @@ uapi_mem_free (fd_t fd, uint64_t disk_addr) {
     }
 
     /* Disk page is loaded in memory, release the object from main memory loaded page*/
-    void *object_addr = (void *)(char *)page_mapped_addr + offset_within_page;
+    void *object_addr = (void *)((char *)page_mapped_addr + offset_within_page);
 
     allocator_free_mem(page_mapped_addr, object_addr);
 
     if (allocator_is_vm_page_empty(page_mapped_addr)) {
 
-        allocator_deinit(page_mapped_addr);
-        db_file_munmap_db_page(page_mapped_addr);
+        db_page_memory_swipe_out(page_mapped_addr);
         db_file_free_db_page(fd, pg_no);
-        hashtable_remove(pg_mapped_addr_to_pg_no_ht, &page_mapped_addr);
-        hashtable_remove(pg_pgno_to_mapped_addr_ht, &pg_no);
     }
 }
 
@@ -167,11 +167,11 @@ uapi_get_vm_addr (fd_t fd, uint64_t disk_addr) {
 
     if (!page_mapped_addr) {
         /* DB Page is not present in memory, load it*/
-        page_mapped_addr = db_file_mmap_db_page (fd, pg_no);
+        db_page_memory_swipe_in(fd, pg_no);
     }
 
     /* Disk page is loaded in memory, release the object from main memory loaded page*/
-    void *object_addr = (void *)(char *)page_mapped_addr + offset_within_page;
+    void *object_addr = (void *)((char *)page_mapped_addr + offset_within_page);
 
     return object_addr;
 }

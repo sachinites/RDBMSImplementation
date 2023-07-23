@@ -1,7 +1,7 @@
 #ifndef __DISK_FILE_MGMT__
 #define __DISK_FILE_MGMT__
 
-#define DB_PAGE_DEF_SIZE    1024
+#define DB_PAGE_DEF_SIZE    8192
 #define DB_FILE_DEF_PAGE_CNT    64
 
 #include "disk_io.h"
@@ -55,5 +55,11 @@ db_get_page_from_offset (pg_offset_t offset);
 
 pg_no_t
 db_get_container_page_from_offset (uint64_t db_file_offset);
+
+void 
+db_page_memory_swipe_in (fd_t fd, pg_no_t pg_no);
+
+void 
+db_page_memory_swipe_out (void *base_address);
 
 #endif 

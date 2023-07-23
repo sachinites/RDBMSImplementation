@@ -75,6 +75,51 @@ allocator_init (void *base_address, uint32_t size) {
     allocator_add_block_to_free_block_list(&vm_page_hdr->block);
 }
 
+/* Restart the memory mgmt of this VM page again*/
+void 
+allocator_reinit (void *base_address) {
+
+    uint64_t block_itr;
+    block_meta_data_t *block;
+
+    vm_page_hdr_t *vm_page_hdr = (vm_page_hdr_t *)base_address;
+
+    /* Iterarate over all free meta blocks and fix up their base_address  and queue them
+        in global free block list*/
+    for (block_itr = vm_page_hdr->block.offset;
+            block_itr != UINT64_MAX;
+            block_itr = block_addr (base_address, block_itr)->next_block) {
+
+        block = block_addr (base_address, block_itr);
+        block->base_address = (uintptr_t)base_address;
+        
+        if (block->is_free) {
+            allocator_add_block_to_free_block_list(block);
+        }
+    }
+}
+
+void 
+allocator_deinit (void *base_address) {
+
+    uint64_t block_itr;
+    block_meta_data_t *block;
+
+    vm_page_hdr_t *vm_page_hdr = (vm_page_hdr_t *)base_address;
+    
+    for (block_itr = vm_page_hdr->block.offset;
+            block_itr != UINT64_MAX;
+            block_itr = block_addr (base_address, block_itr)->next_block) {
+
+        block = block_addr (base_address, block_itr);
+        block->base_address = 0;
+
+        if (block->is_free) {
+            remove_glthread (&block->pq_glue);
+        }
+    } 
+}
+
 static bool
 allocator_split_free_data_block_for_allocation (
             char *base_address,
@@ -247,22 +292,10 @@ allocator_is_vm_page_empty (void *base_address) {
     return true;
 }
 
-void 
-allocator_deinit (void *base_address) {
-
-
-    assert(allocator_is_vm_page_empty (base_address));
-    vm_page_hdr_t *vm_page = (vm_page_hdr_t *)base_address;
-    remove_glthread (&vm_page->block.pq_glue);
-}
-
-
 void
 allocator_print_vm_page (void *base_address) {
 
-
 }
-
 
 #if 0
 int
