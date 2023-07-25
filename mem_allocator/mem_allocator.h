@@ -25,14 +25,6 @@ typedef struct vm_page_hdr_ {
     block_meta_data_t block;  // must be last member
 } vm_page_hdr_t;
 
-typedef struct vm_page_xmit_ {
-
-    void *page_base_address;
-    uint64_t page_size;
-    void *root_address;
-    unsigned char page_memory[0];
-} vm_page_xmit_data_t;
-
 #pragma pack(pop)
 
 #define block_addr(base_address, block_offset)  \
@@ -47,7 +39,7 @@ allocator_deinit (void *base_address);
 void *
 allocator_alloc_mem (void *base_address, uint32_t req_size);
 
-void
+uint32_t
 allocator_free_mem (void *base_address, void *addr) ;
 
 bool

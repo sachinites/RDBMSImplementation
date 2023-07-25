@@ -2,6 +2,7 @@
 #define __MEM_H__
 
 #include <stdint.h>
+#include "mem_allocator.h"
 #include "../disk_io/disk_io.h"
 
 void 
@@ -13,7 +14,7 @@ db_file_open (const char* path);
 uint64_t
 uapi_mem_alloc (fd_t fd, uint32_t req_size, void **ptr);
 
-void 
+uint32_t
 uapi_mem_free (fd_t fd, uint64_t disk_addr) ;
 
 void *

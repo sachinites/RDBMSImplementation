@@ -188,7 +188,7 @@ allocator_alloc_mem (void *base_address, uint32_t req_size) {
     return (void *)(block_meta_data + 1);
 }
 
-static void 
+static uint32_t
 allocator_free_block (char *base_address, block_meta_data_t *to_be_free_block) {
 
     block_meta_data_t *return_block;
@@ -249,16 +249,17 @@ allocator_free_block (char *base_address, block_meta_data_t *to_be_free_block) {
     }
    
     allocator_add_block_to_free_block_list(return_block);
+    return return_block->block_size;
 }
 
-void
+uint32_t
 allocator_free_mem (void *base_address, void *addr) {
 
     block_meta_data_t *block_meta_data = 
         (block_meta_data_t *)((char *)addr - sizeof(block_meta_data_t));
     
     assert(!block_meta_data->is_free);
-    allocator_free_block((char *)base_address, block_meta_data);
+    return allocator_free_block((char *)base_address, block_meta_data);
 }
 
 bool
@@ -307,14 +308,10 @@ main(int argc, char **argv) {
 
     void *ptr1 = allocator_alloc_mem(base_address, 48);
     void *ptr2 = allocator_alloc_mem(base_address, 98);
+    void *ptr3 = allocator_alloc_mem(base_address, 198);
     allocator_free_mem(base_address, ptr1);
-    void*ptr3 = allocator_alloc_mem(base_address, 198);
-    void*ptr4 = allocator_alloc_mem(base_address, 45);
     allocator_free_mem(base_address, ptr2);
-    void*ptr5 = allocator_alloc_mem(base_address, 145);
     allocator_free_mem(base_address, ptr3);
-    allocator_free_mem(base_address, ptr4);
-    allocator_free_mem(base_address, ptr5);
     assert(allocator_is_vm_page_empty(base_address));
     free(base_address);
     return 0;

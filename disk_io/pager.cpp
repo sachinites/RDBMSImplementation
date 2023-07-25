@@ -54,14 +54,17 @@ mem_mgr_destroy () {
 
     struct hashtable_itr *itr;
 
-    itr = hashtable_iterator(pg_mapped_addr_to_pg_no_ht);
-    do  
-    {   
-        void **key = (void **)hashtable_iterator_key(itr);
-        db_page_memory_swipe_out (*key);
-    } while (hashtable_iterator_advance(itr));
+    if (hashtable_count(pg_mapped_addr_to_pg_no_ht)) {
+        
+        itr = hashtable_iterator(pg_mapped_addr_to_pg_no_ht);
+        do
+        {
+            void **key = (void **)hashtable_iterator_key(itr);
+            db_page_memory_swipe_out(*key);
+        } while (hashtable_iterator_advance(itr));
 
-    free(itr);
+        free(itr);
+    }
     
     hashtable_destroy (pg_mapped_addr_to_pg_no_ht, false);
     hashtable_destroy (pg_pgno_to_mapped_addr_ht, false);

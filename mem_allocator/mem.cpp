@@ -50,15 +50,17 @@ uapi_mem_alloc (fd_t fd, uint32_t req_size, void **ptr) {
     *ptr = allocator_alloc_mem ((void *)block_meta_data->base_address, req_size);
     assert(*ptr);
 
-    pg_no_t pg_no = ht_lookup_page_no_by_page_address (*ptr);
+    pg_no_t pg_no = ht_lookup_page_no_by_page_address ((void *)block_meta_data->base_address);
 
     pg_offset_t pg_offset = db_page_get_offset (pg_no);
 
     return pg_offset + (uint64_t) ((char *) *ptr - (char *)block_meta_data->base_address);
 }
 
-void 
+uint32_t 
 uapi_mem_free (fd_t fd, uint64_t disk_addr) {
+
+    uint32_t mem_freed;
 
     pg_no_t pg_no = db_get_container_page_from_offset (disk_addr);
 
@@ -79,13 +81,15 @@ uapi_mem_free (fd_t fd, uint64_t disk_addr) {
     /* Disk page is loaded in memory, release the object from main memory loaded page*/
     void *object_addr = (void *)((char *)page_mapped_addr + offset_within_page);
 
-    allocator_free_mem(page_mapped_addr, object_addr);
+    mem_freed = allocator_free_mem(page_mapped_addr, object_addr);
 
     if (allocator_is_vm_page_empty(page_mapped_addr)) {
 
         db_page_memory_swipe_out(page_mapped_addr);
         db_file_free_db_page(fd, pg_no);
     }
+
+    return mem_freed;
 }
 
 void *

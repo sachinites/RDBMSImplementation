@@ -40,6 +40,15 @@ main (int argc, char **argv) {
     vm_addr1->right = disk_addr2;
     vm_addr2->left = disk_addr1;
 
+    stud_t *vm_addr3;
+    uint64_t disk_addr3;
+    disk_addr3 = uapi_mem_alloc (fd, sizeof(stud_t),  (void **)&vm_addr3);
+
+
+    uapi_mem_free(fd, disk_addr1);
+    uapi_mem_free(fd, disk_addr2);
+    uapi_mem_free(fd, disk_addr3);
+
     db_file_close (fd);
     return 0;
 }
