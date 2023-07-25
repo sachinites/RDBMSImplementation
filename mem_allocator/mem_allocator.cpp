@@ -91,6 +91,7 @@ allocator_reinit (void *base_address) {
             block_itr = block_addr (base_address, block_itr)->next_block) {
 
         block = block_addr (base_address, block_itr);
+        assert (block->base_address == 0);
         block->base_address = (uintptr_t)base_address;
         
         if (block->is_free) {
@@ -112,12 +113,13 @@ allocator_deinit (void *base_address) {
             block_itr = block_addr (base_address, block_itr)->next_block) {
 
         block = block_addr (base_address, block_itr);
+        assert ( block->base_address == (uintptr_t) base_address ); 
         block->base_address = 0;
 
         if (block->is_free) {
             remove_glthread (&block->pq_glue);
         }
-    } 
+    }
 }
 
 static bool
@@ -162,7 +164,7 @@ allocator_split_free_data_block_for_allocation (
         remaining_size - sizeof(block_meta_data_t);
     next_block_meta_data->offset = block_meta_data->offset +
                                    sizeof(block_meta_data_t) + block_meta_data->block_size;
-    
+     next_block_meta_data->base_address = (uintptr_t)base_address;
     allocator_add_block_to_free_block_list(next_block_meta_data);
     mm_bind_blocks_for_allocation(base_address, block_meta_data, next_block_meta_data);
     return true;
@@ -182,7 +184,6 @@ allocator_alloc_mem (void *base_address, uint32_t req_size) {
             (char *)base_address, vm_page_hdr, block_meta_data, req_size)) {
         return NULL;
     }
-
     memset((char *)(block_meta_data + 1), 0, block_meta_data->block_size);
     return (void *)(block_meta_data + 1);
 }

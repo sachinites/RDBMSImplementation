@@ -1,7 +1,6 @@
 #ifndef __DISK_FILE_MGMT__
 #define __DISK_FILE_MGMT__
 
-#define DB_PAGE_DEF_SIZE    8192
 #define DB_FILE_DEF_PAGE_CNT    64
 
 #include "disk_io.h"
@@ -26,12 +25,6 @@ typedef struct db_file_hdr_ {
 #pragma pack(pop)
 
 
-void
-db_file_create_db_file (const char* path,  uint64_t size);
-
-fd_t 
-db_file_open (const char* path);
-
 pg_no_t
 db_file_alloc_db_page (fd_t fd);
 
@@ -51,9 +44,6 @@ pg_offset_t
 db_page_get_offset (pg_no_t pg_no) ;
 
 pg_no_t
-db_get_page_from_offset (pg_offset_t offset);
-
-pg_no_t
 db_get_container_page_from_offset (uint64_t db_file_offset);
 
 void 
@@ -61,5 +51,17 @@ db_page_memory_swipe_in (fd_t fd, pg_no_t pg_no);
 
 void 
 db_page_memory_swipe_out (void *base_address);
+
+void 
+pg_mapped_addr_to_pg_no_ht_insert (void *mapped_addr, pg_no_t pg_no);
+
+void 
+pg_pgno_to_mapped_addr_ht_insert (pg_no_t pg_no, void *mapped_addr) ;
+
+pg_no_t  ht_lookup_page_no_by_page_address (void *ptr);
+void * ht_lookup_page_addr_by_page_no (pg_no_t pg_no);
+
+void  mem_mgr_init ()  ;
+void mem_mgr_destroy () ;
 
 #endif 

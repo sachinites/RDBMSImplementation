@@ -11,67 +11,6 @@
 
 extern glthread_t free_block_list_head;
 
-#define HASH_PRIME_CONST    5381
-
-hashtable_t *pg_mapped_addr_to_pg_no_ht;
-hashtable_t *pg_pgno_to_mapped_addr_ht;
-
-void pg_mapped_addr_to_pg_no_ht_insert (void *mapped_addr, pg_no_t pg_no);
-void  pg_pgno_to_mapped_addr_ht_insert (pg_no_t pg_no, void *mapped_addr) ;
-
-static unsigned int
-hashfromkey(void *key) {
-
-    unsigned char *str = (unsigned char *)key;
-    unsigned int hash = HASH_PRIME_CONST;
-    int c;
-
-    while (c = *str++)
-        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
-
-    return hash;
-}
-
-static int
-equalkeys(void *k1, void *k2)
-{
-    char *ky1 = (char *)k1;
-    char *ky2 = (char *)k2;
-    int len1 = strlen(ky1);
-    int len2 = strlen(ky2);
-    if (len1 != len2) return len1 - len2;
-    return (0 == memcmp(k1,k2, len1));
-}
-
-void  mem_mgr_init () ;
-void  mem_mgr_destroy () ;
-
-void  mem_mgr_init ()  {
-
-    pg_mapped_addr_to_pg_no_ht = create_hashtable(sizeof (uintptr_t), hashfromkey, equalkeys);
-    pg_pgno_to_mapped_addr_ht = create_hashtable(sizeof (uintptr_t), hashfromkey, equalkeys);
-}
-
-void mem_mgr_destroy () {
-
-}
-
-void 
-pg_mapped_addr_to_pg_no_ht_insert (void *mapped_addr, pg_no_t pg_no) {
-
-    unsigned char *key = (unsigned char *) calloc (1, sizeof (uintptr_t));
-    memcpy ( (char *)key,  (char *)&mapped_addr,  sizeof(uintptr_t));
-    assert (!hashtable_insert (pg_mapped_addr_to_pg_no_ht, (void *)key, (void *)&pg_no));
-}
-
-void 
-pg_pgno_to_mapped_addr_ht_insert (pg_no_t pg_no, void *mapped_addr) {
-
-    unsigned char *key = (unsigned char *) calloc (1, sizeof (uintptr_t));
-    memcpy ( (char *)key,  (char *)&pg_no,  sizeof(uintptr_t));
-    assert (!hashtable_insert (pg_pgno_to_mapped_addr_ht, (void *)key, (void *)&mapped_addr));
-}
-
 uint64_t
 uapi_mem_alloc (fd_t fd, uint32_t req_size, void **ptr) {
 
@@ -111,7 +50,7 @@ uapi_mem_alloc (fd_t fd, uint32_t req_size, void **ptr) {
     *ptr = allocator_alloc_mem ((void *)block_meta_data->base_address, req_size);
     assert(*ptr);
 
-    pg_no_t pg_no = (pg_no_t)hashtable_search (pg_mapped_addr_to_pg_no_ht, ptr);
+    pg_no_t pg_no = ht_lookup_page_no_by_page_address (*ptr);
 
     pg_offset_t pg_offset = db_page_get_offset (pg_no);
 
@@ -130,8 +69,7 @@ uapi_mem_free (fd_t fd, uint64_t disk_addr) {
     uint64_t offset_within_page = disk_addr - pg_offset;
  
     /*Check of the disk page is mapped in main memory*/
-    void *page_mapped_addr = 
-        (void *)hashtable_search (pg_pgno_to_mapped_addr_ht, (void *)&pg_no);
+    void *page_mapped_addr = ht_lookup_page_addr_by_page_no (pg_no);
 
     if (!page_mapped_addr) {
         /* DB Page is not present in memory, load it*/
@@ -162,8 +100,7 @@ uapi_get_vm_addr (fd_t fd, uint64_t disk_addr) {
     uint64_t offset_within_page = disk_addr - pg_offset;
  
     /*Check of the disk page is mapped in main memory*/
-    void *page_mapped_addr = 
-        (void *)hashtable_search (pg_pgno_to_mapped_addr_ht, (void *)&pg_no);
+    void *page_mapped_addr = ht_lookup_page_addr_by_page_no (pg_no);
 
     if (!page_mapped_addr) {
         /* DB Page is not present in memory, load it*/

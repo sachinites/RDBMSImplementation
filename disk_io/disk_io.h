@@ -5,9 +5,13 @@
 #include <stdbool.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <unistd.h>
+
+#define DB_PAGE_DEF_SIZE    getpagesize()
 
 typedef int fd_t;
 typedef uint64_t fsize;
+typedef uint64_t file_addr_t;
 
 /* API to create a disk file*/
 void
