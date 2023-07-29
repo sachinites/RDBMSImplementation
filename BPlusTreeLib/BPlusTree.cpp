@@ -1,39 +1,58 @@
-#include "BPlusTree.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-
-#define true 1
-#define false 0
-
-struct BPlusTreeNode* Root;
-
-int MaxChildNumber = 50;
-int TotalNodes;
+#include <memory.h>
+#include <assert.h>
+#include <time.h>
+#include "BPlusTree.h"
 
 int QueryAnsNum;
 
+static int8_t 
+BplusTree_key_comp_fn_default (BPluskey_t *key1, BPluskey_t *key2) {
+
+	if (key1->key_size < key2->key_size) return -1;
+	if (key1->key_size > key2->key_size) return 1;
+	return memcmp (key1->key, key2->key, key1->key_size);
+}
+
 /** Create a new B+tree Node */
 BPlusTreeNode* New_BPlusTreeNode() {
-	struct BPlusTreeNode* p = (struct BPlusTreeNode*)malloc(sizeof(struct BPlusTreeNode));
-	p->isRoot = false;
-	p->isLeaf = false;
-	p->key_num = 0;
-	p->child[0] = NULL;
-	p->father = NULL;
-	p->next = NULL;
-	p->last = NULL;
-	TotalNodes++;
+	struct BPlusTreeNode* p = (struct BPlusTreeNode*)calloc(1, sizeof(struct BPlusTreeNode));
 	return p;
 }
 
+void BPlusTree_init (BPlusTree_t *tree, 
+							BPlusTree_key_com_fn comp_fn, 
+							BPlusTree_key_format_fn key_fmt_fn,
+							BPlusTree_value_format_fn value_fmt_fn,
+							uint16_t MaxChildNumber,
+							BPlusTree_value_free_fn free_fn
+							) {
+
+	BPlusTree_Destroy(tree);
+	tree->Root = New_BPlusTreeNode();
+	tree->Root->isRoot = true;
+	tree->Root->isLeaf = true;
+	tree->comp_fn = comp_fn;
+	tree->key_fmt_fn = key_fmt_fn;
+	tree->value_fmt_fn = value_fmt_fn;
+	tree->MaxChildNumber = MaxChildNumber + 1;
+	tree->free_fn = free_fn;
+}
+
 /** Binary search to find the biggest child l that Cur->key[l] <= key */
-int Binary_Search(BPlusTreeNode* Cur, int key) {
+static int Binary_Search(BPlusTreeNode* Cur, 
+										BPluskey_t *key, 
+										BPlusTree_key_com_fn comp_fn) {
+
 	int l = 0, r = Cur->key_num;
-	if (key < Cur->key[l]) return l;
-	if (Cur->key[r - 1] <= key) return r - 1;
+	if (comp_fn (key, &Cur->key[l]) > 0) return l;
+	if (r == 0) return 0;
+	if (comp_fn(&Cur->key[r - 1], key) >= 0) return r - 1;
 	while (l < r - 1) {
 		int mid = (l + r) >> 1;
-		if (Cur->key[mid] > key)
+		if (comp_fn(&Cur->key[mid], key) < 0)
 			r = mid;
 		else
 			l = mid;
@@ -48,16 +67,21 @@ int Binary_Search(BPlusTreeNode* Cur, int key) {
  * where Mid = MaxChildNumber / 2
  * Note that only when Split() is called, a new Node is created
  */
-void Insert(BPlusTreeNode*, int, int, void*);
-void Split(BPlusTreeNode* Cur) {
+Rangevoid Insert(BPlusTree_t *tree, 
+				  BPlusTreeNode* Cur, 
+				  BPluskey_t *key,
+				  void* value, 
+				  BPlusTree_key_com_fn comp_fn);
+
+void Split(BPlusTree_t *tree, BPlusTreeNode* Cur) {
 	// copy Cur(Mid .. MaxChildNumber) -> Temp(0 .. Temp->key_num)
 	BPlusTreeNode* Temp = New_BPlusTreeNode();
 	BPlusTreeNode* ch;
-	int Mid = MaxChildNumber >> 1;
+	int Mid = tree->MaxChildNumber >> 1;
 	Temp->isLeaf = Cur->isLeaf; // Temp's depth == Cur's depth
-	Temp->key_num = MaxChildNumber - Mid;
+	Temp->key_num = tree->MaxChildNumber - Mid;
 	int i;
-	for (i = Mid; i < MaxChildNumber; i++) {
+	for (i = Mid; i < tree->MaxChildNumber; i++) {
 		Temp->child[i - Mid] = Cur->child[i];
 		Temp->key[i - Mid] = Cur->key[i];
 		if (Temp->isLeaf) {
@@ -72,14 +96,14 @@ void Split(BPlusTreeNode* Cur) {
 	// Insert Temp
 	if (Cur->isRoot) {
 		// Create a new Root, the depth of Tree is increased
-		Root = New_BPlusTreeNode();
-		Root->key_num = 2;
-		Root->isRoot = true;
-		Root->key[0] = Cur->key[0];
-		Root->child[0] = Cur;
-		Root->key[1] = Temp->key[0];
-		Root->child[1] = Temp;
-		Cur->father = Temp->father = Root;
+		tree->Root = New_BPlusTreeNode();
+		tree->Root->key_num = 2;
+		tree->Root->isRoot = true;
+		tree->Root->key[0] = Cur->key[0];
+		tree->Root->child[0] = Cur;
+		tree->Root->key[1] = Temp->key[0];
+		tree->Root->child[1] = Temp;
+		Cur->father = Temp->father = tree->Root;
 		Cur->isRoot = false;
 		if (Cur->isLeaf) {
 			Cur->next = Temp;
@@ -88,20 +112,27 @@ void Split(BPlusTreeNode* Cur) {
 	} else {
 		// Try to insert Temp to Cur->father
 		Temp->father = Cur->father;
-		Insert(Cur->father, Cur->key[Mid], -1, (void*)Temp);
+		Insert(tree, Cur->father, &Cur->key[Mid],  (void*)Temp, tree->comp_fn);
 	}
 }
 
 /** Insert (key, value) into Cur, if Cur is full, then split it to fit the definition of B+tree */
-void Insert(BPlusTreeNode* Cur, int key, void* value) {
+void Insert(BPlusTree_t *tree, 
+				  BPlusTreeNode* Cur, 
+				  BPluskey_t *key,
+				  void* value, 
+				  BPlusTree_key_com_fn comp_fn) {
+
 	int i, ins;
-	if (key < Cur->key[0]) ins = 0; else ins = Binary_Search(Cur, key) + 1;
+	if (comp_fn (key, &Cur->key[0]) > 0)  ins = 0; 
+	else 
+	ins = Binary_Search(Cur, key, comp_fn) + 1;
 	for (i = Cur->key_num; i > ins; i--) {
 		Cur->key[i] = Cur->key[i - 1];
 		Cur->child[i] = Cur->child[i - 1];
 	}
 	Cur->key_num++;
-	Cur->key[ins] = key;
+	Cur->key[ins] = *key;
 	Cur->child[ins] = value;
 	if (Cur->isLeaf == false) { // make links on leaves
 		BPlusTreeNode* firstChild = (BPlusTreeNode*)(Cur->child[0]);
@@ -120,12 +151,11 @@ void Insert(BPlusTreeNode* Cur, int key, void* value) {
 				// do not have a prevChild, then refer next directly
 				// updated: the very first record on B+tree, and will not come to this case
 				temp->next = Cur->child[1];
-				printf("this happens\n");
 			}
 		}
 	}
-	if (Cur->key_num == MaxChildNumber) // children is full
-		Split(Cur);
+	if (Cur->key_num == tree->MaxChildNumber) // children is full
+		Split(tree, Cur);
 }
 
 /** Resort(Give, Get) make their no. of children average */
@@ -185,12 +215,17 @@ void Resort(BPlusTreeNode* Left, BPlusTreeNode* Right) {
  * (4) merge with left brother
  * in that case root has only one child, set this chil to be root
  */
-void Delete(BPlusTreeNode*, int);
-void Redistribute(BPlusTreeNode* Cur) {
+
+void Delete(BPlusTree_t *tree, 
+					BPlusTreeNode* Cur,
+					BPluskey_t *key,
+					BPlusTree_key_com_fn comp_fn);
+
+void Redistribute(BPlusTree_t *tree, BPlusTreeNode* Cur, BPlusTree_key_com_fn comp_fn) {
 	if (Cur->isRoot) {
 		if (Cur->key_num == 1 && !Cur->isLeaf) {
-			Root = Cur->child[0];
-			Root->isRoot = true;
+			tree->Root = Cur->child[0];
+			tree->Root->isRoot = true;
 			free(Cur);
 		}
 		return;
@@ -199,10 +234,10 @@ void Redistribute(BPlusTreeNode* Cur) {
 	BPlusTreeNode* prevChild;
 	BPlusTreeNode* succChild;
 	BPlusTreeNode* temp;
-	int my_index = Binary_Search(Father, Cur->key[0]);
+	int my_index = Binary_Search(Father, &Cur->key[0], comp_fn);
 	if (my_index + 1 < Father->key_num) {
 		succChild = Father->child[my_index + 1];
-		if ((succChild->key_num - 1) * 2 >= MaxChildNumber) { // at least can move one child to Cur
+		if ((succChild->key_num - 1) * 2 >= tree->MaxChildNumber) { // at least can move one child to Cur
 			Resort(Cur, succChild); // (1) resort with right child
 			Father->key[my_index + 1] = succChild->key[0];
 			return;
@@ -210,7 +245,7 @@ void Redistribute(BPlusTreeNode* Cur) {
 	}
 	if (my_index - 1 >= 0) {
 		prevChild = Father->child[my_index - 1];
-		if ((prevChild->key_num - 1) * 2 >= MaxChildNumber) {
+		if ((prevChild->key_num - 1) * 2 >= tree->MaxChildNumber) {
 			Resort(prevChild, Cur); // (2) resort with left child
 			Father->key[my_index] = Cur->key[0];
 			return;
@@ -230,7 +265,7 @@ void Redistribute(BPlusTreeNode* Cur) {
 			Cur->key_num++;
 			i++;
 		}
-		Delete(Father, succChild->key[0]); // delete right child
+		Delete(tree, Father, &succChild->key[0], comp_fn); // delete right child
 		return;
 	}
 	if (my_index - 1 >= 0) { // (4) merge with left child
@@ -247,16 +282,23 @@ void Redistribute(BPlusTreeNode* Cur) {
 			prevChild->key_num++;
 			i++;
 		}
-		Delete(Father, Cur->key[0]); // delete left child
+		Delete(tree, Father, &Cur->key[0], comp_fn); // delete left child
 		return;
 	}
 	printf("What?! you're the only child???\n"); // this won't happen
 }
 
 /** Delete key from Cur, if no. of children < MaxChildNUmber / 2, resort or merge it with brothers */
-void Delete(BPlusTreeNode* Cur, int key) {
-	int i, del = Binary_Search(Cur, key);
+void Delete(BPlusTree_t *tree, 
+					BPlusTreeNode* Cur,
+					BPluskey_t *key,
+					BPlusTree_key_com_fn comp_fn) {
+
+	int i, del = Binary_Search(Cur, key, comp_fn);
 	void* delChild = Cur->child[del];
+	free(Cur->key[del].key);
+	Cur->key[del].key = NULL;
+	Cur->key[del].key_size = 0;
 	for (i = del; i < Cur->key_num - 1; i++) {
 		Cur->key[i] = Cur->key[i + 1];
 		Cur->child[i] = Cur->child[i + 1];
@@ -280,28 +322,28 @@ void Delete(BPlusTreeNode* Cur, int key) {
 		}
 		if (!temp->isRoot) {
 			temp = temp->father;
-			int i = Binary_Search(temp, key);
+			int i = Binary_Search(temp, key, comp_fn);
 			temp->key[i] = Cur->key[0];
 		}
 	}
-	free(delChild);
-	if (Cur->key_num * 2 < MaxChildNumber)
-		Redistribute(Cur);
+	tree->free_fn(delChild);
+	if (Cur->key_num * 2 < tree->MaxChildNumber)
+		Redistribute(tree, Cur, comp_fn);
 }
 
 /** Find a leaf node that key lays in it
  *	modify indicates whether key should affect the tree
  */
-BPlusTreeNode* Find(int key, int modify) {
-	BPlusTreeNode* Cur = Root;
+BPlusTreeNode* Find(BPlusTree_t *tree, BPluskey_t *key, int modify, BPlusTree_key_com_fn comp_fn) {
+	BPlusTreeNode* Cur = tree->Root;
 	while (1) {
 		if (Cur->isLeaf == true)
 			break;
-		if (key < Cur->key[0]) {
-			if (modify == true) Cur->key[0] = key;
+		if (comp_fn (key, &Cur->key[0]) > 0) {
+			if (modify == true) Cur->key[0] = *key;
 			Cur = Cur->child[0];
 		} else {
-			int i = Binary_Search(Cur, key);
+			int i = Binary_Search(Cur, key, comp_fn);
 			Cur = Cur->child[i];
 		}
 	}
@@ -309,20 +351,25 @@ BPlusTreeNode* Find(int key, int modify) {
 }
 
 /** Destroy subtree whose root is Cur, By recursion */
-void Destroy(BPlusTreeNode* Cur) {
+void Destroy(BPlusTreeNode* Cur, BPlusTree_value_free_fn free_fn) {
 	if (Cur->isLeaf == true) {
 		int i;
-		for (i = 0; i < Cur->key_num; i++)
-			free(Cur->child[i]);
+		for (i = 0; i < Cur->key_num; i++) {
+			free(Cur->key[i].key);
+			Cur->key[i].key_size = 0;
+			free_fn(Cur->child[i]);
+			Cur->child[i] = NULL;
+		}
 	} else {
 		int i;
 		for (i = 0; i < Cur->key_num; i++)
-			Destroy(Cur->child[i]);
+			Destroy(Cur->child[i], free_fn);
 	}
 	free(Cur);
 }
 
 /** Print subtree whose root is Cur */
+#if 0
 void Print(BPlusTreeNode* Cur) {
 	int i;
 	for (i = 0; i < Cur->key_num; i++)
@@ -333,50 +380,77 @@ void Print(BPlusTreeNode* Cur) {
 			Print(Cur->child[i]);
 	}
 }
+#endif 
 
 /** Interface: Insert (key, value) into B+tree */
-int BPlusTree_Insert(int key, void* value) {
-	BPlusTreeNode* Leaf = Find(key, true);
-	int i = Binary_Search(Leaf, key);
-	if (Leaf->key[i] == key) return false;
-	Insert(Leaf, key, value);
+int BPlusTree_Insert(BPlusTree_t *tree, BPluskey_t *key, void* value, BPlusTree_key_com_fn comp_fn) {
+	BPlusTreeNode* Leaf = Find(tree, key, true, comp_fn);
+	int i = Binary_Search(Leaf, key, comp_fn);
+	if (comp_fn (&Leaf->key[i], key) == 0) return false;
+	Insert(tree, Leaf, key, value, tree->comp_fn);
 	return true;
 }
 
 /** Interface: query all record whose key satisfy that key = query_key */
-void BPlusTree_Query_Key(int key) {
-	BPlusTreeNode* Leaf = Find(key, false);
+void BPlusTree_Query_Key(BPlusTree_t *tree,
+				BPluskey_t *key, 
+				BPlusTree_key_com_fn comp_fn,
+				BPlusTree_key_format_fn key_fmt_fn,
+				BPlusTree_value_format_fn value_fmt_fn) {
+
+  	unsigned char key_output_buffer [128];
+	unsigned char value_output_buffer [128];
+
+	BPlusTreeNode* Leaf = Find(tree, key, false, comp_fn);
 	QueryAnsNum = 0;
 	int i;
 	for (i = 0; i < Leaf->key_num; i++) {
 		//printf("%d ", Leaf->key[i]);
-		if (Leaf->key[i] == key) {
+		if (comp_fn (&Leaf->key[i], key) == 0) {
 			QueryAnsNum++;
-			if (QueryAnsNum < 20) printf("[no.%d	key = %d, value = %s]\n", QueryAnsNum, Leaf->key[i], (char*)Leaf->child[i]);
+			if (QueryAnsNum < 20) {
+				key_fmt_fn (&Leaf->key[i], key_output_buffer, sizeof (key_output_buffer));
+				value_fmt_fn ((void *)Leaf->child[i], value_output_buffer, sizeof(value_output_buffer));
+				printf("[no.%d	key = %s, value = %s]\n", QueryAnsNum, 
+					key_output_buffer, value_output_buffer);
+			}
 		}
 	}
 	printf("Total number of answers is: %d\n", QueryAnsNum);
 }
 
 /** Interface: query all record whose key satisfy that query_l <= key <= query_r */
-void BPlusTree_Query_Range(int l, int r) {
-	BPlusTreeNode* Leaf = Find(l, false);
+void BPlusTree_Query_Range(
+								BPlusTree_t *tree,
+								BPluskey_t *l, BPluskey_t *r, 
+								BPlusTree_key_com_fn comp_fn,
+								BPlusTree_key_format_fn key_fmt_fn,
+								BPlusTree_value_format_fn value_fmt_fn) {
+
+	unsigned char key_output_buffer [128];
+	unsigned char value_output_buffer [128];
+
+	BPlusTreeNode* Leaf = Find(tree, l, false, comp_fn);
 	QueryAnsNum = 0;
 	int i;
 	for (i = 0; i < Leaf->key_num; i++) {
-		//printf("%d ", Leaf->key[i]);
-		if (Leaf->key[i] >= l) break;
+		if (comp_fn (&Leaf->key[i], l) <= 0) break;
 	}
 	int finish = false;
 	while (!finish) {
 		while (i < Leaf->key_num) {
-			if (Leaf->key[i] > r) {
+			if (comp_fn (&Leaf->key[i], r) < 0) {
 				finish = true;
 				break;
 			}
 			QueryAnsNum++;
 			if (QueryAnsNum == 20) printf("...\n");
-			if (QueryAnsNum < 20) printf("[no.%d	key = %d, value = %s]\n", QueryAnsNum, Leaf->key[i], (char*)Leaf->child[i]);
+			if (QueryAnsNum < 20) {
+				key_fmt_fn (&Leaf->key[i], key_output_buffer, sizeof (key_output_buffer));
+				value_fmt_fn ((void *)Leaf->child[i], value_output_buffer, sizeof(value_output_buffer));
+				printf("[no.%d	key = %s, value = %s]\n", 
+					QueryAnsNum, key_output_buffer, value_output_buffer);
+			}
 			i++;
 		}
 		if (finish || Leaf->next == NULL) break;
@@ -387,65 +461,195 @@ void BPlusTree_Query_Range(int l, int r) {
 }
 
 /** Interface: modify value on the given key */
-void BPlusTree_Modify(int key, void* value) {
-	BPlusTreeNode* Leaf = Find(key, false);
-	int i = Binary_Search(Leaf, key);
-	if (Leaf->key[i] != key) return; // don't have this key
-	printf("Modify: key = %d, original value = %s, new value = %s\n", key, (char*)(Leaf->child[i]), (char*)(value));
+void BPlusTree_Modify(BPlusTree_t *tree,
+			 BPluskey_t * key, void* value, 
+			 BPlusTree_key_com_fn comp_fn,
+			 BPlusTree_key_format_fn key_fmt_fn,
+			 BPlusTree_value_format_fn value_fmt_fn) {
+
+	unsigned char key_output_buffer [128];
+	unsigned char orig_value_output_buffer [128];
+	unsigned char new_value_output_buffer [128];
+
+	BPlusTreeNode* Leaf = Find(tree, key, false, comp_fn);
+	int i = Binary_Search(Leaf, key, comp_fn);
+	if (comp_fn (&Leaf->key[i], key) != 0) return; // don't have this key
+
+	key_fmt_fn (key, key_output_buffer, sizeof(key_output_buffer) );
+	value_fmt_fn ( (void *) Leaf->child[i] , orig_value_output_buffer, sizeof (orig_value_output_buffer));
+	value_fmt_fn ( (void *) value , new_value_output_buffer, sizeof (new_value_output_buffer));	
+	printf("Modify: key = %s, original value = %s, new value = %s\n", 
+		key_output_buffer,
+		orig_value_output_buffer,
+		new_value_output_buffer);
 	free(Leaf->child[i]);
 	Leaf->child[i] = value;
 }
 
 /** Interface: delete value on the given key */
-void BPlusTree_Delete(int key) {
-	BPlusTreeNode* Leaf = Find(key, false);
-	int i = Binary_Search(Leaf, key);
-	if (Leaf->key[i] != key) return; // don't have this key
-	printf("Delete: key = %d, original value = %s\n", key, (char*)(Leaf->child[i]));
-   	Delete(Leaf, key); 
+void BPlusTree_Delete(BPlusTree_t *tree,
+			 BPluskey_t *key,
+			 BPlusTree_key_com_fn comp_fn,
+			 BPlusTree_key_format_fn key_fmt_fn,
+			 BPlusTree_value_format_fn value_fmt_fn) {
+
+	unsigned char key_output_buffer [128];
+	unsigned char value_output_buffer [128];
+
+	BPlusTreeNode* Leaf = Find(tree, key, false, comp_fn);
+	int i = Binary_Search(Leaf, key, comp_fn);
+	if (comp_fn (&Leaf->key[i], key) != 0) return; // don't have this key
+	key_fmt_fn (key, key_output_buffer , sizeof (key_output_buffer ));
+	value_fmt_fn ((void *)Leaf->child[i], value_output_buffer, sizeof (value_output_buffer) );
+	printf("Delete: key = %s, original value = %s\n", 
+		key_output_buffer ,
+		value_output_buffer );
+   	Delete(tree, Leaf, key, comp_fn); 
 }
 
 /** Interface: Called to destroy the B+tree */
-void BPlusTree_Destroy() {
-	if (Root == NULL) return;
+void BPlusTree_Destroy(BPlusTree_t *tree) {
+	if (tree->Root == NULL) return;
 	printf("Now destroying B+tree ..\n");
-	Destroy(Root);
-	Root = NULL;
+	Destroy(tree->Root, tree->free_fn);
+	tree->Root = NULL;
 	printf("Done.\n");
-}
-
-/** Interface: Initialize */
-void BPlusTree_Init() {
-	BPlusTree_Destroy();
-	Root = New_BPlusTreeNode();
-	Root->isRoot = true;
-	Root->isLeaf = true;
-	TotalNodes = 0;
 }
 
 /**
  * Interface: setting MaxChildNumber in your program
  * A suggest value is cube root of the no. of records
  */
-void BPlusTree_SetMaxChildNumber(int number) {
-	MaxChildNumber = number + 1;
+void BPlusTree_SetMaxChildNumber(BPlusTree_t *tree, int number) {
+	tree->MaxChildNumber = number + 1;
 }
 
-/** Interface: print the tree (DEBUG use)*/
-void BPlusTree_Print() {
-	struct BPlusTreeNode* Leaf = Find(1000000000, false);
-	int cnt = 0;
-	while (Leaf != NULL) {
-		int i;
-		for (i = Leaf->key_num - 1; i >= 0; i--) {
-			printf("%4d ", Leaf->key[i]);
-			if (++cnt % 20 == 0) printf("\n");
+
+static int
+BPlusTree_key_format_fn_default (BPluskey_t *key, unsigned char *obuff, int buff_size) {
+
+	assert (key->key_size <= buff_size);
+	memset (obuff, 0, buff_size);
+	memcpy (obuff, key->key, key->key_size);
+	return  key->key_size;
+}
+
+static int
+BPlusTree_value_format_fn_default (void *value, unsigned char *obuff, int buff_size) {
+
+	memset (obuff, 0, buff_size);
+	strncpy ( (char *)obuff, (char *)value, buff_size);
+	return 0;
+}
+
+
+#include <arpa/inet.h>
+static int8_t 
+BplusTree_key_comp_fn_ip_addr (BPluskey_t *key1, BPluskey_t *key2) {
+
+	if (!key1->key && key2->key) return 1;
+	if (key1->key && !key2->key) return -1;
+
+	uint32_t key1_ipaddr;
+	inet_pton (AF_INET, (const char *)key1->key, &key1_ipaddr);
+	key1_ipaddr = htonl (key1_ipaddr);
+
+	uint32_t key2_ipaddr;
+	inet_pton (AF_INET, (const char *)key2->key, &key2_ipaddr);
+	key2_ipaddr = htonl (key2_ipaddr);
+
+	return key2_ipaddr - key1_ipaddr;
+}
+
+int 
+main (int argc, char **argv) {
+
+	int len;
+	int choice;
+	char *val_buff ;
+	BPluskey_t bkey;
+	unsigned char key[64];
+	unsigned char value[128];
+	BPlusTree_t tree;
+	BPlusTree_init (&tree, 
+			BplusTree_key_comp_fn_ip_addr,
+			//BplusTree_key_comp_fn_default,
+			BPlusTree_key_format_fn_default, 
+			BPlusTree_value_format_fn_default,
+			50, free);
+
+	while (1) {
+
+		printf ("1. Insert\n");
+		printf ("2. Delete\n");
+		printf ("3. Update\n");
+		printf ("4. Range\n");
+		printf ("5. Read\n");
+		printf ("6. Destroy\n");
+
+		scanf ("%d", &choice);
+		fgets ( (char *)key, sizeof(key), stdin);
+		fflush (stdin);
+
+		switch (choice) {
+
+			case 1:
+				printf ("Insert Key : ");
+				memset (key, 0, sizeof (key));
+				fgets ( (char *)key, sizeof(key), stdin);
+				key[strcspn(key, "\n")] = '\0';
+				printf ("Insert Value : ");
+				memset (value, 0, sizeof (value));
+				fgets ( (char *)value, sizeof(value), stdin);
+				value[strcspn(value, "\n")] = '\0';
+				len =  strlen ( (const char *)key);
+				bkey.key = (char *)calloc (1, len);
+				strncpy ( (char *)bkey.key, (const char *)key, len);
+				bkey.key_size = len;
+				len = strlen ( (const char *)value);
+				val_buff = (char *)calloc (1, len);
+				strncpy ( (char *)val_buff, (const char *)value, len);
+				BPlusTree_Insert (&tree, &bkey, (void *)val_buff, tree.comp_fn);
+				break;
+			case 4:
+				{
+				// Query on a range [l, r]
+				double start_time, end_time;
+				printf ("Insert Key1 : ");
+				memset (key, 0, sizeof (key));
+				fgets ( (char *)key, sizeof(key), stdin);
+				key[strcspn(key, "\n")] = '\0';
+				len =  strlen ( (const char *)key);
+				bkey.key = key;
+				bkey.key_size = len;
+
+				printf ("Insert key2 : ");
+				memset (value, 0, sizeof (value));
+				fgets ( (char *)value, sizeof(value), stdin);
+				value[strcspn(value, "\n")] = '\0';
+				len = strlen ( (const char *)value);
+				BPluskey_t bkey2;
+				bkey2.key = (char *)value;
+				bkey.key_size = len;
+				start_time = clock();
+				BPlusTree_Query_Range(&tree, &bkey, &bkey2, tree.comp_fn,
+									tree.key_fmt_fn, tree.value_fmt_fn);
+				end_time = clock();
+				printf("Query on a range, costs %lf s\n", (end_time - start_time) / CLOCKS_PER_SEC);
+				break;
+			}
+		case 5:
+			printf ("Key1 : ");
+				memset (key, 0, sizeof (key));
+				fgets ( (char *)key, sizeof(key), stdin);
+				key[strcspn(key, "\n")] = '\0';
+				len =  strlen ( (const char *)key);
+				bkey.key = key;
+				bkey.key_size = len;
+				BPlusTree_Query_Key(&tree, &bkey, tree.comp_fn, tree.key_fmt_fn, tree.value_fmt_fn);
+				break;
 		}
-		Leaf = Leaf->last;
 	}
-}
-
-/** Interface: Total Nodes */
-int BPlusTree_GetTotalNodes() {
-	return TotalNodes;
+	
+	return 0;
 }
