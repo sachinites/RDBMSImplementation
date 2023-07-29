@@ -67,7 +67,7 @@ static int Binary_Search(BPlusTreeNode* Cur,
  * where Mid = MaxChildNumber / 2
  * Note that only when Split() is called, a new Node is created
  */
-Rangevoid Insert(BPlusTree_t *tree, 
+void Insert(BPlusTree_t *tree, 
 				  BPlusTreeNode* Cur, 
 				  BPluskey_t *key,
 				  void* value, 
@@ -124,9 +124,9 @@ void Insert(BPlusTree_t *tree,
 				  BPlusTree_key_com_fn comp_fn) {
 
 	int i, ins;
-	if (comp_fn (key, &Cur->key[0]) > 0)  ins = 0; 
-	else 
-	ins = Binary_Search(Cur, key, comp_fn) + 1;
+	if (Cur->key_num == 0) ins = 0;
+	else if (comp_fn (key, &Cur->key[0]) > 0) ins = 0;
+	else ins = Binary_Search(Cur, key, comp_fn) + 1;
 	for (i = Cur->key_num; i > ins; i--) {
 		Cur->key[i] = Cur->key[i - 1];
 		Cur->child[i] = Cur->child[i - 1];
@@ -576,7 +576,7 @@ main (int argc, char **argv) {
 			//BplusTree_key_comp_fn_default,
 			BPlusTree_key_format_fn_default, 
 			BPlusTree_value_format_fn_default,
-			50, free);
+			3, free);
 
 	while (1) {
 
@@ -611,6 +611,18 @@ main (int argc, char **argv) {
 				strncpy ( (char *)val_buff, (const char *)value, len);
 				BPlusTree_Insert (&tree, &bkey, (void *)val_buff, tree.comp_fn);
 				break;
+			case 2:
+				{
+				printf ("Insert Key : ");
+				memset (key, 0, sizeof (key));
+				fgets ( (char *)key, sizeof(key), stdin);
+				key[strcspn(key, "\n")] = '\0';
+				len =  strlen ( (const char *)key);
+				bkey.key = key;
+				bkey.key_size = len;
+				BPlusTree_Delete (&tree, &bkey, tree.comp_fn, tree.key_fmt_fn, tree.value_fmt_fn);
+				break;
+				}
 			case 4:
 				{
 				// Query on a range [l, r]
