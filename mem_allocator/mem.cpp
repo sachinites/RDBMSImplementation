@@ -95,6 +95,8 @@ uapi_mem_free (fd_t fd, uint64_t disk_addr) {
 void *
 uapi_get_vm_addr (fd_t fd, uint64_t disk_addr) {
 
+    if (disk_addr == 0) return NULL;
+    
     pg_no_t pg_no = db_get_container_page_from_offset (disk_addr);
 
     assert (pg_no != INVALID_DB_PG_NO);
