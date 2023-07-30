@@ -1,7 +1,7 @@
 #ifndef __BPlusTree_H__
 #define __BPlusTree_H__
 
-#define MAX_CHILD_NUMBER 200
+#define MAX_CHILD_NUMBER 5
 #include <stdint.h>
 #include <stdbool.h>
 

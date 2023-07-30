@@ -296,9 +296,7 @@ void Delete(BPlusTree_t *tree,
 
 	int i, del = Binary_Search(Cur, key, comp_fn);
 	void* delChild = Cur->child[del];
-	free(Cur->key[del].key);
-	Cur->key[del].key = NULL;
-	Cur->key[del].key_size = 0;
+
 	for (i = del; i < Cur->key_num - 1; i++) {
 		Cur->key[i] = Cur->key[i + 1];
 		Cur->child[i] = Cur->child[i + 1];
@@ -504,7 +502,9 @@ void BPlusTree_Delete(BPlusTree_t *tree,
 	printf("Delete: key = %s, original value = %s\n", 
 		key_output_buffer ,
 		value_output_buffer );
+	void *key_to_free = Leaf->key[i].key;
    	Delete(tree, Leaf, key, comp_fn); 
+	free(key_to_free);
 }
 
 /** Interface: Called to destroy the B+tree */
@@ -571,12 +571,13 @@ main (int argc, char **argv) {
 	unsigned char key[64];
 	unsigned char value[128];
 	BPlusTree_t tree;
+	memset (&tree, 0, sizeof (tree));
 	BPlusTree_init (&tree, 
 			BplusTree_key_comp_fn_ip_addr,
 			//BplusTree_key_comp_fn_default,
 			BPlusTree_key_format_fn_default, 
 			BPlusTree_value_format_fn_default,
-			3, free);
+			4, free);
 
 	while (1) {
 
@@ -651,7 +652,7 @@ main (int argc, char **argv) {
 				break;
 			}
 		case 5:
-			printf ("Key1 : ");
+				printf ("Insert Query Key : ");
 				memset (key, 0, sizeof (key));
 				fgets ( (char *)key, sizeof(key), stdin);
 				key[strcspn(key, "\n")] = '\0';
