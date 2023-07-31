@@ -39,22 +39,25 @@ typedef enum sql_keywords_ {
     SQL_GROUP_BY = 20,
     SQL_HAVING = 21,
     SQL_COLUMNS_DUMMY = 22,
-    SQL_KEYWORD_MAX = 23
+    SQL_PRIMARY_KEY = 23,
+    SQL_NOT_NULL = 24,
+    SQL_KEYWORD_MAX = 25,
+    
 } sql_keywords_t;
 
 typedef enum sql_op_ {
 
-    SQL_LESS_THAN = 24,
-    SQL_LESS_THAN_EQ = 25,
-    SQL_GREATER_THAN = 26,
-    SQL_GREATER_THAN_EQ = 27,
-    SQL_EQ = 28,
-    SQL_NOT_EQ = 29,
-    SQL_AND = 30,
-    SQL_OR = 31,
-    SQL_IN = 32,
-    SQL_BETWEEN = 33, 
-    SQL_OP_MAX = 34
+    SQL_LESS_THAN = 26,
+    SQL_LESS_THAN_EQ = 27,
+    SQL_GREATER_THAN = 28,
+    SQL_GREATER_THAN_EQ = 29,
+    SQL_EQ = 30,
+    SQL_NOT_EQ = 31,
+    SQL_AND = 32,
+    SQL_OR = 33,
+    SQL_IN = 34,
+    SQL_BETWEEN = 35, 
+    SQL_OP_MAX = 36
 } sql_op_t;
 
 typedef struct ident_ {
@@ -64,36 +67,30 @@ typedef struct ident_ {
 
 typedef enum sql_dtype_{
 
-    SQL_STRING  = 35,
-    SQL_INT = 36,
-    SQL_FLOAT = 37,
-    SQL_DTYPE_MAX = 38
+    SQL_STRING  = 37,
+    SQL_INT = 38,
+    SQL_FLOAT = 39,
+    SQL_DTYPE_MAX = 40
 } sql_dype_t;
 
 typedef enum sql_ident_type_ {
 
-    SQL_TABLE_NAME = 39,
-    SQL_COLUMN_NAME = 40,
-    SQL_CONDITION_VALUE = 41,
-    SQL_IDNT_TYPE_MAX = 42
+    SQL_TABLE_NAME = 41,
+    SQL_COLUMN_NAME = 42,
+    SQL_CONDITION_VALUE = 43,
+    SQL_IDNT_TYPE_MAX = 44
 } sql_identifier_type_t;
 
-typedef struct ast_node_ {
+static inline int
+sql_valid_dtype (int dtype) {
 
-    sql_entity_type_t entity_type;
-    union {
-        sql_query_type_t q_type;
-        sql_agg_fn_t agg_fn;
-        sql_keywords_t kw;
-        sql_op_t op;
-        struct {
-            sql_identifier_type_t ident_type;
-            str_identifier_t identifer;
-        } identifier;
-    }u;
-    struct ast_node_ *left;
-    struct ast_node_ *right;
-    struct ast_node_ *parent;
-} ast_node_t;
+    switch (dtype) {
+        case SQL_STRING:
+        case SQL_INT:
+        case SQL_FLOAT:
+        return 1;
+    }
+    return 0;
+}
 
 #endif 

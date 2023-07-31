@@ -37,16 +37,8 @@
 %{
 
 #include <stdio.h>
-#include "SQLParserStruct.h"
-#define EOL 1000
-#define BRACK_START 1001
-#define BRACK_END 1002
-#define COMMA 1003
-#define INTEGER 1004
-#define WILDCARD 1005
-
-#define PARSER_ERROR_EXIT(code, expected_code) \
-    if (code != expected_code) yyerror (code, expected_code, yytext, yylineno)
+#include "common.h"
+#include "Ast.h"
 
 %}
 
@@ -55,7 +47,24 @@
 "select" {
     return SQL_SELECT_Q;
 }
-
+"create table" {
+    return SQL_CREATE_Q;
+}
+"varchar" {
+    return SQL_STRING;
+}
+"int" {
+    return SQL_INT;
+}
+"float" {
+    return SQL_FLOAT;
+}
+"primary key" {
+    return SQL_PRIMARY_KEY;
+}
+"not null" {
+    return SQL_NOT_NULL;
+}
 "max" {
     return SQL_MAX;
 }
@@ -147,13 +156,6 @@
 }
 
 %%
-
-static void 
-yyerror (int token_code, int exp_token_code, char *str, int lineno) {
-
-    printf ("[%d] : Parsing Failed [token obtained : %d, expected token %d token value : %s\n",    lineno, token_code, exp_token_code, str);
-    exit(0);
-}
 
 static void 
 parse_first_aggregated_column (int token_code) {
@@ -371,11 +373,10 @@ parse_select_query () {
    }
 }
 
-static void 
-parse_update_query () {
+static  void  
+parse_update_query ()  {}
 
-
-}
+#include "SQLCreateParser.c"
 
 static void 
 parse_sql_query () {
@@ -390,7 +391,10 @@ parse_sql_query () {
             break;
         case SQL_UPDATE_Q:
            // yyless(yyleng);
-            parse_update_query ();
+            //parse_update_query ();
+            break;
+        case SQL_CREATE_Q:
+            parse_create_query();
             break;
         default:
             printf ("%s Query not supported\n", yytext);
