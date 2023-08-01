@@ -10,7 +10,7 @@
 */
 
 static int 
-create_q_parse_columns () {
+create_q_parse_columns (ast_node_t *astnode) {
 
     int token_code ;
 
@@ -19,6 +19,14 @@ create_q_parse_columns () {
         PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
     }
     printf ("col name = %s ", yytext);
+
+    ast_node_t *col_name_node = (ast_node_t *)calloc (1, sizeof (ast_node_t ));
+    col_name_node->entity_type = SQL_IDENTIFIER;
+    col_name_node->u.identifier.ident_type = SQL_COLUMN_NAME;
+    strncpy (col_name_node->u.identifier.identifier.name, yytext, sizeof (col_name_node->u.identifier.identifier.name));
+
+    ast_add_child (astnode->left, col_name_node );
+
     token_code = yylex ();
     if (!sql_valid_dtype (token_code)) {
         PARSER_ERROR_EXIT(token_code, 0);
@@ -82,13 +90,19 @@ create_q_parse_columns () {
 }
 
 static int
-create_q_parse_table_name () {
+create_q_parse_table_name ( ast_node_t *astnode) {
 
     int token_code = yylex();
     if (token_code != SQL_IDENTIFIER) {
         PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
     }
     printf ("Table Name = %s\n", yytext);
+
+    ast_node_t *tble_name_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+    tble_name_node->entity_type = SQL_IDENTIFIER;
+    tble_name_node->u.identifier.ident_type = SQL_TABLE_NAME;
+    strncpy(tble_name_node->u.identifier.identifier.name, yytext, sizeof (tble_name_node->u.identifier.identifier.name));
+    ast_add_child (astnode, tble_name_node);
 
     token_code = yylex ();
     if (token_code != BRACK_START) {
@@ -99,10 +113,10 @@ create_q_parse_table_name () {
 }
 
 static void 
-parse_create_query() {
+parse_create_query( ast_node_t *astroot) {
     
-    int token_code = create_q_parse_table_name ();
-    token_code =  create_q_parse_columns ();
+    int token_code = create_q_parse_table_name (astroot);
+    token_code =  create_q_parse_columns (astroot->child);
 
     while (1) {
         switch (token_code) {

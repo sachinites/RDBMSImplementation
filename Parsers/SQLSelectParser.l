@@ -381,6 +381,8 @@ parse_update_query ()  {}
 static void 
 parse_sql_query () {
 
+    ast_node_t *astroot = NULL;
+
     int token_code = yylex();
 
     switch (token_code) {
@@ -394,7 +396,10 @@ parse_sql_query () {
             //parse_update_query ();
             break;
         case SQL_CREATE_Q:
-            parse_create_query();
+            astroot = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+            astroot->entity_type = SQL_QUERY_TYPE;
+            astroot->u.q_type = SQL_CREATE_Q;
+            parse_create_query(astroot);
             break;
         default:
             printf ("%s Query not supported\n", yytext);
