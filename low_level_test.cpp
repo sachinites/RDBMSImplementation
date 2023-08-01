@@ -42,7 +42,7 @@ main (int argc, char **argv) {
     pg_pgno_to_mapped_addr_ht_insert (db_pg1, db_pg1_ptr);
 
     /* Lets allocate memort for student object and initialize it*/
-    stud_t *stud1 = (stud_t *)allocator_alloc_mem (db_pg1_ptr, sizeof(stud_t));
+    stud_t *stud1 = (stud_t *)allocator_alloc_mem ( sizeof(stud_t));
     strncpy (stud1->name, "Abhishek", sizeof(stud1->name));
 
     /* We re done, destory the mapping */

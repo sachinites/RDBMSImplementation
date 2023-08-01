@@ -47,7 +47,7 @@ uapi_mem_alloc (fd_t fd, uint32_t req_size, void **ptr) {
 
     block_meta_data = pq_glue_to_block_meta_data (curr);
 
-    *ptr = allocator_alloc_mem ((void *)block_meta_data->base_address, req_size);
+    *ptr = allocator_alloc_mem (req_size);
     assert(*ptr);
 
     pg_no_t pg_no = ht_lookup_page_no_by_page_address ((void *)block_meta_data->base_address);
@@ -81,7 +81,7 @@ uapi_mem_free (fd_t fd, uint64_t disk_addr) {
     /* Disk page is loaded in memory, release the object from main memory loaded page*/
     void *object_addr = (void *)((char *)page_mapped_addr + offset_within_page);
 
-    mem_freed = allocator_free_mem(page_mapped_addr, object_addr);
+    mem_freed = allocator_free_mem(object_addr);
 
     if (allocator_is_vm_page_empty(page_mapped_addr)) {
 

@@ -37,10 +37,10 @@ void
 allocator_deinit (void *base_address);
 
 void *
-allocator_alloc_mem (void *base_address, uint32_t req_size);
+allocator_alloc_mem (uint32_t req_size);
 
 uint32_t
-allocator_free_mem (void *base_address, void *addr) ;
+allocator_free_mem (void *addr) ;
 
 bool
 allocator_is_vm_page_empty(void *base_address);
