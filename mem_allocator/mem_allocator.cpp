@@ -171,17 +171,18 @@ allocator_split_free_data_block_for_allocation (
 }
 
 void *
-allocator_alloc_mem (void *base_address, uint32_t req_size) {
+allocator_alloc_mem (uint32_t req_size) {
 
     glthread_t *curr;
-    vm_page_hdr_t *vm_page_hdr = (vm_page_hdr_t *)base_address;
     curr = dequeue_glthread_first(&free_block_list_head);
     if (!curr) return NULL;
     block_meta_data_t *block_meta_data = pq_glue_to_block_meta_data(curr);
     assert(block_meta_data->is_free);
     if (block_meta_data->block_size < req_size) return NULL;
     if (!allocator_split_free_data_block_for_allocation(
-            (char *)base_address, vm_page_hdr, block_meta_data, req_size)) {
+            (char *)block_meta_data->base_address, 
+            (vm_page_hdr_t *)block_meta_data->base_address, 
+            block_meta_data, req_size)) {
         return NULL;
     }
     memset((char *)(block_meta_data + 1), 0, block_meta_data->block_size);
@@ -253,13 +254,13 @@ allocator_free_block (char *base_address, block_meta_data_t *to_be_free_block) {
 }
 
 uint32_t
-allocator_free_mem (void *base_address, void *addr) {
+allocator_free_mem (void *addr) {
 
     block_meta_data_t *block_meta_data = 
         (block_meta_data_t *)((char *)addr - sizeof(block_meta_data_t));
     
     assert(!block_meta_data->is_free);
-    return allocator_free_block((char *)base_address, block_meta_data);
+    return allocator_free_block((char *)block_meta_data->base_address, block_meta_data);
 }
 
 bool
