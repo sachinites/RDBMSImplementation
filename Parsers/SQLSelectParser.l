@@ -1,6 +1,5 @@
-/* This file implements the SQL Parser which accespts all SQL queries 
-    satisfying the below Grammar :
-    
+/* This file implements the SQL Parser which accespts all SQL queries satisfying the below Grammar 
+
     <sql_query>         ::= <select_query> | <update_query> | <delete_query>
 
     <select_query>     ::=  SELECT <columns> FROM <tables> WHERE <conditions>
@@ -34,9 +33,12 @@
      <mop>  ::= <   |   >   |   =   |   != 
 */
 
+
 %{
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <memory.h>
 #include "common.h"
 #include "Ast.h"
 
@@ -400,6 +402,7 @@ parse_sql_query () {
             astroot->entity_type = SQL_QUERY_TYPE;
             astroot->u.q_type = SQL_CREATE_Q;
             parse_create_query(astroot);
+            ast_print (astroot, 0);
             break;
         default:
             printf ("%s Query not supported\n", yytext);

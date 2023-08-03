@@ -1,3 +1,6 @@
+#ifndef __AST__
+#define __AST__
+
 #include "SQLParserStruct.h"
 
 typedef struct ast_node_ {
@@ -8,9 +11,11 @@ typedef struct ast_node_ {
         sql_agg_fn_t agg_fn;
         sql_keywords_t kw;
         sql_op_t op;
+        sql_dype_t dtype;
+        sql_dtype_attr_t dtype_attr;
         struct {
             sql_identifier_type_t ident_type;
-            str_identifier_t identifer;
+            str_identifier_t identifier;
         } identifier;
     }u;
     struct ast_node_ *child_list;
@@ -27,6 +32,12 @@ ast_find (ast_node_t *root, ast_node_t *tmplate);
 void 
 ast_destroy_tree (ast_node_t *root);
 
+void 
+ast_print (ast_node_t *root, int depth) ;
+
+
 #define FOR_ALL_AST_CHILD(astnode_ptr, ptr) \
     for (ptr = astnode_ptr->child_list; ptr; ptr = ptr->next)
 
+
+#endif 
