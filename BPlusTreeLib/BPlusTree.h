@@ -51,7 +51,7 @@ extern void BPlusTree_init (BPlusTree_t *,
 
 extern void BPlusTree_SetMaxChildNumber(BPlusTree_t *, int);
 extern void BPlusTree_Destroy(BPlusTree_t *);
-extern int BPlusTree_Insert(BPlusTree_t *, BPluskey_t *, void*);
+extern bool BPlusTree_Insert(BPlusTree_t *, BPluskey_t *, void*);
 
 extern void BPlusTree_Query_Key(BPlusTree_t *tree,
 				BPluskey_t *key);

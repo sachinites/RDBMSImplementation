@@ -29,7 +29,7 @@ static bool
 ast_match (ast_node_t *root, ast_node_t *tmplate) {
 
     if (root->entity_type != tmplate->entity_type) return false;
-    if (memcmp (&root->u, &tmplate->u, sizeof (root->u)) == 0) return true;
+    if (memcmp (&root->u, &tmplate->u, sizeof(int)) == 0) return true;
     return false;
 }
 

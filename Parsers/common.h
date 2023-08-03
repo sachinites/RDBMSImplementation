@@ -11,6 +11,7 @@
 #define COMMA 1003
 #define INTEGER 1004
 #define WILDCARD 1005
+#define SHOW_DB_TABLES  1006
 
 #define PARSER_ERROR_EXIT(code, expected_code) \
     if (code != expected_code) yyerror (code, expected_code, yytext, yylineno)

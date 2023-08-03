@@ -351,6 +351,7 @@ void Destroy(BPlusTreeNode* Cur, BPlusTree_value_free_fn free_fn) {
 		for (i = 0; i < Cur->key_num; i++)
 			Destroy(Cur->child[i], free_fn);
 	}
+	free(Cur->key->key);
 	free(Cur);
 }
 
@@ -369,7 +370,8 @@ void Print(BPlusTreeNode* Cur) {
 #endif 
 
 /** Interface: Insert (key, value) into B+tree */
-int BPlusTree_Insert(BPlusTree_t *tree, BPluskey_t *key, void* value) {
+bool
+BPlusTree_Insert(BPlusTree_t *tree, BPluskey_t *key, void* value) {
 
 	BPlusTreeNode* Leaf = Find(tree, key, true);
 	int i = Binary_Search(tree, Leaf, key);

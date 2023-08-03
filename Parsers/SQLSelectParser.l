@@ -127,6 +127,10 @@
     return EOL;
 }
 
+"dt\n" {
+    return SHOW_DB_TABLES;
+}
+
 "," {
 
     return COMMA;
@@ -380,6 +384,8 @@ parse_update_query ()  {}
 
 #include "SQLCreateParser.c"
 
+#include "../core/sql_intf.h"
+
 static void 
 parse_sql_query () {
 
@@ -403,17 +409,23 @@ parse_sql_query () {
             astroot->u.q_type = SQL_CREATE_Q;
             parse_create_query(astroot);
             ast_print (astroot, 0);
+            sql_process_create_query(NULL, astroot);
+            break;
+        case SHOW_DB_TABLES:
+            sql_show_table_catalog (NULL);
             break;
         default:
             printf ("%s Query not supported\n", yytext);
-            exit(0);
+            break;
     }
 }
 
 int 
 main (int argc, char **argv) {
 
-    parse_sql_query();
-    printf ("Parser finished successfully\n");
+    while(1) {
+        parse_sql_query();
+        printf ("Parser finished successfully\n");
+    }
     return 0;
 }

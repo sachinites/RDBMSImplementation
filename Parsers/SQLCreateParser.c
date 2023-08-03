@@ -115,7 +115,7 @@ create_q_parse_columns (ast_node_t *table_name) {
             PARSER_ERROR_EXIT(token_code, 0);
     }
 
-    return token_code;
+    return yylex();
 }
 
 static int
@@ -153,8 +153,7 @@ parse_create_query( ast_node_t *create_kw) {
                 printf ("\n");
                 token_code = create_q_parse_columns(create_kw->child_list);
                 break;
-            case BRACK_END:
-                printf ("\n");
+            case EOL:
                 return;
         }
     }
