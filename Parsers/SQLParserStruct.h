@@ -110,4 +110,19 @@ sql_valid_dtype (int dtype) {
     return 0;
 }
 
+static inline int
+sql_dtype_size (sql_dype_t dtype) {
+
+    switch (dtype)
+    {
+    case SQL_STRING:
+        return 1;
+    case SQL_INT:
+        return 4;
+    case SQL_FLOAT:
+        return sizeof(float);
+    }
+    return 0;
+}
+
 #endif 

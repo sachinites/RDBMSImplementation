@@ -156,15 +156,14 @@ Catalog_create_schema_table_records (ast_node_t *root,
 
     int i;
     int col_count = 0;
+    int offset = 0;
+    bool offset_upd = false;
     ast_node_t *attr_node;
     ast_node_t *col_node;
     ast_node_t *identifier_node;
     ast_node_t *col_dtype_node;
     ast_node_t astnode_tmplate;
     ast_node_t *table_name_node;
-
-    bkeys = NULL;
-    crecords = NULL;
 
     switch (root->entity_type) {
 
@@ -181,10 +180,7 @@ Catalog_create_schema_table_records (ast_node_t *root,
                     assert (table_name_node);
                     col_count = 0;
 
-                    FOR_ALL_AST_CHILD(table_name_node, col_node) {
-
-                        col_count++;
-                    }
+                    FOR_ALL_AST_CHILD(table_name_node, col_node) { col_count++; }
 
                     if (!col_count) return 0;
 
@@ -193,6 +189,8 @@ Catalog_create_schema_table_records (ast_node_t *root,
 
                     i = 0;
                     FOR_ALL_AST_CHILD(table_name_node, col_node) {
+                        
+                        offset_upd = false;
 
                         (*bkeys)[i] = (BPluskey_t *)calloc (1, sizeof (BPluskey_t));
                         (*bkeys[i])->key = (void *)calloc (1, SQL_COLUMN_NAME_MAX_SIZE);
@@ -205,19 +203,24 @@ Catalog_create_schema_table_records (ast_node_t *root,
                         assert (col_dtype_node->entity_type == SQL_DTYPE);
 
                         (*crecords)[i]->dtype = col_dtype_node->u.dtype;
-
                         (*crecords [i])->dtype_size = 1;
+                        (*crecords [i])->offset = offset ;
 
                          FOR_ALL_AST_CHILD(col_dtype_node, attr_node) {
 
                             assert (attr_node->entity_type == SQL_DTYPE_ATTR);
+
                             switch (attr_node->u.dtype_attr)
                             {
                             case SQL_DTYPE_LEN:
                                 identifier_node = attr_node->child_list;
                                 assert(identifier_node->entity_type == SQL_IDENTIFIER);
                                 assert(identifier_node->u.identifier.ident_type == SQL_INTEGER_VALUE);
-                                memcpy (&(*crecords [i])->dtype_size, identifier_node->u.identifier.identifier.name, sizeof (int));
+                                memcpy (&(*crecords [i])->dtype_size,
+                                    identifier_node->u.identifier.identifier.name, sizeof (int));
+                                offset += (*(int *)identifier_node->u.identifier.identifier.name ) * 
+                                                sql_dtype_size(col_dtype_node->u.dtype);
+                                offset_upd = true;
                                 break;
                             case SQL_DTYPE_PRIMARY_KEY:
                                 (*crecords [i])->is_primary_key = true;
@@ -226,6 +229,10 @@ Catalog_create_schema_table_records (ast_node_t *root,
                                 (*crecords [i])->is_non_null = true;
                                 break;
                             }
+                         }
+                         if (offset_upd == false) {
+                            offset += sql_dtype_size(col_dtype_node->u.dtype);
+                            offset_upd = true;
                          }
                          i++;
                     }

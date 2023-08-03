@@ -14,7 +14,7 @@ typedef struct schema_rec_ {
     int dtype_size;
     bool is_primary_key;
     bool is_non_null;
-
+    int offset;
 } schema_rec_t;
 
 typedef struct catalog_table_value {
