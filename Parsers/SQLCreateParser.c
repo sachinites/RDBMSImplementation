@@ -17,7 +17,7 @@ create_q_parse_columns (ast_node_t *table_name) {
     if (token_code != SQL_IDENTIFIER) {
         PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
     }
-    printf ("col name = %s ", yytext);
+    //printf ("col name = %s ", yytext);
 
     ast_node_t *col_name_node = (ast_node_t *)calloc (1, sizeof (ast_node_t ));
     col_name_node->entity_type = SQL_IDENTIFIER;
@@ -30,7 +30,7 @@ create_q_parse_columns (ast_node_t *table_name) {
     if (!sql_valid_dtype (token_code)) {
         PARSER_ERROR_EXIT(token_code, 0);
     }
-    printf ("whose dtype name = %s (%d) ", yytext, token_code);
+    //printf ("whose dtype name = %s (%d) ", yytext, token_code);
 
     ast_node_t *dtype =  (ast_node_t *)calloc (1, sizeof (ast_node_t ));
     dtype->entity_type = SQL_DTYPE;
@@ -49,10 +49,10 @@ create_q_parse_columns (ast_node_t *table_name) {
         }        
         int a = atoi (yytext);
         if (a >= 256) {
-            printf ("\nError : VARCHAR max size supported is 255\n");
+          //  printf ("\nError : VARCHAR max size supported is 255\n");
             exit(0);
         }
-        printf (" and varchar len is %d ", a);
+        //printf (" and varchar len is %d ", a);
 
         ast_node_t *dtype_attr_len =  (ast_node_t *)calloc (1, sizeof (ast_node_t ));
         dtype_attr_len->entity_type = SQL_DTYPE_ATTR;
@@ -72,50 +72,34 @@ create_q_parse_columns (ast_node_t *table_name) {
             PARSER_ERROR_EXIT(token_code, BRACK_END);
         }
     }
+
     token_code = yylex ();
+
     switch (token_code) {
+
         case SQL_PRIMARY_KEY:
-            printf ("which is primary key ");
+          //  printf ("which is primary key ");
             ast_node_t *dtype_attr_pr_key =  (ast_node_t *)calloc (1, sizeof (ast_node_t ));
             dtype_attr_pr_key->entity_type = SQL_DTYPE_ATTR;
             dtype_attr_pr_key->u.dtype_attr = SQL_DTYPE_PRIMARY_KEY;
             ast_add_child (dtype, dtype_attr_pr_key);
-
-            token_code = yylex ();
-             switch(token_code) {
-                case COMMA:
-                case  BRACK_END:
-                    break;
-                default:
-                    PARSER_ERROR_EXIT(token_code, 0);
-                    break;
-             }
-             break;
+            break;
         case SQL_NOT_NULL:
-             printf ("which is not null ");
+           //  printf ("which is not null ");
             ast_node_t *dtype_attr_not_null =  (ast_node_t *)calloc (1, sizeof (ast_node_t ));
             dtype_attr_pr_key->entity_type = SQL_DTYPE_ATTR;
             dtype_attr_pr_key->u.dtype_attr = SQL_DTYPE_NOT_NULL ;
             ast_add_child (dtype, dtype_attr_not_null);
-
-             token_code = yylex ();
-             switch(token_code) {
-                case COMMA:
-                case  BRACK_END:
-                    break;
-                default:
-                    PARSER_ERROR_EXIT(token_code, 0);
-                    break;
-             }
-             break;
+            break;
+        case BRACK_END:
         case COMMA:
-        case  BRACK_END:
-        break;
+            break;
         default :
             PARSER_ERROR_EXIT(token_code, 0);
+            break;
     }
 
-    return yylex();
+    return token_code;
 }
 
 static int
@@ -125,7 +109,7 @@ create_q_parse_table_name ( ast_node_t *create_kw) {
     if (token_code != SQL_IDENTIFIER) {
         PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
     }
-    printf ("Table Name = %s\n", yytext);
+   // printf ("Table Name = %s\n", yytext);
 
     ast_node_t *tble_name_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
     tble_name_node->entity_type = SQL_IDENTIFIER;
@@ -148,13 +132,23 @@ parse_create_query( ast_node_t *create_kw) {
     token_code =  create_q_parse_columns (create_kw->child_list);
 
     while (1) {
+
         switch (token_code) {
+            case SQL_PRIMARY_KEY:
+            case SQL_NOT_NULL:
+                token_code = yylex();
+                continue;
             case COMMA:
-                printf ("\n");
                 token_code = create_q_parse_columns(create_kw->child_list);
                 break;
-            case EOL:
-                return;
+            case BRACK_END:
+                    token_code = yylex();
+                    if (token_code != EOL) {
+                        PARSER_ERROR_EXIT(token_code, EOL);
+                    }
+                    return;
+            default:
+                PARSER_ERROR_EXIT(token_code, 0);
         }
     }
 }

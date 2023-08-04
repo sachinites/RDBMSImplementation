@@ -110,7 +110,7 @@ ast_node_print (ast_node_t *root, int depth) {
                     printf ("Dtype : String\n");
                     break;
                 case SQL_INT:
-                    printf ("Dtype : int");
+                    printf ("Dtype : int\n");
                     break;
                 case SQL_FLOAT:
                 printf ("Dtype : float\n");

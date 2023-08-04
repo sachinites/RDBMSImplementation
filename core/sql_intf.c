@@ -10,13 +10,22 @@ extern BPlusTree_t TableCatalogDef;
 bool 
 sql_process_create_query (BPlusTree_t *TableCatalog, ast_node_t *root) {
 
-    return Catalog_insert_new_table (TableCatalog , root);
+    if (Catalog_insert_new_table (TableCatalog , root)) {
+        printf ("CREATE TABLE\n");
+    }
+}
+
+bool 
+sql_process_insert_query (BPlusTree_t *TableCatalog, ast_node_t *root) {
+
+    return true;
 }
 
 void 
 sql_show_table_catalog (BPlusTree_t *TableCatalog) {
 
     int i;
+    int rows = 0;
     BPluskey_t *key;
     BPlusTreeNode *bnode;
     unsigned char table_name[SQL_TABLE_NAME_MAX_SIZE];
@@ -31,7 +40,13 @@ sql_show_table_catalog (BPlusTree_t *TableCatalog) {
         bnode = bnode->child[0];
     }
 
-    while (bnode != NULL) {
+    if (!bnode) return;
+
+    printf ("           List of relations\n");
+    printf (" Schema    |           Name           | Type   | owner  \n");
+    printf ("-----------+--------------------------+-------+--------------\n");
+
+    while (bnode) {
         
         for (i = 0; i < bnode->key_num; i++) {
 
@@ -39,10 +54,15 @@ sql_show_table_catalog (BPlusTree_t *TableCatalog) {
 
             tcatalog->key_fmt_fn (key, table_name, SQL_TABLE_NAME_MAX_SIZE);
             
-            printf (" %s\n", table_name);
+            printf (" public    | %-23s  | table | postgres  \n", table_name);
+            if (bnode->next) {
+                printf ("-----------+--------------------------+-------+--------------\n");
+            }
+            rows++;
         }
+
         bnode = bnode->next;
     }
-    return;
+    printf ("(%d rows)\n", rows);
 }
 

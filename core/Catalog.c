@@ -165,7 +165,7 @@ Catalog_create_schema_table_records (ast_node_t *root,
     ast_node_t astnode_tmplate;
     ast_node_t *table_name_node;
 
-    switch (root->entity_type) {
+     switch (root->entity_type) {
 
         case SQL_QUERY_TYPE:
 
@@ -193,9 +193,9 @@ Catalog_create_schema_table_records (ast_node_t *root,
                         offset_upd = false;
 
                         (*bkeys)[i] = (BPluskey_t *)calloc (1, sizeof (BPluskey_t));
-                        (*bkeys[i])->key = (void *)calloc (1, SQL_COLUMN_NAME_MAX_SIZE);
-                        strncpy ((*bkeys[i])->key, col_node->u.identifier.identifier.name, SQL_COLUMN_NAME_MAX_SIZE);
-                        (*bkeys[i])->key_size = SQL_COLUMN_NAME_MAX_SIZE;
+                        (*bkeys)[i]->key = (void *)calloc (1, SQL_COLUMN_NAME_MAX_SIZE);
+                        strncpy ((*bkeys)[i]->key, col_node->u.identifier.identifier.name, SQL_COLUMN_NAME_MAX_SIZE);
+                        (*bkeys)[i]->key_size = SQL_COLUMN_NAME_MAX_SIZE;
 
                         (*crecords)[i] =  (schema_rec_t *)calloc (1 , sizeof ( schema_rec_t ));
 
@@ -203,8 +203,8 @@ Catalog_create_schema_table_records (ast_node_t *root,
                         assert (col_dtype_node->entity_type == SQL_DTYPE);
 
                         (*crecords)[i]->dtype = col_dtype_node->u.dtype;
-                        (*crecords [i])->dtype_size = 1;
-                        (*crecords [i])->offset = offset ;
+                        (*crecords)[i]->dtype_size = 1;
+                        (*crecords)[i]->offset = offset ;
 
                          FOR_ALL_AST_CHILD(col_dtype_node, attr_node) {
 
@@ -216,17 +216,17 @@ Catalog_create_schema_table_records (ast_node_t *root,
                                 identifier_node = attr_node->child_list;
                                 assert(identifier_node->entity_type == SQL_IDENTIFIER);
                                 assert(identifier_node->u.identifier.ident_type == SQL_INTEGER_VALUE);
-                                memcpy (&(*crecords [i])->dtype_size,
+                                memcpy (&(*crecords)[i]->dtype_size,
                                     identifier_node->u.identifier.identifier.name, sizeof (int));
                                 offset += (*(int *)identifier_node->u.identifier.identifier.name ) * 
                                                 sql_dtype_size(col_dtype_node->u.dtype);
                                 offset_upd = true;
                                 break;
                             case SQL_DTYPE_PRIMARY_KEY:
-                                (*crecords [i])->is_primary_key = true;
+                                (*crecords)[i]->is_primary_key = true;
                                 break;
                             case SQL_DTYPE_NOT_NULL:
-                                (*crecords [i])->is_non_null = true;
+                                (*crecords)[i]->is_non_null = true;
                                 break;
                             }
                          }

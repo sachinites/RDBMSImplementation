@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <stdint.h>
 #include "common.h"
 #include "Ast.h"
 
@@ -51,6 +52,9 @@
 }
 "create table" {
     return SQL_CREATE_Q;
+}
+"insert into" {
+    return SQL_INSERT_Q;
 }
 "varchar" {
     return SQL_STRING;
@@ -99,6 +103,10 @@
     return BRACK_END;
 }
 
+"'" {
+    return QUOTATION_MARK;
+}
+
 "<" {
     return SQL_LESS_THAN;
 }
@@ -127,7 +135,7 @@
     return EOL;
 }
 
-"dt\n" {
+"\\dt\n" {
     return SHOW_DB_TABLES;
 }
 
@@ -144,8 +152,16 @@
     /*ignore*/
 }
 
+"\\q" {
+    return QUIT;
+}
+
 [1-9][0-9]* {
     return INTEGER;
+}
+
+"^[a-zA-Z]+(?:[\s.]+[a-zA-Z]+)*$" {
+    return SQL_STRING_VALUE;
 }
 
 [a-zA-Z0-9]+ {
@@ -166,15 +182,15 @@
 static void 
 parse_first_aggregated_column (int token_code) {
 
-    printf ("Aggregated Colmn name is : %s", yytext);
+    //printf ("Aggregated Colmn name is : %s", yytext);
     token_code = yylex();
     PARSER_ERROR_EXIT(token_code, BRACK_START);
     token_code = yylex();
     PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
-    printf ("(%s", yytext);
+    //printf ("(%s", yytext);
     token_code = yylex();
     PARSER_ERROR_EXIT(token_code, BRACK_END);
-    printf (")\n");
+    //printf (")\n");
 }
 
 static int
@@ -193,15 +209,15 @@ parse_aggregated_columns() {
             case SQL_MAX:
             case SQL_COUNT:
             case SQL_AVG:
-                printf ("Aggregated Colmn name is : %s", yytext);
+               // printf ("Aggregated Colmn name is : %s", yytext);
                 token_code = yylex();
                 PARSER_ERROR_EXIT(token_code, BRACK_START);
                 token_code = yylex();
                 PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
-                printf ("(%s", yytext);
+               // printf ("(%s", yytext);
                 token_code = yylex();
                 PARSER_ERROR_EXIT(token_code, BRACK_END);
-                printf (")\n");
+               // printf (")\n");
                 token_code = yylex();
                 if (token_code != COMMA) {
                     return token_code;
@@ -217,7 +233,7 @@ parse_aggregated_columns() {
 static void 
  parse_first_plain_column (int token_code) {
 
-    printf ("Colmn name is : %s\n", yytext);
+    //printf ("Colmn name is : %s\n", yytext);
  }
 
 static int
@@ -229,7 +245,7 @@ parse_plain_coumns() {
 
         token_code = yylex();
         PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
-        printf ("Colmn name is : %s\n", yytext);
+       // printf ("Colmn name is : %s\n", yytext);
         token_code = yylex();
         if (token_code != COMMA) {
             break;
@@ -264,7 +280,7 @@ parse_columns () {
             }
             break;
         case WILDCARD:
-            printf ("Colmn name is : %s\n", yytext);
+           // printf ("Colmn name is : %s\n", yytext);
             token_code = yylex();
             break;
         default: ;
@@ -297,7 +313,7 @@ parse_where_condition() {
         PARSER_ERROR_EXIT(token_code, INTEGER);
         value = atoi (yytext);
 
-        printf ("Condition : %s %d %d\n", col_name, op_code, value);
+        //printf ("Condition : %s %d %d\n", col_name, op_code, value);
     }
 
     else if (token_code == SQL_IN) {
@@ -322,7 +338,7 @@ parse_where_conditions() {
 
             case SQL_AND:
             case SQL_OR:
-                printf ("logical Op : %s\n", yytext);
+                //printf ("logical Op : %s\n", yytext);
             break;
             case EOL:
                 return token_code;
@@ -339,7 +355,7 @@ parse_tables() {
     while(1) {
         token_code = yylex();
         PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
-        printf ("Table Name : %s\n", yytext);
+        //printf ("Table Name : %s\n", yytext);
         token_code = yylex();
         if (token_code == COMMA) {
             continue;
@@ -383,13 +399,15 @@ static  void
 parse_update_query ()  {}
 
 #include "SQLCreateParser.c"
-
+#include "SQLInsertIntoParser.c"
 #include "../core/sql_intf.h"
 
 static void 
 parse_sql_query () {
 
     ast_node_t *astroot = NULL;
+
+    printf ("postgres=# ");
 
     int token_code = yylex();
 
@@ -408,14 +426,27 @@ parse_sql_query () {
             astroot->entity_type = SQL_QUERY_TYPE;
             astroot->u.q_type = SQL_CREATE_Q;
             parse_create_query(astroot);
-            ast_print (astroot, 0);
+            //ast_print (astroot, 0);
             sql_process_create_query(NULL, astroot);
             break;
         case SHOW_DB_TABLES:
             sql_show_table_catalog (NULL);
             break;
+        case SQL_INSERT_Q:
+             astroot = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+             astroot->entity_type = SQL_QUERY_TYPE;
+             astroot->u.q_type = SQL_INSERT_Q;
+             parse_insert_query (astroot);
+             //ast_print (astroot, 0);
+             sql_process_insert_query(NULL, astroot);
+             break;
+        case EOL:
+            break;
+        case QUIT:
+            exit(0);
         default:
-            printf ("%s Query not supported\n", yytext);
+            printf ("%s : Unsupported Command\n", yytext);
+            yylex(); // consume \n
             break;
     }
 }
@@ -425,7 +456,6 @@ main (int argc, char **argv) {
 
     while(1) {
         parse_sql_query();
-        printf ("Parser finished successfully\n");
     }
     return 0;
 }
