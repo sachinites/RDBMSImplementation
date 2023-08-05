@@ -35,6 +35,7 @@ bool
 Catalog_insert_new_table (BPlusTree_t *catalog_table, ast_node_t *root) {
 
     int n, i;
+    list_node_t *lnode;
     BPluskey_t bkey;
     ast_node_t *ast_node;
     BPluskey_t **bkeys;
@@ -75,6 +76,7 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, ast_node_t *root) {
     ctable_val_t *ctable_val = (ctable_val_t *)calloc (1, sizeof (ctable_val_t));
     ctable_val->schema_table = NULL;
     ctable_val->rdbms_table = NULL;
+    init_glthread (&ctable_val->col_list_head);
 
      if (!BPlusTree_Insert (catalog_table, &bkey, (void *)ctable_val)) {
 
@@ -111,7 +113,11 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, ast_node_t *root) {
      }
 
      for (i = 0; i < n; i++) {
-
+        
+        lnode = (list_node_t *)calloc (1, sizeof (list_node_t));
+        init_glthread(&lnode->glue);
+        lnode->data = (void *)bkeys[i]->key;
+        glthread_add_last (&ctable_val->col_list_head, &lnode->glue);
         assert (BPlusTree_Insert (schema_table, bkeys[i], (void *)crecords[i]));
         /* insrt create a copy of the keys, so free what we have*/
         free(bkeys[i]);
@@ -203,7 +209,7 @@ Catalog_create_schema_table_records (ast_node_t *root,
                         assert (col_dtype_node->entity_type == SQL_DTYPE);
 
                         (*crecords)[i]->dtype = col_dtype_node->u.dtype;
-                        (*crecords)[i]->dtype_size = 1;
+                        (*crecords)[i]->dtype_size = sql_dtype_size (col_dtype_node->u.dtype);
                         (*crecords)[i]->offset = offset ;
 
                          FOR_ALL_AST_CHILD(col_dtype_node, attr_node) {
@@ -231,7 +237,7 @@ Catalog_create_schema_table_records (ast_node_t *root,
                             }
                          }
                          if (offset_upd == false) {
-                            offset += sql_dtype_size(col_dtype_node->u.dtype);
+                            offset += (*crecords)[i]->dtype_size;
                             offset_upd = true;
                          }
                          i++;

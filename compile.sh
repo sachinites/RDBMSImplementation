@@ -18,5 +18,7 @@ gcc -g -c   core/Catalog.c -o core/Catalog.o
 gcc -g -c   core/sql_intf.c -o core/sql_intf.o
 gcc -g -c   core/sql_utils.c -o core/sql_utils.o
 gcc -g -c   core/sql_io.c -o core/sql_io.o
+gcc -g -c   core/select.c -o core/selct.o
+gcc -g -c gluethread/glthread.c -o gluethread/glthread.o
 gcc -g -c   BPlusTreeLib/BPlusTree.c -o BPlusTreeLib/BPlusTree.o
-gcc -g Parsers/Ast.o Parsers/lex.yy.o core/Catalog.o core/sql_intf.o core/sql_utils.o core/sql_io.o c-hashtable/hashtable.o c-hashtable/hashtable_itr.o BPlusTreeLib/BPlusTree.o -o exe -lfl -lm
+gcc -g Parsers/Ast.o Parsers/lex.yy.o core/Catalog.o core/sql_intf.o core/sql_utils.o core/sql_io.o c-hashtable/hashtable.o c-hashtable/hashtable_itr.o BPlusTreeLib/BPlusTree.o core/selct.o gluethread/glthread.o -o exe -lfl -lm

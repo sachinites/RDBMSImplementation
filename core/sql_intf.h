@@ -18,4 +18,7 @@ sql_show_table_catalog (BPlusTree_t *TableCatalog);
 void 
 sql_print_record (BPlusTree_t *TableSchema, unsigned char *record, bool hr);
 
+void 
+sql_process_select_query (BPlusTree_t *TableCatalog, ast_node_t *root) ;
+
 #endif 

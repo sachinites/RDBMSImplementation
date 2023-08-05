@@ -12,6 +12,8 @@ static int
 create_q_parse_columns (ast_node_t *table_name) {
 
     int token_code ;
+    ast_node_t *dtype_attr_pr_key;
+    ast_node_t *dtype_attr_not_null;
 
     token_code = yylex ();
     if (token_code != SQL_IDENTIFIER) {
@@ -79,14 +81,14 @@ create_q_parse_columns (ast_node_t *table_name) {
 
         case SQL_PRIMARY_KEY:
           //  printf ("which is primary key ");
-            ast_node_t *dtype_attr_pr_key =  (ast_node_t *)calloc (1, sizeof (ast_node_t ));
+            dtype_attr_pr_key =  (ast_node_t *)calloc (1, sizeof (ast_node_t ));
             dtype_attr_pr_key->entity_type = SQL_DTYPE_ATTR;
             dtype_attr_pr_key->u.dtype_attr = SQL_DTYPE_PRIMARY_KEY;
             ast_add_child (dtype, dtype_attr_pr_key);
             break;
         case SQL_NOT_NULL:
            //  printf ("which is not null ");
-            ast_node_t *dtype_attr_not_null =  (ast_node_t *)calloc (1, sizeof (ast_node_t ));
+            dtype_attr_not_null =  (ast_node_t *)calloc (1, sizeof (ast_node_t ));
             dtype_attr_pr_key->entity_type = SQL_DTYPE_ATTR;
             dtype_attr_pr_key->u.dtype_attr = SQL_DTYPE_NOT_NULL ;
             ast_add_child (dtype, dtype_attr_not_null);

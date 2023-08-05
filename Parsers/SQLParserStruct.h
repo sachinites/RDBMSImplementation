@@ -107,6 +107,7 @@ sql_valid_dtype (int dtype) {
         case SQL_STRING:
         case SQL_INT:
         case SQL_FLOAT:
+        case SQL_IPV4_ADDR:
         return 1;
     }
     return 0;
@@ -123,6 +124,8 @@ sql_dtype_size (sql_dype_t dtype) {
         return 4;
     case SQL_FLOAT:
         return sizeof(float);
+    case SQL_IPV4_ADDR:
+        return 4;
     }
     return 0;
 }

@@ -3,8 +3,11 @@
 
 #include <stdbool.h>
 #include "sql_const.h"
+#include "rdbms_struct.h"
+#include "../Parsers/SQLParserStruct.h"
 
 typedef struct BPlusTree BPlusTree_t ;
+typedef struct BPluskey BPluskey_t;
 typedef struct ast_node_ ast_node_t;
 typedef struct BPlusTreeNode BPlusTreeNode ;
 
@@ -21,7 +24,8 @@ typedef struct catalog_table_value {
 
     BPlusTree_t  *rdbms_table;
     BPlusTree_t  *schema_table;
-
+    glthread_t col_list_head;
+    
 } ctable_val_t;
 
 bool 

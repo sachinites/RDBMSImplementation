@@ -231,13 +231,19 @@ parse_aggregated_columns() {
 }
 
 static void 
- parse_first_plain_column (int token_code) {
+ parse_first_plain_column (int token_code, ast_node_t *parent) {
 
     //printf ("Colmn name is : %s\n", yytext);
+    ast_node_t *col_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+    col_node->entity_type = SQL_IDENTIFIER;
+    col_node->u.identifier.ident_type = SQL_COLUMN_NAME;
+    strncpy (col_node->u.identifier.identifier.name, yytext, 
+        sizeof (col_node->u.identifier.identifier.name));
+    ast_add_child (parent, col_node);
  }
 
 static int
-parse_plain_coumns() {
+parse_plain_coumns(ast_node_t *parent) {
 
     int token_code;
 
@@ -246,6 +252,12 @@ parse_plain_coumns() {
         token_code = yylex();
         PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
        // printf ("Colmn name is : %s\n", yytext);
+       ast_node_t *astnode = (ast_node_t *)calloc (1,sizeof (ast_node_t));
+       astnode->entity_type = SQL_IDENTIFIER;
+       astnode->u.identifier.ident_type = SQL_COLUMN_NAME;
+        strncpy (astnode->u.identifier.identifier.name, yytext, 
+        sizeof (astnode->u.identifier.identifier.name));
+        ast_add_child (parent, astnode);
         token_code = yylex();
         if (token_code != COMMA) {
             break;
@@ -255,7 +267,7 @@ parse_plain_coumns() {
 }
 
 static int
-parse_columns () {
+parse_columns (ast_node_t *parent) {
 
  int token_code = yylex();
 
@@ -273,10 +285,10 @@ parse_columns () {
             }
             break;
         case SQL_IDENTIFIER:
-            parse_first_plain_column (token_code);
+            parse_first_plain_column (token_code, parent);
             token_code = yylex();
             if (token_code == COMMA) {
-                token_code = parse_plain_coumns();
+                token_code = parse_plain_coumns(parent);
             }
             break;
         case WILDCARD:
@@ -348,14 +360,20 @@ parse_where_conditions() {
 }
 
 static int
-parse_tables() {
+parse_tables(ast_node_t *select_kw) {
 
     int token_code;
 
     while(1) {
+
         token_code = yylex();
         PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
         //printf ("Table Name : %s\n", yytext);
+        ast_node_t *tble_name_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+        tble_name_node->entity_type = SQL_IDENTIFIER;
+        tble_name_node->u.identifier.ident_type = SQL_TABLE_NAME;
+        strncpy(tble_name_node->u.identifier.identifier.name, yytext, sizeof (tble_name_node->u.identifier.identifier.name));
+        ast_add_child (select_kw, tble_name_node);
         token_code = yylex();
         if (token_code == COMMA) {
             continue;
@@ -365,18 +383,20 @@ parse_tables() {
 }
 
 static void 
-parse_select_query () {
+parse_select_query (ast_node_t *root) {
 
     int token_code;
-
+    ast_node_t parent_temp;
   //token_code = yylex();
   //PARSER_ERROR_EXIT(token_code, SQL_SELECT_Q);
   
-   token_code = parse_columns();
+   memset (&parent_temp, 0, sizeof (parent_temp));
+   token_code = parse_columns(&parent_temp);
 
    switch (token_code) {
     case SQL_FROM:
-        token_code = parse_tables();
+        token_code = parse_tables(root);
+        root->child_list->child_list = parent_temp.child_list;
         switch(token_code) {
             case SQL_WHERE:
                 token_code = parse_where_conditions();
@@ -415,7 +435,11 @@ parse_sql_query () {
 
         case SQL_SELECT_Q:
             //yyless(yyleng);
-            parse_select_query  ();
+            astroot = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+            astroot->entity_type = SQL_QUERY_TYPE;
+            astroot->u.q_type = SQL_SELECT_Q;
+            parse_select_query  (astroot);
+            sql_process_select_query (NULL, astroot);
             break;
         case SQL_UPDATE_Q:
            // yyless(yyleng);

@@ -381,7 +381,7 @@ BPlusTree_Insert(BPlusTree_t *tree, BPluskey_t *key, void* value) {
 }
 
 /** Interface: query all record whose key satisfy that key = query_key */
-void BPlusTree_Query_Key(BPlusTree_t *tree,
+void* BPlusTree_Query_Key(BPlusTree_t *tree,
 											  BPluskey_t *key) {
 
   	unsigned char key_output_buffer [128];
@@ -394,15 +394,17 @@ void BPlusTree_Query_Key(BPlusTree_t *tree,
 		//printf("%d ", Leaf->key[i]);
 		if (tree->comp_fn (&Leaf->key[i], key, tree->key_mdata, tree->key_mdata_size) == 0) {
 			QueryAnsNum++;
-			if (QueryAnsNum < 20) {
+			if (0 && QueryAnsNum < 20) {
 				tree->key_fmt_fn (&Leaf->key[i], key_output_buffer, sizeof (key_output_buffer));
 				tree->value_fmt_fn ((void *)Leaf->child[i], value_output_buffer, sizeof(value_output_buffer));
 				printf("[no.%d	key = %s, value = %s]\n", QueryAnsNum, 
 					key_output_buffer, value_output_buffer);
 			}
+			return (void *)Leaf->child[i];
 		}
 	}
-	printf("Total number of answers is: %d\n", QueryAnsNum);
+	//printf("Total number of answers is: %d\n", QueryAnsNum);
+	return NULL;
 }
 
 /** Interface: query all record whose key satisfy that query_l <= key <= query_r */

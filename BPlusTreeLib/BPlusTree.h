@@ -53,7 +53,7 @@ extern void BPlusTree_SetMaxChildNumber(BPlusTree_t *, int);
 extern void BPlusTree_Destroy(BPlusTree_t *);
 extern bool BPlusTree_Insert(BPlusTree_t *, BPluskey_t *, void*);
 
-extern void BPlusTree_Query_Key(BPlusTree_t *tree,
+extern void* BPlusTree_Query_Key(BPlusTree_t *tree,
 				BPluskey_t *key);
 				
 extern void BPlusTree_Query_Range(BPlusTree_t *, 
@@ -66,5 +66,33 @@ extern void  BPlusTree_Modify(
 extern void BPlusTree_Delete(
 			 BPlusTree_t *,
 			 BPluskey_t *);
+
+#define BPTREE_ITERATE_ALL_RECORDS_BEGIN(BPlusTree_ptr, key_ptr, rec_ptr)	\
+	{	\
+		int _i;	\
+		bool break_ctrl = false;	\
+		BPlusTreeNode *_bnode = BPlusTree_ptr->Root; \
+		key_ptr = NULL;	\
+		rec_ptr = NULL;	 \
+		while (_bnode && !_bnode->isLeaf) {	\
+        	_bnode = _bnode->child[0];	\
+    	}	\
+		while (_bnode)	{ \
+			for (_i = 0; _i < _bnode->key_num; _i++) {	\
+				key_ptr = &_bnode->key[_i];	\
+				rec_ptr = _bnode->child[_i];
+
+#define BPTREE_ITERATAION_BREAK	\
+	break_ctrl = true;	\
+	break;
+
+#define BPTREE_ITERATAION_CONTINUE	\
+	continue
+
+#define BPTREE_ITERATE_ALL_RECORDS_END(BPlusTree_ptr, key_ptr, rec_ptr)	\
+		} \
+		if (break_ctrl) break;	\
+		_bnode = _bnode->next;	\
+		}}
 
 #endif
