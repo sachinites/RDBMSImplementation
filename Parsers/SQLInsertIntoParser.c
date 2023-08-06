@@ -19,7 +19,6 @@ static int
      ast_node_t *astnode = NULL;
 
     token_code = yylex();
-
     switch (token_code) {
 
         case INTEGER:
@@ -45,6 +44,17 @@ static int
                         PARSER_ERROR_EXIT(token_code, QUOTATION_MARK);
                     }
                 break;
+                case SQL_IPV4_ADDR_VALUE:
+                    astnode = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+                    astnode->entity_type =  SQL_IDENTIFIER;
+                    astnode->u.identifier.ident_type = SQL_IPV4_ADDR_VALUE;
+                    memcpy (astnode->u.identifier.identifier.name, yytext, sizeof (astnode->u.identifier.identifier.name));
+                    ast_add_child (table_name_node , astnode);
+                    token_code = yylex();
+                    if (token_code != QUOTATION_MARK) {
+                        PARSER_ERROR_EXIT(token_code, QUOTATION_MARK);
+                    }
+                    break;
                     default:
                         PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
                         break;

@@ -65,6 +65,9 @@
 "float" {
     return SQL_FLOAT;
 }
+"ipv4" {
+    return SQL_IPV4_ADDR;
+}
 "primary key" {
     return SQL_PRIMARY_KEY;
 }
@@ -156,11 +159,16 @@
     return QUIT;
 }
 
+(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9]) {
+
+    return SQL_IPV4_ADDR_VALUE;
+}
+
 [1-9][0-9]* {
     return INTEGER;
 }
 
-"^[a-zA-Z]+(?:[\s.]+[a-zA-Z]+)*$" {
+^[a-zA-Z]+(?:[\s.]+[a-zA-Z]+)*$ {
     return SQL_STRING_VALUE;
 }
 

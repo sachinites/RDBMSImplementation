@@ -9,37 +9,53 @@
 #include "../BPlusTreeLib/BPlusTree.h"
 
 static void 
-print_spaces (char c , int n) {
-    while (n--) {
-        printf ("%c", c);
+print_line(int num_columns, int column_width) {
+    for (int i = 0; i < num_columns; i++) {
+        for (int j = 0; j < column_width; j++) {
+            putchar('-');
+        }
+        putchar('+');
     }
+    putchar('\n');
 }
 
 void 
-sql_print_hdr (BPlusTree_t *schema_table, glthread_t *col_list_head ) {
+sql_print_hdr (glthread_t *col_list_head ) {
 
     glthread_t *curr;
     list_node_t *lnode;
-    BPluskey_t bpkey_tmplate;
-    schema_rec_t *schema_rec;
+    unsigned char *column_name;
+    int num_columns = 0;
 
-    return ;
+    // Count the number of columns to calculate the width of each column
+    ITERATE_GLTHREAD_BEGIN(col_list_head, curr) {
+        num_columns++;
+    } ITERATE_GLTHREAD_END(col_list_head, curr);
 
-    ITERATE_GLTHREAD_BEGIN (col_list_head, curr) {
+    int column_width = 20; // Default column width
+    if (num_columns > 0) {
+        column_width = 80 / num_columns; // Adjust column width based on available space
+    }
 
+    // Print the top line
+    print_line(num_columns, column_width);
+
+    // Print the header row with column names
+    ITERATE_GLTHREAD_BEGIN(col_list_head, curr) {
         lnode = glue_to_list_node(curr);
-        bpkey_tmplate.key = (void *)lnode->data;
-        bpkey_tmplate.key_size = SQL_COLUMN_NAME_MAX_SIZE;
-        schema_rec = (schema_rec_t *) BPlusTree_Query_Key (schema_table, &bpkey_tmplate);
-       
+        column_name = (char *)lnode->data;
+        printf("%-*s|", column_width, column_name);
+    } ITERATE_GLTHREAD_END(col_list_head, curr);
 
-    } ITERATE_GLTHREAD_END (col_list_head, curr);
+    printf("\n");
+
+    // Print the line below the header
+    print_line(num_columns, column_width);
 }
 
-void 
- sql_emit_select_output (BPlusTree_t *schema_table, 
-                                        glthread_t *col_list_head, 
-                                        void *record_ptr) {
+void sql_emit_select_output(BPlusTree_t *schema_table, 
+                                              glthread_t *col_list_head,
+                                              void *record_ptr) {
 
     glthread_t *curr;
     list_node_t *lnode;
@@ -47,34 +63,54 @@ void
     schema_rec_t *schema_rec;
     BPluskey_t bpkey_tmplate;
 
-    ITERATE_GLTHREAD_BEGIN (col_list_head, curr) {
+    int num_columns = 0;
 
-        lnode =  glue_to_list_node(curr);
+    // Count the number of columns to calculate the width of each column
+    ITERATE_GLTHREAD_BEGIN(col_list_head, curr) {
+        num_columns++;
+    } ITERATE_GLTHREAD_END(col_list_head, curr);
+
+    int column_width = 20; // Default column width
+    if (num_columns > 0) {
+        column_width = 80 / num_columns; // Adjust column width based on available space
+    }
+
+    // Print each row of data
+    ITERATE_GLTHREAD_BEGIN(col_list_head, curr) {
+        lnode = glue_to_list_node(curr);
         column_name = (char *)lnode->data;
-        printf ("%s : ", column_name);
         bpkey_tmplate.key = (void *)column_name;
         bpkey_tmplate.key_size = SQL_COLUMN_NAME_MAX_SIZE;
-        schema_rec = (schema_rec_t *) BPlusTree_Query_Key (schema_table, &bpkey_tmplate);
+        schema_rec = (schema_rec_t *)BPlusTree_Query_Key(schema_table, &bpkey_tmplate);
         assert(schema_rec);
+
         switch (schema_rec->dtype) {
             case SQL_STRING:
-                printf ("%-20s\t", (char *)record_ptr + schema_rec->offset);
+                printf("%-*s|", column_width, (char *)record_ptr + schema_rec->offset);
                 break;
             case SQL_INT:
-                printf ("%-6d\t", *(int *)((char *)record_ptr + schema_rec->offset));
+                printf("%-*d|", column_width, *(int *)((char *)record_ptr + schema_rec->offset));
                 break;
             case SQL_FLOAT:
-                printf ("%-10f\t", *(float *)((char *)record_ptr + schema_rec->offset));
+                printf("%-*f|", column_width, *(float *)((char *)record_ptr + schema_rec->offset));
                 break;
-            case SQL_IPV4_ADDR:
-            {
-                unsigned char ipv4_addr_str [16];
-                inet_ntop (AF_INET, (char *)record_ptr + schema_rec->offset, ipv4_addr_str, 16);
-                printf ("%-16s\t", ipv4_addr_str);
+            case SQL_IPV4_ADDR: {
+                unsigned char ipv4_addr_str[16];
+                inet_ntop(AF_INET, (char *)record_ptr + schema_rec->offset, ipv4_addr_str, 16);
+                printf("%-*s|", column_width, ipv4_addr_str);
+                break;
             }
-            break;
             default:
                 assert(0);
         }
-    }  ITERATE_GLTHREAD_END (col_list_head, curr);
+    } ITERATE_GLTHREAD_END(col_list_head, curr);
+
+    printf("\n");
+
 }
+
+
+
+
+
+

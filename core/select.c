@@ -17,8 +17,8 @@ sql_process_select_query_internal (BPlusTree_t *schema_table,
     /* we wil implement a very simple select statement of the format :
         select <col1>, <col2>, .... from <table_name> 
     */
-
-    int i = 1;
+    int i = 0;
+    int total_rows = 0;
     void *record_ptr;
     BPluskey_t *bpkey_ptr;
     glthread_t col_list_head;
@@ -36,11 +36,14 @@ sql_process_select_query_internal (BPlusTree_t *schema_table,
         glthread_add_last (&col_list_head, &lnode->glue);
     }
 
-    sql_print_hdr (schema_table, &col_list_head);
-
     BPTREE_ITERATE_ALL_RECORDS_BEGIN(data_table, bpkey_ptr, record_ptr) {
 
-    printf ("\n%d.", i++);
+    if  ((i % 24) == 0) {
+        sql_print_hdr (&col_list_head);
+    }
+    i++;
+    total_rows++;
+
      sql_emit_select_output(schema_table, &col_list_head, record_ptr);
         
    } BPTREE_ITERATE_ALL_RECORDS_END(data_table, bpkey_ptr, record_ptr);
@@ -53,7 +56,7 @@ sql_process_select_query_internal (BPlusTree_t *schema_table,
 
     } ITERATE_GLTHREAD_END (&col_list_head, curr) 
 
-    printf ("\n");
+    printf ("(%d rows)\n", total_rows);
 }
 
 bool 

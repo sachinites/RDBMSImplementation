@@ -95,6 +95,7 @@ typedef enum sql_ident_type_ {
     SQL_COLUMN_NAME ,
     SQL_INTEGER_VALUE,
     SQL_STRING_VALUE ,
+    SQL_IPV4_ADDR_VALUE ,
     SQL_FLOAT_VALUE,
     SQL_IDNT_TYPE_MAX
 
