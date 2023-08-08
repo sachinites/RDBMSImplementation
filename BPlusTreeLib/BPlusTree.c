@@ -505,3 +505,36 @@ void BPlusTree_SetMaxChildNumber(BPlusTree_t *tree, int number) {
 	tree->MaxChildNumber = number + 1;
 }
 
+void *
+BPlusTree_get_next_record (BPlusTree_t *bptree, BPlusTreeNode **bnode, int *index) {
+
+	BPluskey_t *_key;
+	void* _rec;
+
+	/* Fetching the first record */
+	if (*bnode == NULL) {
+
+		BPTREE_ITERATE_ALL_RECORDS_BEGIN (bptree, _key, _rec) {
+
+			*index = 0;
+			*bnode = _bnode;
+			return _bnode->child[*index];
+
+		}  BPTREE_ITERATE_ALL_RECORDS_END(bptree, _key, _rec)
+	}
+
+	/* Subsequent fetch*/
+	*index++;
+	if (*index < (*bnode)->key_num) {
+		return (*bnode)->child[*index];
+	}
+
+	*index = 0;
+	*bnode = (*bnode)->next;
+
+	if (*bnode) {
+		return (*bnode)->child[*index];
+	}
+
+	return NULL;
+}

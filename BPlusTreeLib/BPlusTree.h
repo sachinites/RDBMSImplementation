@@ -95,4 +95,7 @@ extern void BPlusTree_Delete(
 		_bnode = _bnode->next;	\
 		}}
 
+void *
+BPlusTree_get_next_record (BPlusTree_t *, BPlusTreeNode **, int *);
+
 #endif

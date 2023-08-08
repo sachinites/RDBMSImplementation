@@ -34,8 +34,9 @@ typedef enum sql_agg_fn_ {
     SQL_MAX,
     SQL_COUNT,
     SQL_AVG,
-    SQL_MAX_MAX
-
+    SQL_AGG_FN_NONE,
+    SQL_MAX_MAX,
+ 
 } sql_agg_fn_t;
 
 typedef enum sql_keywords_ {
