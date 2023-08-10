@@ -144,13 +144,13 @@ sql_construct_table_key_mdata (ast_node_t *root, int *key_mdata_size) {
                                     is_non_null = true;
                                     break;
                             }
-                         }
+                         } FOR_ALL_AST_CHILD_END;
                          if (is_key) {
                             key_mdata[i].dtype = col_dtype_node->u.dtype;
                             key_mdata[i].size = attr_len;
                             i++;
                          }
-                    }
+                    } FOR_ALL_AST_CHILD_END;
                 break;
                 default:
                     assert(0);

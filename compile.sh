@@ -21,7 +21,6 @@ gcc -g -c   core/sql_io.c -o core/sql_io.o
 gcc -g -c   core/select.c -o core/select.o
 gcc -g -c Tracer/tracer.c -o Tracer/tracer.o
 gcc -g -c core/qplanner.c -o core/qplanner.o
-gcc -g -c EventDispatcher/event_dispatcher.c -o EventDispatcher/event_dispatcher.o
 gcc -g -c gluethread/glthread.c -o gluethread/glthread.o
 gcc -g -c   BPlusTreeLib/BPlusTree.c -o BPlusTreeLib/BPlusTree.o
-gcc -g Parsers/Ast.o Parsers/lex.yy.o core/Catalog.o core/sql_intf.o core/sql_utils.o core/sql_io.o c-hashtable/hashtable.o c-hashtable/hashtable_itr.o BPlusTreeLib/BPlusTree.o core/select.o gluethread/glthread.o Tracer/tracer.o core/qplanner.o EventDispatcher/event_dispatcher.o -o exe -lfl -lm -lpthread
+gcc -g Parsers/Ast.o Parsers/lex.yy.o core/Catalog.o core/sql_intf.o core/sql_utils.o core/sql_io.o c-hashtable/hashtable.o c-hashtable/hashtable_itr.o BPlusTreeLib/BPlusTree.o core/select.o gluethread/glthread.o Tracer/tracer.o core/qplanner.o  -o exe -lfl -lm -lpthread

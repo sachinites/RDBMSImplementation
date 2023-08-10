@@ -186,7 +186,9 @@ Catalog_create_schema_table_records (ast_node_t *root,
                     assert (table_name_node);
                     col_count = 0;
 
-                    FOR_ALL_AST_CHILD(table_name_node, col_node) { col_count++; }
+                    FOR_ALL_AST_CHILD(table_name_node, col_node) { 
+                        col_count++; 
+                    } FOR_ALL_AST_CHILD_END;
 
                     if (!col_count) return 0;
 
@@ -235,13 +237,13 @@ Catalog_create_schema_table_records (ast_node_t *root,
                                 (*crecords)[i]->is_non_null = true;
                                 break;
                             }
-                         }
+                         } FOR_ALL_AST_CHILD_END;
                          if (offset_upd == false) {
                             offset += (*crecords)[i]->dtype_size;
                             offset_upd = true;
                          }
                          i++;
-                    }
+                    } FOR_ALL_AST_CHILD_END;
                 break;
                 default:
                     assert(0);

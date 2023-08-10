@@ -188,7 +188,7 @@
 %%
 
 static void 
-parse_first_aggregated_column (int token_code) {
+parse_first_aggregated_column (int token_code, ast_node_t *parent) {
 
     //printf ("Aggregated Colmn name is : %s", yytext);
     token_code = yylex();
@@ -196,15 +196,22 @@ parse_first_aggregated_column (int token_code) {
     token_code = yylex();
     PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
     //printf ("(%s", yytext);
+    ast_node_t *column_name_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+    column_name_node->entity_type =  SQL_IDENTIFIER;
+    column_name_node->u.identifier.ident_type = SQL_COLUMN_NAME;
+    strcpy (column_name_node->u.identifier.identifier.name, yytext);
+    ast_add_child (parent, column_name_node);
     token_code = yylex();
     PARSER_ERROR_EXIT(token_code, BRACK_END);
     //printf (")\n");
 }
 
 static int
-parse_aggregated_columns() {
+parse_aggregated_columns(ast_node_t *parent) {
 
     int token_code;
+    ast_node_t *agg_fn_node ;
+    ast_node_t *column_name_node;
     /* Parse list of AGG columns 
     <function_name>(colmn_name) , . . . 
     */
@@ -218,11 +225,21 @@ parse_aggregated_columns() {
             case SQL_COUNT:
             case SQL_AVG:
                // printf ("Aggregated Colmn name is : %s", yytext);
+                agg_fn_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+                agg_fn_node->entity_type =  SQL_AGG_FN;
+                agg_fn_node->u.agg_fn = token_code;
                 token_code = yylex();
                 PARSER_ERROR_EXIT(token_code, BRACK_START);
                 token_code = yylex();
                 PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
                // printf ("(%s", yytext);
+               column_name_node = (ast_node_t *)calloc (1,sizeof (ast_node_t));
+               column_name_node->entity_type = SQL_IDENTIFIER;
+               column_name_node->u.identifier.ident_type = SQL_COLUMN_NAME;
+               strncpy (column_name_node->u.identifier.identifier.name, yytext, 
+                    sizeof column_name_node->u.identifier.identifier.name);
+                ast_add_child (column_name_node , agg_fn_node);
+                ast_add_child (parent, column_name_node);
                 token_code = yylex();
                 PARSER_ERROR_EXIT(token_code, BRACK_END);
                // printf (")\n");
@@ -286,10 +303,15 @@ parse_columns (ast_node_t *parent) {
         case SQL_MAX:
         case SQL_COUNT:
         case SQL_AVG:
-            parse_first_aggregated_column (token_code);
+            parse_first_aggregated_column (token_code, parent);
+            ast_node_t *column_name_node = parent->child_list;
+            ast_node_t *agg_fn_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+            agg_fn_node->entity_type =  SQL_AGG_FN;
+            agg_fn_node->u.agg_fn = token_code;
+            ast_add_child (column_name_node, agg_fn_node);
             token_code = yylex();
             if (token_code == COMMA) {
-                token_code = parse_aggregated_columns();
+                token_code = parse_aggregated_columns(parent);
             }
             break;
         case SQL_IDENTIFIER:
@@ -394,6 +416,7 @@ static void
 parse_select_query (ast_node_t *root) {
 
     int token_code;
+    ast_node_t *curr;
     ast_node_t parent_temp;
   //token_code = yylex();
   //PARSER_ERROR_EXIT(token_code, SQL_SELECT_Q);
@@ -404,7 +427,11 @@ parse_select_query (ast_node_t *root) {
    switch (token_code) {
     case SQL_FROM:
         token_code = parse_tables(root);
-        root->child_list->child_list = parent_temp.child_list;
+        FOR_ALL_AST_CHILD((&parent_temp), curr) {
+            curr->next = NULL;
+            curr->parent = NULL;
+            ast_add_child (root->child_list, curr);
+        }FOR_ALL_AST_CHILD_END;
         switch(token_code) {
             case SQL_WHERE:
                 token_code = parse_where_conditions();
@@ -447,7 +474,8 @@ parse_sql_query () {
             astroot->entity_type = SQL_QUERY_TYPE;
             astroot->u.q_type = SQL_SELECT_Q;
             parse_select_query  (astroot);
-            sql_process_select_query (NULL, astroot);
+            ast_print (astroot, 0);
+            //sql_process_select_query (NULL, astroot);
             break;
         case SQL_UPDATE_Q:
            // yyless(yyleng);

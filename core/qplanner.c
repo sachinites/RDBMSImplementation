@@ -1,11 +1,11 @@
 
 #include <assert.h>
+#include <stddef.h>
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "qplanner.h"
 #include "Catalog.h"
 #include "../Parsers/Ast.h"
 #include "../gluethread/glthread.h"
-#include "../EventDispatcher/event_dispatcher.h"
 
 #define NOT_SUPPORT_YET assert(0)
 

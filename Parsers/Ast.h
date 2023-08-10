@@ -36,8 +36,12 @@ void
 ast_print (ast_node_t *root, int depth) ;
 
 
-#define FOR_ALL_AST_CHILD(astnode_ptr, ptr) \
-    for (ptr = astnode_ptr->child_list; ptr; ptr = ptr->next)
+#define FOR_ALL_AST_CHILD(astnode_ptr, ptr)     \
+    {                                                                                \
+    ast_node_t *_temp;                                                  \
+    for (ptr = astnode_ptr->child_list; ptr; ptr = _temp){  \
+    _temp = ptr->next;
 
-
+ #define FOR_ALL_AST_CHILD_END }}
+ 
 #endif 

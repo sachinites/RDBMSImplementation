@@ -19,7 +19,8 @@ ast_add_child (ast_node_t *parent, ast_node_t *child) {
 
         if (cur->next) continue;
         break;
-    }
+
+    } FOR_ALL_AST_CHILD_END;
 
     cur->next = child;
     child->parent = parent;
@@ -47,7 +48,7 @@ ast_find (ast_node_t *root, ast_node_t *tmplate) {
 
        res =  ast_find (cur, tmplate);
        if (res) return res;
-    }
+    }  FOR_ALL_AST_CHILD_END;
 
     return NULL;
 }
@@ -61,7 +62,8 @@ ast_destroy_tree (ast_node_t *root) {
     FOR_ALL_AST_CHILD(root, cur) {
 
         ast_destroy_tree(cur);
-    }
+
+    } FOR_ALL_AST_CHILD_END;
 
     free(root);
 }
@@ -79,7 +81,29 @@ ast_node_print (ast_node_t *root, int depth) {
             printf ("Query type : %d\n", root->u.q_type);
             break;
         case SQL_AGG_FN:
-            printf ("Agg fn : %d\n", root->u.agg_fn);
+            switch (root->u.agg_fn) {
+                case SQL_SUM:
+                    printf ("Agg fn : sum\n");
+                    break;
+                case SQL_MIN:
+                    printf ("Agg fn : min\n");
+                    break;                
+                case SQL_MAX:
+                    printf ("Agg fn : max\n");
+                    break;                
+                case SQL_COUNT:
+                    printf ("Agg fn : count\n");
+                    break;                
+                case SQL_AVG:
+                    printf ("Agg fn : avg\n");
+                    break;                
+                case SQL_AGG_FN_NONE:
+                case SQL_MAX_MAX:
+                    printf ("Agg fn : None\n");
+                    break;
+                break;
+                default: ;
+            }
             break;
         case SQL_KEYWORD:
             printf ("Key word : %d\n", root->u.kw);
@@ -131,7 +155,6 @@ ast_node_print (ast_node_t *root, int depth) {
                     break;
             }
         break;
-        default: ;
     }
 }
 
@@ -145,7 +168,8 @@ ast_print (ast_node_t *root, int depth) {
     FOR_ALL_AST_CHILD(root, cur) {
 
         ast_print(cur, depth + 1);
-    }
+        
+    } FOR_ALL_AST_CHILD_END;
 
     ast_node_print (root, depth);
 }
