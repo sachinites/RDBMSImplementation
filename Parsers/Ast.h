@@ -30,7 +30,10 @@ ast_node_t *
 ast_find (ast_node_t *root, ast_node_t *tmplate);
 
 void 
-ast_destroy_tree (ast_node_t *root);
+ast_destroy_tree_from_root (ast_node_t *root);
+
+void 
+ast_destroy_tree (ast_node_t *any_ast_node);
 
 void 
 ast_print (ast_node_t *root, int depth) ;

@@ -474,8 +474,8 @@ parse_sql_query () {
             astroot->entity_type = SQL_QUERY_TYPE;
             astroot->u.q_type = SQL_SELECT_Q;
             parse_select_query  (astroot);
-            ast_print (astroot, 0);
-            //sql_process_select_query (NULL, astroot);
+           // ast_print (astroot, 0);
+            sql_process_select_query (NULL, astroot);
             break;
         case SQL_UPDATE_Q:
            // yyless(yyleng);

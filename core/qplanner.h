@@ -8,13 +8,14 @@
 typedef struct catalog_table_value ctable_val_t ;
 typedef struct schema_rec_ schema_rec_t ;
 typedef struct ast_node_ ast_node_t;
-
+typedef struct BPlusTree BPlusTree_t;
 
 typedef enum qp_node_type_ {
 
     QP_NODE_SEQ_SCAN,
     QP_NODE_WHERE,
     QP_NODE_JOIN,
+    QP_NODE_AGGREGATOR,
     QP_NODE_GROUP_BY,
     QP_NODE_HAVING,
     QP_NODE_SELECT,
@@ -40,8 +41,9 @@ typedef struct qp_node_ {
         /* QP_NODE_SELECT */
         struct {
             int n;
-            sql_agg_fn_t agg_fn[0];
-            qp_col_t *col_names[0];
+            bool is_aggrgated;
+            sql_agg_fn_t *agg_fn;
+            qp_col_t *col_names;
             struct qp_node_ *child[1];
             glthread_t col_list_head;
         } select;
@@ -55,7 +57,7 @@ typedef struct qp_node_ {
             qp_col_t *col_name;
             sql_op_t op;
             operand_val_t op_val;
-             struct qp_node_ *child[1];
+            struct qp_node_ *child[1];
         }having;
 
 
@@ -66,6 +68,7 @@ typedef struct qp_node_ {
             qp_col_t *col_name[SQL_MAX_GROUP_BY_N_SUPPORTED];
              struct qp_node_ *child[1];
         } groupby;
+
 
 
         /* QP_NODE_JOIN */
@@ -135,11 +138,12 @@ typedef struct qp_request_data_ {
     } u;
 }qp_request_data_t;
 
-
+#define QEP_F_GROUPBY   1
 
 typedef struct qep_ {
 
-    ast_node_t *root;
+    uint32_t flags;
+    qp_node_t *root;
 
 } qep_t;
 
@@ -151,7 +155,7 @@ void
 qep_respond_upstream_node (qp_response_t *qp_resp);
 
 qep_t*
-qep_prepare_execution_plan (ast_node_t *root);
+select_qep_prepare_execution_plan (BPlusTree_t *tcatalog, ast_node_t *root);
 
 void 
 qep_destory (qep_t *qep);

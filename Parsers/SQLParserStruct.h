@@ -35,7 +35,7 @@ typedef enum sql_agg_fn_ {
     SQL_COUNT,
     SQL_AVG,
     SQL_AGG_FN_NONE,
-    SQL_MAX_MAX,
+    SQL_MAX_MAX = 5
  
 } sql_agg_fn_t;
 

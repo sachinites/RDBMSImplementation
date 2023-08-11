@@ -20,17 +20,12 @@ print_line(int num_columns, int column_width) {
 }
 
 void 
-sql_print_hdr (glthread_t *col_list_head ) {
+sql_print_hdr (qp_col_t *col_list, int n_cols ) {
 
-    glthread_t *curr;
-    list_node_t *lnode;
+    int i;
+    qp_col_t *col;
     unsigned char *column_name;
-    int num_columns = 0;
-
-    // Count the number of columns to calculate the width of each column
-    ITERATE_GLTHREAD_BEGIN(col_list_head, curr) {
-        num_columns++;
-    } ITERATE_GLTHREAD_END(col_list_head, curr);
+    int num_columns = n_cols;
 
     int column_width = 20; // Default column width
     if (num_columns > 0) {
@@ -41,11 +36,11 @@ sql_print_hdr (glthread_t *col_list_head ) {
     print_line(num_columns, column_width);
 
     // Print the header row with column names
-    ITERATE_GLTHREAD_BEGIN(col_list_head, curr) {
-        lnode = glue_to_list_node(curr);
-        column_name = (char *)lnode->data;
+    for (i = 0; i < n_cols; i++) {
+        col = &col_list[i];
+        column_name = col->schema_rec->column_name;
         printf("%-*s|", column_width, column_name);
-    } ITERATE_GLTHREAD_END(col_list_head, curr);
+    }
 
     printf("\n");
 
@@ -53,22 +48,17 @@ sql_print_hdr (glthread_t *col_list_head ) {
     print_line(num_columns, column_width);
 }
 
-void sql_emit_select_output(BPlusTree_t *schema_table, 
-                                              glthread_t *col_list_head,
+void sql_emit_select_output(BPlusTree_t *schema_table,
+                                              int n_col,
+                                              qp_col_t *col_list_head,
                                               void *record_ptr) {
 
-    glthread_t *curr;
-    list_node_t *lnode;
+    int i;
+    qp_col_t *qp_col;
     unsigned char *column_name;
     schema_rec_t *schema_rec;
-    BPluskey_t bpkey_tmplate;
 
-    int num_columns = 0;
-
-    // Count the number of columns to calculate the width of each column
-    ITERATE_GLTHREAD_BEGIN(col_list_head, curr) {
-        num_columns++;
-    } ITERATE_GLTHREAD_END(col_list_head, curr);
+    int num_columns = n_col;
 
     int column_width = 20; // Default column width
     if (num_columns > 0) {
@@ -76,12 +66,10 @@ void sql_emit_select_output(BPlusTree_t *schema_table,
     }
 
     // Print each row of data
-    ITERATE_GLTHREAD_BEGIN(col_list_head, curr) {
-        lnode = glue_to_list_node(curr);
-        column_name = (char *)lnode->data;
-        bpkey_tmplate.key = (void *)column_name;
-        bpkey_tmplate.key_size = SQL_COLUMN_NAME_MAX_SIZE;
-        schema_rec = (schema_rec_t *)BPlusTree_Query_Key(schema_table, &bpkey_tmplate);
+    for (i = 0; i < n_col; i++) {
+        qp_col = &col_list_head[i];
+        column_name = qp_col->schema_rec->column_name;
+        schema_rec = qp_col->schema_rec;
         assert(schema_rec);
 
         switch (schema_rec->dtype) {
@@ -103,10 +91,8 @@ void sql_emit_select_output(BPlusTree_t *schema_table,
             default:
                 assert(0);
         }
-    } ITERATE_GLTHREAD_END(col_list_head, curr);
-
+    }
     printf("\n");
-
 }
 
 

@@ -206,10 +206,9 @@ Catalog_create_schema_table_records (ast_node_t *root,
                         (*bkeys)[i]->key_size = SQL_COLUMN_NAME_MAX_SIZE;
 
                         (*crecords)[i] =  (schema_rec_t *)calloc (1 , sizeof ( schema_rec_t ));
-
+                        strncpy ((*crecords)[i]->column_name,  col_node->u.identifier.identifier.name, SQL_COLUMN_NAME_MAX_SIZE);
                         col_dtype_node = col_node->child_list;
                         assert (col_dtype_node->entity_type == SQL_DTYPE);
-
                         (*crecords)[i]->dtype = col_dtype_node->u.dtype;
                         (*crecords)[i]->dtype_size = sql_dtype_size (col_dtype_node->u.dtype);
                         (*crecords)[i]->offset = offset ;

@@ -39,7 +39,7 @@ sql_process_select_query (BPlusTree_t *TableCatalog, ast_node_t *root) {
         return ;
     }
 
-    sql_process_select_query_internal (schema_table, data_table, root);
+    sql_process_select_query_internal (tcatalog , root);
 }
 
 bool 

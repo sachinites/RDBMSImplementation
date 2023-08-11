@@ -524,7 +524,7 @@ BPlusTree_get_next_record (BPlusTree_t *bptree, BPlusTreeNode **bnode, int *inde
 	}
 
 	/* Subsequent fetch*/
-	*index++;
+	(*index)++;
 	if (*index < (*bnode)->key_num) {
 		return (*bnode)->child[*index];
 	}

@@ -54,18 +54,27 @@ ast_find (ast_node_t *root, ast_node_t *tmplate) {
 }
 
 void 
-ast_destroy_tree (ast_node_t *root) {
+ast_destroy_tree_from_root (ast_node_t *root) {
 
      ast_node_t *cur;
     if (!root) return;
 
     FOR_ALL_AST_CHILD(root, cur) {
 
-        ast_destroy_tree(cur);
+        ast_destroy_tree_from_root(cur);
 
     } FOR_ALL_AST_CHILD_END;
 
     free(root);
+}
+
+void 
+ast_destroy_tree (ast_node_t *any_ast_node) {
+
+    while ((any_ast_node->parent &&
+                    (any_ast_node =  any_ast_node->parent)));
+
+    ast_destroy_tree_from_root  (any_ast_node);
 }
 
 static void 
