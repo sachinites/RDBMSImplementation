@@ -511,6 +511,8 @@ BPlusTree_get_next_record (BPlusTree_t *bptree, BPlusTreeNode **bnode, int *inde
 	BPluskey_t *_key;
 	void* _rec;
 
+	if (!bptree) return NULL;
+
 	/* Fetching the first record */
 	if (*bnode == NULL) {
 
@@ -536,5 +538,6 @@ BPlusTree_get_next_record (BPlusTree_t *bptree, BPlusTreeNode **bnode, int *inde
 		return (*bnode)->child[*index];
 	}
 
+	*index = 0;
 	return NULL;
 }

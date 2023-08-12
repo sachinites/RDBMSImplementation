@@ -11,7 +11,7 @@ typedef struct ast_node_ ast_node_t;
 
 typedef struct  key_mdata_ {
 
-    sql_dype_t dtype;
+    sql_dtype_t dtype;
     int size;
 
 } key_mdata_t ;
@@ -28,8 +28,9 @@ typedef struct qp_col_ {
 
     ctable_val_t *ctable_val; 
     schema_rec_t *schema_rec;
-    unsigned char computed_value[256];
-    
+    sql_agg_fn_t agg_fn;
+    void *computed_value;
+
 } qp_col_t;
 
 typedef struct qp_row_ {
@@ -41,7 +42,7 @@ typedef struct qp_row_ {
 
 typedef struct operand_val_ {
 
-    sql_dype_t dtype;
+    sql_dtype_t dtype;
     unsigned char operand_val[SQL_OPERAND_MAX_VALUE];
 
 } operand_val_t;

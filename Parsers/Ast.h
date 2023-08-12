@@ -11,7 +11,7 @@ typedef struct ast_node_ {
         sql_agg_fn_t agg_fn;
         sql_keywords_t kw;
         sql_op_t op;
-        sql_dype_t dtype;
+        sql_dtype_t dtype;
         sql_dtype_attr_t dtype_attr;
         struct {
             sql_identifier_type_t ident_type;

@@ -80,7 +80,7 @@ typedef enum sql_dtype_{
     SQL_IPV4_ADDR,
     SQL_DTYPE_MAX
 
-} sql_dype_t;
+} sql_dtype_t;
 
 typedef enum sql_dtype_attr_ {
 
@@ -116,7 +116,7 @@ sql_valid_dtype (int dtype) {
 }
 
 static inline int
-sql_dtype_size (sql_dype_t dtype) {
+sql_dtype_size (sql_dtype_t dtype) {
 
     switch (dtype)
     {
@@ -130,6 +130,24 @@ sql_dtype_size (sql_dype_t dtype) {
         return 4;
     }
     return 0;
+}
+
+static inline const char *
+sql_agg_fn_tostring (sql_agg_fn_t agg_fn) {
+
+    switch (agg_fn) {
+        case SQL_SUM:
+            return "sum";
+        case SQL_MIN:
+            return "min";
+        case SQL_MAX:
+            return "max";
+        case SQL_COUNT:
+            return "count";
+        case SQL_AVG:
+            return "avg";
+    }
+    return "";
 }
 
 #endif 

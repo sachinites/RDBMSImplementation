@@ -237,7 +237,6 @@ hashtable_destroy(struct hashtable *h, int free_values)
         }
     }
     free(h->table);
-    free(h);
 }
 
 /*

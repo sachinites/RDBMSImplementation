@@ -14,7 +14,7 @@ typedef struct BPlusTreeNode BPlusTreeNode ;
 typedef struct schema_rec_ {
 
     unsigned char column_name [SQL_COLUMN_NAME_MAX_SIZE];
-    sql_dype_t dtype;
+    sql_dtype_t dtype;
     int dtype_size;
     bool is_primary_key;
     bool is_non_null;

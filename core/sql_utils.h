@@ -3,6 +3,7 @@
 
 typedef struct ast_node_ ast_node_t;
 
+#include "../Parsers/SQLParserStruct.h"
 #include "rdbms_struct.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 
@@ -16,5 +17,15 @@ BPlusTree_value_format_fn_default (void *value, unsigned char *obuff, int buff_s
 
 key_mdata_t *
 sql_construct_table_key_mdata (ast_node_t *root, int *key_mdata_size);
+
+void 
+sql_compute_aggregate (sql_agg_fn_t agg_fn, 
+                                        void *src, void *dst, 
+                                        sql_dtype_t dtype, 
+                                        int dype_size,
+                                        int row_no);
+
+void 
+sql_compute_column_text_name (qp_col_t *col, unsigned char *column_name, int size) ;
 
 #endif 

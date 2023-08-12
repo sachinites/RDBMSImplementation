@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <stdio.h>
+#include "Catalog.h"
 #include "sql_utils.h"
 #include "sql_const.h"
 #include "../Parsers/Ast.h"
@@ -14,7 +16,7 @@ rdbms_key_comp_fn (BPluskey_t *key_1, BPluskey_t *key_2, key_mdata_t *key_mdata,
     int dsize;
     int offset = 0;
 
-    sql_dype_t dtype;
+    sql_dtype_t dtype;
 
     if (!key_1 || !key_1->key || !key_1->key_size) return 1;
     if (!key_2 || !key_2->key || !key_2->key_size) return -1;
@@ -167,4 +169,29 @@ sql_construct_table_key_mdata (ast_node_t *root, int *key_mdata_size) {
 
     *key_mdata_size = i;
     return key_mdata;
+}
+
+void 
+sql_compute_aggregate (sql_agg_fn_t agg_fn, 
+                                        void *src, void *dst, 
+                                        sql_dtype_t dtype, 
+                                        int dype_size, int row_no) {
+
+    
+}
+
+void 
+sql_compute_column_text_name (qp_col_t *col, unsigned char *column_name, int size) {
+
+    memset (column_name, 0, size);
+
+    if (col->agg_fn != SQL_AGG_FN_NONE) {
+        snprintf (column_name, size,
+                    "%s(%s)", sql_agg_fn_tostring(col->agg_fn), col->schema_rec->column_name);
+    }
+    else {
+        snprintf (column_name, size, 
+                    "%s", col->schema_rec->column_name);
+
+    }
 }

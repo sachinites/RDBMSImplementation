@@ -2,11 +2,17 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <assert.h>
+#include <stdint.h>
 #include "sql_const.h"
 #include "rdbms_struct.h"
 #include "Catalog.h"
 #include "sql_io.h"
 #include "../BPlusTreeLib/BPlusTree.h"
+#include "qplanner.h"
+#include "sql_utils.h"
+
+extern void *
+sql_get_column_value_from_joined_row (joined_row_t *joined_row, qp_col_t *col);
 
 static void 
 print_line(int num_columns, int column_width) {
@@ -20,11 +26,11 @@ print_line(int num_columns, int column_width) {
 }
 
 void 
-sql_print_hdr (qp_col_t *col_list, int n_cols ) {
+sql_print_hdr (qp_col_t **col_list, int n_cols ) {
 
     int i;
     qp_col_t *col;
-    unsigned char *column_name;
+    unsigned char column_name[SQL_COLUMN_TEXT_NAME_MAX_SIZE];
     int num_columns = n_cols;
 
     int column_width = 20; // Default column width
@@ -37,8 +43,8 @@ sql_print_hdr (qp_col_t *col_list, int n_cols ) {
 
     // Print the header row with column names
     for (i = 0; i < n_cols; i++) {
-        col = &col_list[i];
-        column_name = col->schema_rec->column_name;
+        col = col_list[i];
+        sql_compute_column_text_name  (col, column_name, sizeof (column_name));
         printf("%-*s|", column_width, column_name);
     }
 
@@ -48,15 +54,14 @@ sql_print_hdr (qp_col_t *col_list, int n_cols ) {
     print_line(num_columns, column_width);
 }
 
-void sql_emit_select_output(BPlusTree_t *schema_table,
-                                              int n_col,
-                                              qp_col_t *col_list_head,
-                                              void *record_ptr) {
+
+void sql_emit_select_output(int n_col,
+                                              qp_col_t **col_list_head) {
 
     int i;
     qp_col_t *qp_col;
-    unsigned char *column_name;
     schema_rec_t *schema_rec;
+    unsigned char column_name[SQL_COLUMN_TEXT_NAME_MAX_SIZE];
 
     int num_columns = n_col;
 
@@ -67,24 +72,24 @@ void sql_emit_select_output(BPlusTree_t *schema_table,
 
     // Print each row of data
     for (i = 0; i < n_col; i++) {
-        qp_col = &col_list_head[i];
-        column_name = qp_col->schema_rec->column_name;
+        qp_col = col_list_head[i];
+        sql_compute_column_text_name  (qp_col, column_name, sizeof (column_name));
         schema_rec = qp_col->schema_rec;
         assert(schema_rec);
-
+        void *val = qp_col->computed_value;
         switch (schema_rec->dtype) {
             case SQL_STRING:
-                printf("%-*s|", column_width, (char *)record_ptr + schema_rec->offset);
+                printf("%-*s|", column_width, (char *)val);
                 break;
             case SQL_INT:
-                printf("%-*d|", column_width, *(int *)((char *)record_ptr + schema_rec->offset));
+                printf("%-*d|", column_width, *(int *)val);
                 break;
             case SQL_FLOAT:
-                printf("%-*f|", column_width, *(float *)((char *)record_ptr + schema_rec->offset));
+                printf("%-*f|", column_width, *(float *)val);
                 break;
             case SQL_IPV4_ADDR: {
                 unsigned char ipv4_addr_str[16];
-                inet_ntop(AF_INET, (char *)record_ptr + schema_rec->offset, ipv4_addr_str, 16);
+                inet_ntop(AF_INET, val, ipv4_addr_str, 16);
                 printf("%-*s|", column_width, ipv4_addr_str);
                 break;
             }

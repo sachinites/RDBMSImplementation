@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <memory.h>
 #include "Catalog.h"
 #include "select.h"
 #include "../BPlusTreeLib/BPlusTree.h"
@@ -14,8 +15,12 @@ void
 sql_process_select_query_internal (BPlusTree_t *tcatalog,
                                                          ast_node_t *root) {
 
-    qep_t *qep = select_qep_prepare_execution_plan (tcatalog, root);
-    qep_execute (qep);
+    qep_struct_t qep_struct;
+    memset (&qep_struct, 0, sizeof (qep_struct));
+    qep_struct_init (&qep_struct, tcatalog, root);
+    qep_execute (&qep_struct);
+    ast_destroy_tree_from_root (root);
+    qep_deinit (&qep_struct);
 }
 
 bool 
