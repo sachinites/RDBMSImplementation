@@ -40,6 +40,7 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <stdint.h>
+#include <time.h>
 #include "common.h"
 #include "Ast.h"
 
@@ -463,6 +464,7 @@ parse_sql_query () {
     ast_node_t *astroot = NULL;
 
     printf ("postgres=# ");
+    clock_t t = clock();
 
     int token_code = yylex();
 
@@ -501,7 +503,7 @@ parse_sql_query () {
              sql_process_insert_query(NULL, astroot);
              break;
         case EOL:
-            break;
+            return;
         case QUIT:
             exit(0);
         default:
@@ -509,6 +511,10 @@ parse_sql_query () {
             yylex(); // consume \n
             break;
     }
+
+    t = clock() - t;
+    double time_taken = ((double)t * 1000)/CLOCKS_PER_SEC; 
+    printf("%f msec\n", time_taken);
 }
 
 int 

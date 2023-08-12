@@ -45,7 +45,6 @@ table_iterators_first (qep_struct_t *qep_struct, table_iterators_t *titer, void 
     titer->bpnode[2] = NULL;
     titer->index[2] = 0;
 
-
     do {
         *rec1 = BPlusTree_get_next_record (titer->ctable_val[0]->rdbms_table, &titer->bpnode[0], &titer->index[0]);
         *rec1 =  qep_enforce_where (qep_struct->ctable_val1->schema_table, *rec1, qep_struct->ctable_val_cond1);
@@ -473,13 +472,23 @@ qep_execute (qep_struct_t *qep_struct) {
             }
 
             sql_emit_select_output (qep_struct->select.n, qep_struct->select.sel_colmns);
-        } 
+
+            if (qep_struct->limit == row_no) {
+                break;
+            }
+        }
 
     } // join loop ends
 
+    /* Case 1 :  No Group by Clause, Non-Aggregated Columns */
+    if (!qep_struct->groupby.n && !is_aggregation) {
+
+        printf ("(%d rows)\n", row_no);
+    }
+
 
      /* Case 2 :  No Group by Clause,  Aggregated Columns */
-    if (!qep_struct->groupby.n && is_aggregation) {
+    else if (!qep_struct->groupby.n && is_aggregation) {
 
         sql_emit_select_output (qep_struct->select.n, qep_struct->select.sel_colmns);
     }
@@ -496,10 +505,10 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
     int n_cols = 0;
     BPluskey_t bpkey;
     ast_node_t ast_tmplate;
+
     memset (&ast_tmplate, 0, sizeof (ast_tmplate));
     ast_tmplate.entity_type = SQL_IDENTIFIER;
     ast_tmplate.u.identifier.ident_type = SQL_TABLE_NAME;
-
     ast_node_t *table_name_node = ast_find (root, &ast_tmplate);
     bpkey.key = table_name_node->u.identifier.identifier.name;
     bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
@@ -528,6 +537,7 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
         FOR_ALL_AST_CHILD (column_node, agg_node) {
             if (agg_node->entity_type != SQL_AGG_FN) continue;
             qep_struct->select.sel_colmns[i]->agg_fn = agg_node->u.agg_fn;
+            break;
         } FOR_ALL_AST_CHILD_END;
         i++;
     } FOR_ALL_AST_CHILD_END;
@@ -560,13 +570,16 @@ qep_deinit (qep_struct_t *qep_struct) {
 
         for (i = 0; i < qep_struct->select.n; i++) {
             col =  qep_struct->select.sel_colmns[i];
+            if (col->computed_value) {
+                free(col->computed_value);
+            }
             free(col);
         }
     }
 
-    if (hashtable_count (&qep_struct->ht)) {
-        hashtable_destroy (&qep_struct->ht, 1);
-        memset (&qep_struct->ht, 0, sizeof (qep_struct->ht));
+    if (hashtable_count (qep_struct->ht)) {
+        hashtable_destroy (qep_struct->ht, 1); 
+        qep_struct->ht = NULL;
     }
 
 }
