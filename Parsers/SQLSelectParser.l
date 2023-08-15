@@ -41,6 +41,7 @@
 #include <memory.h>
 #include <stdint.h>
 #include <time.h>
+#include <assert.h>
 #include "../core/sql_const.h"
 #include "common.h"
 #include "Ast.h"
@@ -188,6 +189,8 @@
 }
 
 %%
+
+static int paranthesis_cnt = 0;
 
 static void 
 parse_first_aggregated_column (int token_code, ast_node_t *parent) {
@@ -343,6 +346,12 @@ parse_where_condition() {
     char operand_identifer [256];
 
     int token_code = yylex();
+
+    while (token_code == BRACK_START) {
+        paranthesis_cnt++;
+        token_code = yylex();
+    }
+
     PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
     strcpy (col_name, yytext);
 
@@ -392,7 +401,14 @@ parse_where_condition() {
     }
 
     /* What follows after condition : Logical Operators */
-    return yylex();
+    token_code =  yylex();
+    
+    while (token_code == BRACK_END) {
+        paranthesis_cnt--;
+        token_code = yylex();
+    }
+
+    return token_code;
 }
 
 static int
@@ -408,7 +424,8 @@ parse_where_conditions() {
 
             case SQL_AND:
             case SQL_OR:
-                //printf ("logical Op : %s\n", yytext);
+            case SQL_NOT:
+                printf ("logical Op : %s\n", yytext);
             break;
             case EOL:
                 return token_code;
@@ -489,6 +506,7 @@ static void
 parse_sql_query () {
 
     ast_node_t *astroot = NULL;
+    paranthesis_cnt = 0;
 
     printf ("postgres=# ");
     clock_t t = clock();
@@ -504,6 +522,10 @@ parse_sql_query () {
             astroot->u.q_type = SQL_SELECT_Q;
             parse_select_query  (astroot);
             ast_print (astroot, 0);
+            if (paranthesis_cnt) {
+                printf ("Error : Unbalanced Paranthesis\n");
+                return;
+            }
             sql_process_select_query (NULL, astroot);
             break;
         case SQL_UPDATE_Q:

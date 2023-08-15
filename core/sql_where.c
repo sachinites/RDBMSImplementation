@@ -288,7 +288,7 @@ sql_where_compute (where_cond_t *wc, joined_row_t *joined_row) {
     assert (!lval);
 
     /* Compute rval*/
-    switch (wc->right_op.wh_opd_type) {
+    switch (wc->right_op.w_opd) {
 
         case WH_COL:
             rcol = &wc->right_op.u.col;
@@ -297,7 +297,7 @@ sql_where_compute (where_cond_t *wc, joined_row_t *joined_row) {
             assert (lcol->schema_rec->dtype == rcol->schema_rec->dtype);
             return sql_where_compare (lval, l_value_size, rval, r_value_size, lcol->schema_rec->dtype, wc->op);
 
-        case WH_VAUE:
+        case WH_VALUE:
             rval = wc->right_op.u.value.val;
             r_value_size = wc->right_op.u.value.size;
             assert (lcol->schema_rec->dtype == wc->right_op.u.value.dtype);
@@ -308,5 +308,40 @@ sql_where_compute (where_cond_t *wc, joined_row_t *joined_row) {
     }
     
     assert(0);
+    return false;
+}
+
+bool 
+sql_evaluate_where_expression_tree ( expt_node_t *root, joined_row_t *joined_row)  {
+
+    switch (root->expt_node_type) {
+
+        case LOG_OP:
+            switch (root->u.lop) {
+                case SQL_AND:
+                {
+                    bool rcl = sql_evaluate_where_expression_tree (root->left, joined_row);
+                    if (rcl == false) return false;
+                    bool rcr = sql_evaluate_where_expression_tree (root->right, joined_row);
+                    return rcl && rcr;
+                }
+                case SQL_OR:
+                {
+                    bool rcl = sql_evaluate_where_expression_tree (root->left, joined_row);
+                    if (rcl == true) return true;
+                    bool rcr = sql_evaluate_where_expression_tree (root->right, joined_row);
+                    return rcl || rcr;                    
+                }
+                case SQL_NOT:
+                    return ! ( sql_evaluate_where_expression_tree (
+                                root->right ? root->right : root->left, joined_row));
+            }
+        break;
+        case WHERE_COND:
+            return sql_where_compute (root->u.wc, joined_row);
+        default: ;
+            assert(0);
+            return false;
+    }
     return false;
 }

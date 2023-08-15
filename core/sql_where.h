@@ -6,20 +6,16 @@
 
 typedef struct  joined_row_  joined_row_t;
 
-/* Type of operand */
 typedef enum {
 
     WH_COL,
-    WH_VAUE,
-    LOG_OP
+    WH_VALUE
 
-} wh_opd_type_t ;
+} where_opd_type_t;
 
-/* Structure to represent where operand, which could be col name,
-    fixed value or logical operator (internal node of expression tree )*/
-typedef struct wh_opd_ {
+typedef struct where_operand_ {
 
-    wh_opd_type_t wh_opd_type;
+    where_opd_type_t w_opd;
 
     union {
 
@@ -31,25 +27,45 @@ typedef struct wh_opd_ {
             void *val;
         } value;
 
-        sql_op_t op;  // logical operatpr AND OR NOT
-
     } u;
 
-    struct wh_opd_ *left;
-    struct wh_opd_ *right;
-
-} wh_opd_t;
-
+} where_operand_t;
 
 typedef struct where_cond_ {
 
     qp_col_t col;   // left operand
     sql_op_t op;   // mathematical operator < | > | = | !=
-    wh_opd_t right_op;
+    where_operand_t right_op;
 
 } where_cond_t;
 
 bool 
 sql_where_compute (where_cond_t *wc, joined_row_t *joined_row);
+
+/* Expression Tree*/
+typedef enum {
+
+    LOG_OP,
+    WHERE_COND
+
+} expt_node_type_t;
+
+typedef struct expt_node_ {
+
+     expt_node_type_t  expt_node_type;
+
+    union {
+
+        sql_op_t lop;
+        where_cond_t *wc;
+    } u;
+
+    struct expt_node_ *left;
+    struct expt_node_ *right;
+
+} expt_node_t;
+
+bool 
+sql_evaluate_where_expression_tree ( expt_node_t *root, joined_row_t *joined_row);
 
 #endif 

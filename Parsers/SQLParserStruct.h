@@ -61,9 +61,10 @@ typedef enum sql_op_ {
     SQL_NOT_EQ,
     SQL_AND ,
     SQL_OR,
+    SQL_NOT,
     SQL_IN,
     SQL_BETWEEN, 
-    SQL_OP_MAX =  51
+    SQL_OP_MAX =  52
 
 } sql_op_t;
 
