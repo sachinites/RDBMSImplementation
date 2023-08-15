@@ -16,7 +16,7 @@
 
     <conditions> ::= <condition> | <condition> <lop> <conditions>
 
-    <condition>  ::= <column> <mop> <digits> 
+    <condition>  ::= <column> <mop> <digits> |  <column> <mop> <column> | <column> <mop> 'identifer'
 
     <function>     ::= COUNT | SUM | AVG | MIN | MAX
 
@@ -41,6 +41,7 @@
 #include <memory.h>
 #include <stdint.h>
 #include <time.h>
+#include "../core/sql_const.h"
 #include "common.h"
 #include "Ast.h"
 
@@ -169,12 +170,12 @@
     return INTEGER;
 }
 
-^[a-zA-Z]+(?:[\s.]+[a-zA-Z]+)*$ {
-    return SQL_STRING_VALUE;
-}
-
 [a-zA-Z0-9]+ {
     return SQL_IDENTIFIER;
+}
+
+^[a-zA-Z]+(?:[\s.]+[a-zA-Z]+)*$ {
+    return SQL_STRING_VALUE;
 }
 
 "*" {
@@ -335,9 +336,11 @@ parse_columns (ast_node_t *parent) {
 static int 
 parse_where_condition() {
 
-    char col_name [64];
-    int op_code;
     int value;
+    int op_code;
+    char col_name [SQL_COLUMN_NAME_MAX_SIZE];
+    char operand_col_name [SQL_COLUMN_NAME_MAX_SIZE];
+    char operand_identifer [256];
 
     int token_code = yylex();
     PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
@@ -345,23 +348,47 @@ parse_where_condition() {
 
     token_code = yylex();
 
-    if (token_code == SQL_LESS_THAN ||
-         token_code == SQL_GREATER_THAN ||
-         token_code == SQL_EQ ||
-         token_code == SQL_NOT_EQ) {
+    /* supported operators */
+    op_code = token_code;
 
-        op_code = token_code;
+    switch(token_code) {
 
-        token_code = yylex();
-        PARSER_ERROR_EXIT(token_code, INTEGER);
-        value = atoi (yytext);
-
-        //printf ("Condition : %s %d %d\n", col_name, op_code, value);
+        case SQL_LESS_THAN:
+        case SQL_GREATER_THAN:
+        case SQL_EQ:
+        case SQL_NOT_EQ:
+        break;
+        default:
+            printf ("%d operator not supported\n", token_code);
+            exit(0);
     }
 
-    else if (token_code == SQL_IN) {
+    printf ("%s op(%d) ", col_name, token_code);
 
-        exit(0);
+    token_code = yylex();
+
+    switch (token_code) {
+
+        case INTEGER:
+            value = atoi (yytext);
+            printf ("%d\n", value);
+            break;
+        case SQL_IDENTIFIER:
+        case SQL_STRING_VALUE:
+            strcpy (operand_col_name, yytext);
+            printf ("%s\n", operand_col_name);
+            break;
+        case QUOTATION_MARK:
+            token_code = yylex();
+            //PARSER_ERROR_EXIT(token_code, SQL_STRING_VALUE);
+            PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
+            strcpy (operand_identifer, yytext);
+            token_code = yylex();
+            PARSER_ERROR_EXIT(token_code, QUOTATION_MARK);
+            printf ("\'%s\'\n", operand_identifer);
+            break;
+        default:
+            PARSER_ERROR_EXIT(token_code, 0);
     }
 
     /* What follows after condition : Logical Operators */
@@ -476,7 +503,7 @@ parse_sql_query () {
             astroot->entity_type = SQL_QUERY_TYPE;
             astroot->u.q_type = SQL_SELECT_Q;
             parse_select_query  (astroot);
-           // ast_print (astroot, 0);
+            ast_print (astroot, 0);
             sql_process_select_query (NULL, astroot);
             break;
         case SQL_UPDATE_Q:

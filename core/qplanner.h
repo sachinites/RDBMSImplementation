@@ -3,8 +3,7 @@
 
 #include "../Parsers/SQLParserStruct.h"
 #include "sql_const.h"
-#include "rdbms_struct.h"
-
+#include "sql_where.h"
 
 typedef struct catalog_table_value ctable_val_t ;
 typedef struct schema_rec_ schema_rec_t ;
@@ -36,29 +35,12 @@ typedef struct table_iterators_ {
     ctable_val_t *ctable_val[3];
 } table_iterators_t;
 
-typedef struct joined_row_ {
-
-    BPlusTree_t *schema_table[3];
-    void *rec[3];
-
-} joined_row_t;
-
-
-/* Data structure to store where conditions on a single table.
-    Current let us support only 1 conditon */
-typedef struct where_ {
-
-    qp_col_t col;
-    sql_op_t op;
-    operand_val_t op_val;
-
-} where_t;
 
 typedef struct having_ {
 
     qp_col_t col;
     sql_op_t op;
-    operand_val_t op_val;
+    wh_opd_t right_op;
 
 } having_t;
 
@@ -76,11 +58,11 @@ typedef struct qep_struct_ {
 
     /* We cannot use more than three tables in our SQL query*/
     ctable_val_t *ctable_val1;
-    where_t *ctable_val_cond1;
+    where_cond_t *ctable_val_cond1;
     ctable_val_t *ctable_val2;
-    where_t *ctable_val_cond2;
+    where_cond_t *ctable_val_cond2;
     ctable_val_t *ctable_val3;
-    where_t *ctable_val_cond3;
+    where_cond_t *ctable_val_cond3;
    
     struct {
 

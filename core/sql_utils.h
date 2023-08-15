@@ -28,4 +28,7 @@ sql_compute_aggregate (sql_agg_fn_t agg_fn,
 void 
 sql_compute_column_text_name (qp_col_t *col, unsigned char *column_name, int size) ;
 
+void *
+sql_get_column_value_from_joined_row (joined_row_t *joined_row, qp_col_t *col);
+
 #endif 

@@ -10,6 +10,7 @@
 #include "../gluethread/glthread.h"
 #include "sql_io.h"
 #include "sql_utils.h"
+#include "sql_where.h"
 #include "../c-hashtable/hashtable.h"
 #include "../c-hashtable/hashtable_itr.h"
 
@@ -18,10 +19,18 @@
 extern BPlusTree_t TableCatalogDef;
 
 static void *
- qep_enforce_where (BPlusTree_t  *schema_table, void *record, where_t *where) {
+ qep_enforce_where (BPlusTree_t  *schema_table, void *record, where_cond_t *where) {
 
     if (!record) return NULL;
-    return record;
+
+     joined_row_t  joined_row;
+     joined_row.schema_table[0] = schema_table;
+     joined_row.rec[0] = record;
+
+    bool rc = sql_where_compute (where, &joined_row);
+    
+    if (rc) return record;
+    return NULL;
  }
 
 
@@ -277,25 +286,6 @@ qep_execute_join (qep_struct_t *qep_struct, void **rec1, void **rec2, void **rec
    }
 
    return table_iterators_next (qep_struct, &qep_struct->titer, rec1, rec2, rec3);
-}
-
-
-static void *
-joined_row_search ( BPlusTree_t * BPlusTree, joined_row_t *joined_row) {
-
-    int i;
-    for (i = 0; i < 3; i++) {
-        if (joined_row->schema_table[i] == BPlusTree) return joined_row->rec[i];
-    }
-    return NULL;
-}
-
-void *
-sql_get_column_value_from_joined_row (joined_row_t *joined_row, qp_col_t *col) {
-
-   void *rec = joined_row_search (col->ctable_val->schema_table, joined_row);
-   assert (rec);
-    return (void *)((char *)rec + col->schema_rec->offset);
 }
 
 static joined_row_t *

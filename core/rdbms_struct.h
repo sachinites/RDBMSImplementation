@@ -4,6 +4,7 @@
 #include "../Parsers/SQLParserStruct.h"
 #include "../gluethread/glthread.h"
 #include "sql_const.h"
+#include "../BPlusTreeLib/BPlusTree.h"
 
 typedef struct catalog_table_value ctable_val_t ;
 typedef struct schema_rec_ schema_rec_t ;
@@ -33,18 +34,12 @@ typedef struct qp_col_ {
 
 } qp_col_t;
 
-typedef struct qp_row_ {
+typedef struct joined_row_ {
 
-     ctable_val_t *schema_table;
-     void *record;
+    BPlusTree_t *schema_table[3];
+    void *rec[3];
 
-} qp_row_t;
+} joined_row_t;
 
-typedef struct operand_val_ {
-
-    sql_dtype_t dtype;
-    unsigned char operand_val[SQL_OPERAND_MAX_VALUE];
-
-} operand_val_t;
 
 #endif 
