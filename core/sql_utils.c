@@ -178,7 +178,88 @@ sql_compute_aggregate (sql_agg_fn_t agg_fn,
                                         sql_dtype_t dtype, 
                                         int dype_size, int row_no) {
 
-    
+    switch (agg_fn) {
+
+        case SQL_SUM:
+            {
+                switch (dtype) {
+
+                    case SQL_INT:
+                    {
+                        int *src_int = (int *)src;
+                        int *dst_int = (int *)dst;
+                        *dst_int  += *src_int ;
+                    }
+                    break;
+                    default: ;
+                }
+            }
+            break;
+
+
+        case SQL_MAX:
+        {
+                switch (dtype)
+                {
+                case SQL_INT:
+                {
+                        int *src_int = (int *)src;
+                        int *dst_int = (int *)dst;
+                        if (row_no == 1) {
+                            *dst_int = INT32_MIN;
+                        }
+                       if (*dst_int < *src_int) {
+                            *dst_int = *src_int;
+                       }
+                }
+                break;
+                default:;
+                }
+        }
+        break;
+
+
+        case SQL_MIN:
+        {
+                switch (dtype)
+                {
+                case SQL_INT:
+                {
+                        int *src_int = (int *)src;
+                        int *dst_int = (int *)dst;
+                        if (row_no == 1) {
+                            *dst_int = INT32_MAX;
+                        }
+                       if (*dst_int > *src_int) {
+                            *dst_int = *src_int;
+                       }
+                }
+                break;
+                default:;
+                }
+        }
+        break;        
+
+
+        case SQL_COUNT:
+        {
+                switch (dtype)
+                {
+                case SQL_INT:
+                {
+                        int *dst_int = (int *)dst;
+                         (*dst_int)++;
+                }
+                break;
+                default:;
+                }
+        }
+        break;       
+
+
+
+        default: ;
+    }
 }
 
 void 

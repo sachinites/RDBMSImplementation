@@ -441,7 +441,12 @@ qep_execute (qep_struct_t *qep_struct) {
                 if (row_no == 1)
                 {
                     val = sql_get_column_value_from_joined_row(joined_row, col);
-                    memcpy(col->computed_value, val, col->schema_rec->dtype_size);
+                    if (col->agg_fn == SQL_COUNT) {
+                        *(int *)(col->computed_value) = 1;
+                    }
+                    else {
+                        memcpy(col->computed_value, val, col->schema_rec->dtype_size);
+                    }
                 }
                 else
                 {
@@ -480,7 +485,9 @@ qep_execute (qep_struct_t *qep_struct) {
      /* Case 2 :  No Group by Clause,  Aggregated Columns */
     else if (!qep_struct->groupby.n && is_aggregation) {
 
+        sql_print_hdr  (qep_struct->select.sel_colmns, qep_struct->select.n);
         sql_emit_select_output (qep_struct->select.n, qep_struct->select.sel_colmns);
+        printf ("(1 rows)\n");
     }
 
     /* case 3 :  Group by Clause */
