@@ -129,7 +129,7 @@ sql_construct_table_key_mdata (ast_node_t *root, int *key_mdata_size) {
 
                         is_key = false;
                         is_non_null = false;
-                        attr_len = 1;
+                        attr_len = sql_dtype_size (col_dtype_node->u.dtype);
                          FOR_ALL_AST_CHILD(col_dtype_node, attr_node) {
                             
                             assert (attr_node->entity_type == SQL_DTYPE_ATTR);
