@@ -4,6 +4,9 @@
 #include <memory.h>
 #include "Ast.h"
 
+typedef struct where_literal_ where_literal_t;
+extern void sql_where_literals_array_free (where_literal_t *where_literal_arr) ;
+
 void 
 ast_add_child (ast_node_t *parent, ast_node_t *child) {
 
@@ -53,6 +56,19 @@ ast_find (ast_node_t *root, ast_node_t *tmplate) {
     return NULL;
 }
 
+static void 
+ast_node_free (ast_node_t *node) {
+
+    if (node->entity_type == SQL_WHERE_CLAUSE &&
+            node->u.identifier.ident_type == SQL_PTR) {
+
+        void *array_ptr = NULL;
+        memcpy (&array_ptr, (void *)node->u.identifier.identifier.name, sizeof (void *));
+        sql_where_literals_array_free (array_ptr);
+    }
+    free (node);
+}
+
 void 
 ast_destroy_tree_from_root (ast_node_t *root) {
 
@@ -65,7 +81,7 @@ ast_destroy_tree_from_root (ast_node_t *root) {
 
     } FOR_ALL_AST_CHILD_END;
 
-    free(root);
+    ast_node_free (root);
 }
 
 void 
@@ -181,4 +197,14 @@ ast_print (ast_node_t *root, int depth) {
     } FOR_ALL_AST_CHILD_END;
 
     ast_node_print (root, depth);
+}
+
+ast_node_t *
+ast_node_get_root (ast_node_t *ast_node)  {
+
+    while (ast_node->parent) {
+        ast_node = ast_node->parent;
+    }
+
+    return ast_node;
 }

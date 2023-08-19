@@ -42,9 +42,12 @@
 #include <stdint.h>
 #include <time.h>
 #include <assert.h>
-#include "../core/sql_const.h"
+#include <arpa/inet.h>
 #include "common.h"
 #include "Ast.h"
+#include "../core/sql_const.h"
+#include "../core/sql_where.h"
+#include "../core/Catalog.h"
 
 %}
 
@@ -337,23 +340,44 @@ parse_columns (ast_node_t *parent) {
 
 
 static int 
-parse_where_condition() {
+parse_where_condition(ast_node_t *select_root, where_literal_t **wlit) {
 
     int value;
     int op_code;
-    char col_name [SQL_COLUMN_NAME_MAX_SIZE];
-    char operand_col_name [SQL_COLUMN_NAME_MAX_SIZE];
-    char operand_identifer [256];
+    ast_node_t ast_tmplate;
+    where_cond_t *wc;
+    ast_node_t *table_name_node;
+
+    char col_name [SQL_COLUMN_NAME_MAX_SIZE] = {0};
+    char operand_col_name [SQL_COLUMN_NAME_MAX_SIZE] = {0};
+    char operand_identifer [256] = {0};
 
     int token_code = yylex();
 
     while (token_code == BRACK_START) {
         paranthesis_cnt++;
+        (*wlit)->where_token_type = WHERE_LITERAL_OPERATOR_TOKEN_CODE;
+        (*wlit)->u.token_id = BRACK_START;
+        (*wlit)++;
         token_code = yylex();
     }
+    ast_tmplate.entity_type = SQL_IDENTIFIER;
+    ast_tmplate.u.identifier.ident_type = SQL_TABLE_NAME;
+
+    table_name_node = ast_find (select_root, &ast_tmplate);
+    assert (table_name_node);
+
+    (*wlit)->where_token_type = WHERE_LITERAL_WHERE_COND;
+    wc = &(*wlit)->u.wc;
 
     PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
     strcpy (col_name, yytext);
+
+    if (!Catalog_get_column (NULL, table_name_node->u.identifier.identifier.name, col_name, &wc->col) ) {
+        printf ("Error : Unrecognized Column <%s::%s>\n", 
+            table_name_node->u.identifier.identifier.name, col_name);
+        return EOL;
+    }
 
     token_code = yylex();
 
@@ -366,13 +390,14 @@ parse_where_condition() {
         case SQL_GREATER_THAN:
         case SQL_EQ:
         case SQL_NOT_EQ:
+        wc->op = token_code;
         break;
         default:
             printf ("%d operator not supported\n", token_code);
             exit(0);
     }
 
-    printf ("%s op(%d) ", col_name, token_code);
+    //printf ("%s op(%d) ", col_name, token_code);
 
     token_code = yylex();
 
@@ -381,20 +406,48 @@ parse_where_condition() {
         case INTEGER:
             value = atoi (yytext);
             printf ("%d\n", value);
+            wc->right_op.w_opd = WH_VALUE;
+            wc->right_op.u.value.dtype = SQL_INT;
+            wc->right_op.u.value.size = sql_dtype_size (wc->right_op.u.value.dtype);
+            wc->right_op.u.value.val = calloc (wc->right_op.u.value.size, 1);
+            *(int *)(wc->right_op.u.value.val) = value;
             break;
         case SQL_IDENTIFIER:
         case SQL_STRING_VALUE:
             strcpy (operand_col_name, yytext);
             printf ("%s\n", operand_col_name);
+            wc->right_op.w_opd = WH_COL;
+            if (!Catalog_get_column (NULL, 
+                                table_name_node->u.identifier.identifier.name, 
+                                operand_col_name, &wc->right_op.u.col)) {
+                printf ("Error : Unrecognized Column <%s::%s>\n", 
+                    table_name_node->u.identifier.identifier.name, operand_col_name);
+                return EOL;                
+            }
             break;
         case QUOTATION_MARK:
             token_code = yylex();
             //PARSER_ERROR_EXIT(token_code, SQL_STRING_VALUE);
             PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
             strcpy (operand_identifer, yytext);
+            //printf ("\'%s\'\n", operand_identifer);
+            wc->right_op.w_opd = WH_VALUE;
+            wc->right_op.u.value.dtype = SQL_STRING;
+            wc->right_op.u.value.size = strlen (yytext);
+            wc->right_op.u.value.val = calloc (wc->right_op.u.value.size, 1);
+            strcpy (wc->right_op.u.value.val, yytext);
             token_code = yylex();
             PARSER_ERROR_EXIT(token_code, QUOTATION_MARK);
-            printf ("\'%s\'\n", operand_identifer);
+            break;
+        case SQL_IPV4_ADDR_VALUE:
+            wc->right_op.w_opd = WH_VALUE;
+            wc->right_op.u.value.dtype = SQL_IPV4_ADDR;
+            wc->right_op.u.value.size = sql_dtype_size (wc->right_op.u.value.dtype);
+            //wc->right_op.u.value.size = 16;
+            wc->right_op.u.value.val = calloc (wc->right_op.u.value.size, 1);
+            inet_pton (AF_INET, (const char *)yytext, wc->right_op.u.value.val);
+            sql_debug_print_where_cond (wc);
+            //strcpy (wc->right_op.u.value.val , yytext);
             break;
         default:
             PARSER_ERROR_EXIT(token_code, 0);
@@ -404,6 +457,9 @@ parse_where_condition() {
     token_code =  yylex();
     
     while (token_code == BRACK_END) {
+        (*wlit)++;
+        (*wlit)->where_token_type = WHERE_LITERAL_OPERATOR_TOKEN_CODE;
+        (*wlit)->u.token_id = BRACK_END;
         paranthesis_cnt--;
         token_code = yylex();
     }
@@ -412,25 +468,51 @@ parse_where_condition() {
 }
 
 static int
-parse_where_conditions() {
+parse_where_conditions(ast_node_t *select_root) {
 
     int token_code;
+    where_literal_t *wlit;
     
-    while(1){
+    ast_node_t *where_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+    where_node->entity_type = SQL_KEYWORD;
+    where_node->u.kw = SQL_WHERE;
+    ast_add_child (select_root, where_node);
 
-        token_code = parse_where_condition();
-        
+    where_literal_t *where_literals_arr = 
+        (where_literal_t *) calloc ( SQL_MAX_WHERE_LITERAL_ARRAY_SIZE, sizeof (where_literal_t));
+    
+    ast_node_t *where_literals_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+    where_literals_node->entity_type =  SQL_WHERE_CLAUSE;
+    where_literals_node->u.identifier.ident_type = SQL_PTR;
+    memcpy ((void *)where_literals_node->u.identifier.identifier.name, (void *)&where_literals_arr, sizeof (void *));
+    ast_add_child (where_node, where_literals_node);
+
+    wlit = &where_literals_arr[0];
+
+    while(1) {
+
+        token_code = parse_where_condition(select_root, &wlit);
+
         switch (token_code) {
 
             case SQL_AND:
             case SQL_OR:
             case SQL_NOT:
-                printf ("logical Op : %s\n", yytext);
+               /// printf ("logical Op : %s\n", yytext);
+                wlit++;
+                wlit->where_token_type = WHERE_LITERAL_OPERATOR_TOKEN_CODE;
+                wlit->u.token_id = token_code;
             break;
             case EOL:
+                wlit++;
+                wlit->where_token_type = WHERE_LITERAL_OPERATOR_TOKEN_CODE;
+                wlit->u.token_id = token_code;
+                sql_debug_print_where_literals (where_literals_arr);
                 return token_code;
         }
+        wlit++;
     }
+
     return token_code;
 }
 
@@ -479,7 +561,7 @@ parse_select_query (ast_node_t *root) {
         }FOR_ALL_AST_CHILD_END;
         switch(token_code) {
             case SQL_WHERE:
-                token_code = parse_where_conditions();
+                token_code = parse_where_conditions(root);
                  switch(token_code) {
                     case EOL:
                         return;
@@ -521,7 +603,7 @@ parse_sql_query () {
             astroot->entity_type = SQL_QUERY_TYPE;
             astroot->u.q_type = SQL_SELECT_Q;
             parse_select_query  (astroot);
-            ast_print (astroot, 0);
+            //ast_print (astroot, 0);
             if (paranthesis_cnt) {
                 printf ("Error : Unbalanced Paranthesis\n");
                 return;
@@ -552,6 +634,7 @@ parse_sql_query () {
              sql_process_insert_query(NULL, astroot);
              break;
         case EOL:
+            ast_destroy_tree_from_root (astroot);
             return;
         case QUIT:
             exit(0);
@@ -564,6 +647,7 @@ parse_sql_query () {
     t = clock() - t;
     double time_taken = ((double)t * 1000)/CLOCKS_PER_SEC; 
     printf("%f msec\n", time_taken);
+    ast_destroy_tree_from_root (astroot);
 }
 
 int 

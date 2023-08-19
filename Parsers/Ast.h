@@ -38,6 +38,8 @@ ast_destroy_tree (ast_node_t *any_ast_node);
 void 
 ast_print (ast_node_t *root, int depth) ;
 
+ast_node_t *
+ast_node_get_root (ast_node_t *ast_node) ;
 
 #define FOR_ALL_AST_CHILD(astnode_ptr, ptr)     \
     {                                                                                \

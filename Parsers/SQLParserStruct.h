@@ -12,6 +12,7 @@ typedef enum sql_entity_ {
     SQL_IDENTIFIER,
     SQL_DTYPE,
     SQL_DTYPE_ATTR,
+    SQL_WHERE_CLAUSE,
     SQL_UNKNOWN
 
 } sql_entity_type_t;
@@ -99,6 +100,7 @@ typedef enum sql_ident_type_ {
     SQL_STRING_VALUE ,
     SQL_IPV4_ADDR_VALUE ,
     SQL_FLOAT_VALUE,
+    SQL_PTR,
     SQL_IDNT_TYPE_MAX
 
 } sql_identifier_type_t;

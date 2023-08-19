@@ -99,9 +99,3 @@ void sql_emit_select_output(int n_col,
     }
     printf("\n");
 }
-
-
-
-
-
-

@@ -65,7 +65,55 @@ typedef struct expt_node_ {
 
 } expt_node_t;
 
+typedef enum {
+
+    WHERE_LITERAL_OPERATOR_TOKEN_CODE,  // represent ( , ), Logical Operators
+    WHERE_LITERAL_WHERE_COND, // represent 1 single condition unit
+
+} where_token_type_t;
+
+typedef struct where_literal_ {
+
+    where_token_type_t where_token_type;
+
+    union {
+        int token_id;
+        where_cond_t wc;
+    } u;
+
+} where_literal_t;
+
+void 
+sql_debug_print_where_literals (where_literal_t *arr);
+
+void 
+sql_debug_print_where_literals2 (where_literal_t **arr, int size) ;
+
+where_literal_t **
+sql_where_clause_infix_to_postfix (where_literal_t *arr_in, int *size_out);
+
+expt_node_t *
+sql_where_convert_postfix_to_expression_tree (where_literal_t **arr, int size);
+
 bool 
 sql_evaluate_where_expression_tree ( expt_node_t *root, joined_row_t *joined_row);
+
+void 
+expt_destroy(expt_node_t *root);
+
+void 
+sql_where_literals_array_free (where_literal_t *where_literal_arr) ;
+
+void 
+sql_debug_print_where_cond (where_cond_t *wc) ;
+
+expt_node_t *
+sql_where_convert_postfix_to_expression_tree (where_literal_t **wlit, int size);
+
+void 
+sql_debug_print_expression_tree_node (expt_node_t *root);
+
+void 
+sql_debug_print_expression_tree (expt_node_t *root) ;
 
 #endif 

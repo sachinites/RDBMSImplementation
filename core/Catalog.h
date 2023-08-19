@@ -39,4 +39,10 @@ Catalog_create_schema_table_records (ast_node_t *root,
                                                         BPluskey_t ***bkeys,
                                                         schema_rec_t ***crecords) ;
 
+bool
+Catalog_get_column (BPlusTree_t *tcatalog, 
+                                    char *table_name, 
+                                    char *col_name,
+                                    qp_col_t *qp_col);
+
 #endif 

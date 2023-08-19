@@ -32,7 +32,7 @@ typedef struct qp_col_ {
     sql_agg_fn_t agg_fn;
     void *computed_value;
 
-} qp_col_t;
+}qp_col_t;
 
 typedef struct joined_row_ {
 

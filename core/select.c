@@ -19,7 +19,6 @@ sql_process_select_query_internal (BPlusTree_t *tcatalog,
     memset (&qep_struct, 0, sizeof (qep_struct));
     qep_struct_init (&qep_struct, tcatalog, root);
     qep_execute (&qep_struct);
-    ast_destroy_tree_from_root (root);
     qep_deinit (&qep_struct);
 }
 

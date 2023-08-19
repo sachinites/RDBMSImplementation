@@ -25,6 +25,8 @@ static void *
     if (!expt_root) return record;
     
      joined_row_t  joined_row;
+
+     memset (&joined_row, 0, sizeof (joined_row));
      joined_row.schema_table[0] = schema_table;
      joined_row.rec[0] = record;
 
@@ -46,6 +48,43 @@ table_iterators_init (table_iterators_t *titer,
     titer->ctable_val[2] = ctable_val3;
 }
 
+static void 
+qep_init_where_clause (qep_struct_t *qep_struct, ast_node_t *root) {
+
+    int size_out = 0;
+    ast_node_t ast_tmplate;
+
+    ast_tmplate.entity_type = SQL_WHERE_CLAUSE;
+    ast_tmplate.u.kw = SQL_PTR;
+
+    ast_node_t *where_clause_node = ast_find (root, &ast_tmplate);
+
+    if (!where_clause_node) return;
+
+    where_literal_t *where_literals_arr = NULL;
+
+    memcpy ((void *)&where_literals_arr,
+                    where_clause_node->u.identifier.identifier.name,
+                    sizeof (void *));
+    assert (where_literals_arr);
+
+    where_literal_t **where_literals_postfix = 
+        sql_where_clause_infix_to_postfix (where_literals_arr, &size_out);
+
+    if (!where_literals_postfix) return;
+
+    printf ("postfix : \n");
+    sql_debug_print_where_literals2 (where_literals_postfix, size_out);
+
+    qep_struct->expt_root = 
+        sql_where_convert_postfix_to_expression_tree (where_literals_postfix , size_out);
+
+    printf ("Expression Tree :\n");
+    sql_debug_print_expression_tree (qep_struct->expt_root);
+    
+    free (where_literals_postfix);
+}
+
 static void
 table_iterators_first (qep_struct_t *qep_struct, table_iterators_t *titer, void **rec1, void **rec2, void **rec3) {
     titer->bpnode[0] = NULL;
@@ -57,7 +96,7 @@ table_iterators_first (qep_struct_t *qep_struct, table_iterators_t *titer, void 
 
     do {
         *rec1 = BPlusTree_get_next_record (titer->ctable_val[0]->rdbms_table, &titer->bpnode[0], &titer->index[0]);
-        *rec1 =  qep_enforce_where (qep_struct->ctable_val1->schema_table, *rec1, qep_struct->expt_root1);
+        *rec1 =  qep_enforce_where (qep_struct->ctable_val1->schema_table, *rec1, qep_struct->expt_root);
     } while (!(*rec1) && titer->bpnode[0]);
 
     if (!titer->bpnode[0]) {
@@ -71,7 +110,7 @@ table_iterators_first (qep_struct_t *qep_struct, table_iterators_t *titer, void 
 
     do {
         *rec2 = BPlusTree_get_next_record (titer->ctable_val[1]->rdbms_table, &titer->bpnode[1], &titer->index[1]);
-        *rec2 =  qep_enforce_where (qep_struct->ctable_val2->schema_table, *rec2, qep_struct->expt_root2);
+        *rec2 =  qep_enforce_where (qep_struct->ctable_val2->schema_table, *rec2, qep_struct->expt_root);
     } while (!(*rec2) && titer->bpnode[1]);
 
     if (!titer->bpnode[1]) {
@@ -85,7 +124,7 @@ table_iterators_first (qep_struct_t *qep_struct, table_iterators_t *titer, void 
 
     do {
         *rec3 = BPlusTree_get_next_record (titer->ctable_val[2]->rdbms_table, &titer->bpnode[2], &titer->index[2]);
-        *rec3 =  qep_enforce_where (qep_struct->ctable_val3->schema_table, *rec3, qep_struct->expt_root3);
+        *rec3 =  qep_enforce_where (qep_struct->ctable_val3->schema_table, *rec3, qep_struct->expt_root);
     } while (!(*rec3) && titer->bpnode[2]);
 
     if (!titer->bpnode[2]) {
@@ -105,7 +144,7 @@ table_iterators_next (qep_struct_t *qep_struct, table_iterators_t *titer, void *
         if (titer->bpnode[2]) {
             do {
                 *rec3 = BPlusTree_get_next_record(titer->ctable_val[2]->rdbms_table, &titer->bpnode[2], &titer->index[2]);
-                *rec3 =  qep_enforce_where (qep_struct->ctable_val3->schema_table, *rec3, qep_struct->expt_root3);
+                *rec3 =  qep_enforce_where (qep_struct->ctable_val3->schema_table, *rec3, qep_struct->expt_root);
             } while (!(*rec3) && titer->bpnode[2]);
 
             if (!titer->bpnode[2])
@@ -122,7 +161,7 @@ table_iterators_next (qep_struct_t *qep_struct, table_iterators_t *titer, void *
 
                     do {
                         *rec2 = BPlusTree_get_next_record (titer->ctable_val[1]->rdbms_table, &titer->bpnode[1], &titer->index[1]);
-                        *rec2 =  qep_enforce_where (qep_struct->ctable_val2->schema_table, *rec2, qep_struct->expt_root2);
+                        *rec2 =  qep_enforce_where (qep_struct->ctable_val2->schema_table, *rec2, qep_struct->expt_root);
                     } while   (!(*rec2) && titer->bpnode[1]);
 
                     if (!titer->bpnode[1]) {
@@ -133,7 +172,7 @@ table_iterators_next (qep_struct_t *qep_struct, table_iterators_t *titer, void *
 
                     do {
                         *rec3 = BPlusTree_get_next_record (titer->ctable_val[2]->rdbms_table, &titer->bpnode[2], &titer->index[2]);
-                        *rec3 =  qep_enforce_where (qep_struct->ctable_val3->schema_table, *rec3, qep_struct->expt_root3);
+                        *rec3 =  qep_enforce_where (qep_struct->ctable_val3->schema_table, *rec3, qep_struct->expt_root);
                     }  while (!(*rec3) && titer->bpnode[2]);
 
                     if (!titer->bpnode[2]) {
@@ -149,7 +188,7 @@ table_iterators_next (qep_struct_t *qep_struct, table_iterators_t *titer, void *
                     if (titer->bpnode[0]) {
                         do {
                             *rec1 = BPlusTree_get_next_record (titer->ctable_val[0]->rdbms_table, &titer->bpnode[0], &titer->index[0]);
-                            *rec1 =  qep_enforce_where (qep_struct->ctable_val1->schema_table, *rec1, qep_struct->expt_root1);
+                            *rec1 =  qep_enforce_where (qep_struct->ctable_val1->schema_table, *rec1, qep_struct->expt_root);
                         }  while (!(*rec1) && titer->bpnode[0]);
 
                         if (!titer->bpnode[0]) {
@@ -161,7 +200,7 @@ table_iterators_next (qep_struct_t *qep_struct, table_iterators_t *titer, void *
 
                         do {
                             *rec2 = BPlusTree_get_next_record (titer->ctable_val[1]->rdbms_table, &titer->bpnode[1], &titer->index[1]);
-                            *rec2 =  qep_enforce_where (qep_struct->ctable_val2->schema_table, *rec2, qep_struct->expt_root2);
+                            *rec2 =  qep_enforce_where (qep_struct->ctable_val2->schema_table, *rec2, qep_struct->expt_root);
                         }while   (!(*rec2) && titer->bpnode[1]);
 
                         if (!titer->bpnode[1]) {
@@ -172,7 +211,7 @@ table_iterators_next (qep_struct_t *qep_struct, table_iterators_t *titer, void *
 
                         do {
                             *rec3 = BPlusTree_get_next_record (titer->ctable_val[2]->rdbms_table, &titer->bpnode[2], &titer->index[2]);
-                            *rec3 =  qep_enforce_where (qep_struct->ctable_val3->schema_table, *rec3, qep_struct->expt_root3);
+                            *rec3 =  qep_enforce_where (qep_struct->ctable_val3->schema_table, *rec3, qep_struct->expt_root);
                         }  while (!(*rec3) && titer->bpnode[2]);
 
                         if (!titer->bpnode[2]) {
@@ -201,7 +240,7 @@ table_iterators_next (qep_struct_t *qep_struct, table_iterators_t *titer, void *
             
             do {
                 *rec2 = BPlusTree_get_next_record (titer->ctable_val[1]->rdbms_table, &titer->bpnode[1], &titer->index[1]);            
-                *rec2 =  qep_enforce_where (qep_struct->ctable_val2->schema_table, *rec2, qep_struct->expt_root2);
+                *rec2 =  qep_enforce_where (qep_struct->ctable_val2->schema_table, *rec2, qep_struct->expt_root);
             } while   (!(*rec2) && titer->bpnode[1]);
 
             if (!titer->bpnode[1]) {
@@ -218,7 +257,7 @@ table_iterators_next (qep_struct_t *qep_struct, table_iterators_t *titer, void *
 
                 do {
                     *rec1 = BPlusTree_get_next_record (titer->ctable_val[0]->rdbms_table, &titer->bpnode[0], &titer->index[0]);
-                    *rec1 =  qep_enforce_where (qep_struct->ctable_val1->schema_table, *rec1, qep_struct->expt_root1);
+                    *rec1 =  qep_enforce_where (qep_struct->ctable_val1->schema_table, *rec1, qep_struct->expt_root);
                 }  while (!(*rec1) && titer->bpnode[0]);
 
                 if (!titer->bpnode[0]) {
@@ -230,7 +269,7 @@ table_iterators_next (qep_struct_t *qep_struct, table_iterators_t *titer, void *
 
                 do {
                     *rec2 = BPlusTree_get_next_record (titer->ctable_val[1]->rdbms_table, &titer->bpnode[1], &titer->index[1]);
-                    *rec2 =  qep_enforce_where (qep_struct->ctable_val2->schema_table, *rec2, qep_struct->expt_root2);                    
+                    *rec2 =  qep_enforce_where (qep_struct->ctable_val2->schema_table, *rec2, qep_struct->expt_root);                    
                 } while   (!(*rec2) && titer->bpnode[1]);
 
                 if (!titer->bpnode[1]) {
@@ -254,7 +293,7 @@ table_iterators_next (qep_struct_t *qep_struct, table_iterators_t *titer, void *
      if (titer->bpnode[0]) {
         do {
             *rec1 = BPlusTree_get_next_record (titer->ctable_val[0]->rdbms_table, &titer->bpnode[0], &titer->index[0]);
-            *rec1 =  qep_enforce_where (qep_struct->ctable_val1->schema_table, *rec1, qep_struct->expt_root1);
+            *rec1 =  qep_enforce_where (qep_struct->ctable_val1->schema_table, *rec1, qep_struct->expt_root);
         } while (!(*rec1) && titer->bpnode[0]);
 
         if (!titer->bpnode[0]) {
@@ -548,6 +587,7 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
     qep_struct->ht = create_hashtable
                             (sql_compute_group_by_key_size (qep_struct), 
                             hashfromkey, equalkeys);    
+    qep_init_where_clause (qep_struct, root);
 }
 
 void 
@@ -556,6 +596,10 @@ qep_deinit (qep_struct_t *qep_struct) {
     int i;
     qp_col_t *col;
 
+    if (qep_struct->expt_root) {
+        expt_destroy (qep_struct->expt_root);
+    }
+    
     if (qep_struct->groupby.n) {
 
         for (i = 0; i < qep_struct->groupby.n; i++) {
