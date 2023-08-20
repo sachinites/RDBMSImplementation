@@ -286,3 +286,36 @@ Catalog_get_column (BPlusTree_t *tcatalog,
 
     return true;
 }
+
+bool
+sql_process_select_wildcard (BPlusTree_t *tcatalog, ast_node_t *table_name_node) {
+
+    void *rec;
+    ast_node_t *column_node;
+    ctable_val_t *ctable_val;
+    schema_rec_t *schema_rec;
+    BPluskey_t bpkey, *bpkey_ptr;
+
+    bpkey.key =  table_name_node->u.identifier.identifier.name;
+    bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;        
+
+    ctable_val = (ctable_val_t *)BPlusTree_Query_Key (
+                                tcatalog ? tcatalog : &TableCatalogDef, &bpkey);
+
+    if (!ctable_val) return false;
+
+    BPlusTree_t *schema_table = ctable_val->schema_table;
+
+    BPTREE_ITERATE_ALL_RECORDS_BEGIN(schema_table, bpkey_ptr, rec) {
+
+        schema_rec = (schema_rec_t *)rec;
+        column_node = (ast_node_t *) calloc (1, sizeof (ast_node_t));
+        column_node->entity_type = SQL_IDENTIFIER;
+        column_node->u.identifier.ident_type = SQL_COLUMN_NAME;
+        strncpy (column_node->u.identifier.identifier.name, schema_rec->column_name, SQL_COLUMN_NAME_MAX_SIZE);
+        ast_add_child (table_name_node, column_node);
+
+    } BPTREE_ITERATE_ALL_RECORDS_END(schema_table, bpkey_ptr, rec);
+
+    return true;
+}

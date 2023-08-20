@@ -60,6 +60,9 @@ static int
                         break;
             }
             break;
+            case DECIMAL_NUMBER:
+                exit(0);
+                break;
             default: 
                 PARSER_ERROR_EXIT(0, token_code);
                 break;
@@ -107,7 +110,7 @@ insert_q_parse_table_name (ast_node_t *insert_kw) {
 }
 
 static void 
-parse_insert_query( ast_node_t *insert_kw) {
+parse_insert_query ( ast_node_t *insert_kw) {
     
     int token_code = insert_q_parse_table_name (insert_kw);
 

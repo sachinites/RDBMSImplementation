@@ -45,4 +45,7 @@ Catalog_get_column (BPlusTree_t *tcatalog,
                                     char *col_name,
                                     qp_col_t *qp_col);
 
+bool
+sql_process_select_wildcard (BPlusTree_t *tcatalog, ast_node_t *table_name_node) ;
+
 #endif 

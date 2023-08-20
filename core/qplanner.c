@@ -72,16 +72,16 @@ qep_init_where_clause (qep_struct_t *qep_struct, ast_node_t *root) {
         sql_where_clause_infix_to_postfix (where_literals_arr, &size_out);
 
     if (!where_literals_postfix) return;
-
+#if 0
     printf ("postfix : \n");
     sql_debug_print_where_literals2 (where_literals_postfix, size_out);
-
+#endif
     qep_struct->expt_root = 
         sql_where_convert_postfix_to_expression_tree (where_literals_postfix , size_out);
-
+#if 0
     printf ("Expression Tree :\n");
     sql_debug_print_expression_tree (qep_struct->expt_root);
-    
+#endif
     free (where_literals_postfix);
 }
 

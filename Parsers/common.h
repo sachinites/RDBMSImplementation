@@ -13,7 +13,8 @@
 #define WILDCARD 1005
 #define SHOW_DB_TABLES  1006
 #define QUOTATION_MARK 1007
-#define QUIT    1008
+#define  DECIMAL_NUMBER    1008
+#define QUIT    1009
 
 #define PARSER_ERROR_EXIT(code, expected_code) \
     if (code != expected_code) yyerror (code, expected_code, yytext, yylineno)

@@ -144,6 +144,10 @@
     return EOL;
 }
 
+"\\\n" {
+
+}
+
 "\\dt\n" {
     return SHOW_DB_TABLES;
 }
@@ -173,6 +177,11 @@
 [1-9][0-9]* {
     return INTEGER;
 }
+
+[0-9]*.[0-9]+ {
+    return DECIMAL_NUMBER;
+}
+
 
 [a-zA-Z0-9]+ {
     return SQL_IDENTIFIER;
@@ -330,6 +339,9 @@ parse_columns (ast_node_t *parent) {
             }
             break;
         case WILDCARD:
+            if (!sql_process_select_wildcard(NULL, parent)) {
+                return EOL;
+            }
            // printf ("Colmn name is : %s\n", yytext);
             token_code = yylex();
             break;
@@ -350,7 +362,7 @@ parse_where_condition(ast_node_t *select_root, where_literal_t **wlit) {
 
     char col_name [SQL_COLUMN_NAME_MAX_SIZE] = {0};
     char operand_col_name [SQL_COLUMN_NAME_MAX_SIZE] = {0};
-    char operand_identifer [256] = {0};
+    char operand_identifer [SQL_OPERAND_MAX_VALUE] = {0};
 
     int token_code = yylex();
 
@@ -405,7 +417,6 @@ parse_where_condition(ast_node_t *select_root, where_literal_t **wlit) {
 
         case INTEGER:
             value = atoi (yytext);
-            printf ("%d\n", value);
             wc->right_op.w_opd = WH_VALUE;
             wc->right_op.u.value.dtype = SQL_INT;
             wc->right_op.u.value.size = sql_dtype_size (wc->right_op.u.value.dtype);
@@ -446,7 +457,7 @@ parse_where_condition(ast_node_t *select_root, where_literal_t **wlit) {
             //wc->right_op.u.value.size = 16;
             wc->right_op.u.value.val = calloc (wc->right_op.u.value.size, 1);
             inet_pton (AF_INET, (const char *)yytext, wc->right_op.u.value.val);
-            sql_debug_print_where_cond (wc);
+            //sql_debug_print_where_cond (wc);
             //strcpy (wc->right_op.u.value.val , yytext);
             break;
         default:
@@ -507,7 +518,7 @@ parse_where_conditions(ast_node_t *select_root) {
                 wlit++;
                 wlit->where_token_type = WHERE_LITERAL_OPERATOR_TOKEN_CODE;
                 wlit->u.token_id = token_code;
-                sql_debug_print_where_literals (where_literals_arr);
+                //sql_debug_print_where_literals (where_literals_arr);
                 return token_code;
         }
         wlit++;
@@ -571,6 +582,9 @@ parse_select_query (ast_node_t *root) {
                 return;
         }
         break;
+    case EOL:
+        return;
+    break;
         default:
         PARSER_ERROR_EXIT(token_code, 0);
         break;
