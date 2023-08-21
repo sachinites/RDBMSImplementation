@@ -325,15 +325,13 @@ sql_evaluate_where_expression_tree ( expt_node_t *root, joined_row_t *joined_row
                 {
                     bool rcl = sql_evaluate_where_expression_tree (root->left, joined_row);
                     if (rcl == false) return false;
-                    bool rcr = sql_evaluate_where_expression_tree (root->right, joined_row);
-                    return rcl && rcr;
+                    return rcl && sql_evaluate_where_expression_tree (root->right, joined_row);
                 }
                 case SQL_OR:
                 {
                     bool rcl = sql_evaluate_where_expression_tree (root->left, joined_row);
                     if (rcl == true) return true;
-                    bool rcr = sql_evaluate_where_expression_tree (root->right, joined_row);
-                    return rcl || rcr;                    
+                    return sql_evaluate_where_expression_tree (root->right, joined_row);               
                 }
                 case SQL_NOT:
                     return ! ( sql_evaluate_where_expression_tree (

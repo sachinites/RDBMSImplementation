@@ -3,6 +3,7 @@
 #include <memory.h>
 #include <stdlib.h>
 #include <assert.h>
+#include "../gluethread/glthread.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "../core/rdbms_struct.h"
 #include "../core/sql_const.h"
@@ -291,31 +292,40 @@ bool
 sql_process_select_wildcard (BPlusTree_t *tcatalog, ast_node_t *table_name_node) {
 
     void *rec;
+    glthread_t *curr;
+    list_node_t *lnode;
     ast_node_t *column_node;
     ctable_val_t *ctable_val;
-    schema_rec_t *schema_rec;
-    BPluskey_t bpkey, *bpkey_ptr;
+    BPlusTree_t *tcatalog_to_use;
+    BPluskey_t bpkey;
+
+    tcatalog_to_use = tcatalog ? tcatalog : &TableCatalogDef;
+
+    if (!tcatalog_to_use->Root)  {
+        printf ("Error : relation does not exist\n");
+        return false;
+    }
 
     bpkey.key =  table_name_node->u.identifier.identifier.name;
     bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;        
 
-    ctable_val = (ctable_val_t *)BPlusTree_Query_Key (
-                                tcatalog ? tcatalog : &TableCatalogDef, &bpkey);
+    ctable_val = (ctable_val_t *)BPlusTree_Query_Key (tcatalog_to_use, &bpkey);
 
-    if (!ctable_val) return false;
+    if (!ctable_val) {
+        printf ("Error : relation does not exist\n");
+        return false;
+    }
 
-    BPlusTree_t *schema_table = ctable_val->schema_table;
+    ITERATE_GLTHREAD_BEGIN(&ctable_val->col_list_head, curr) {
 
-    BPTREE_ITERATE_ALL_RECORDS_BEGIN(schema_table, bpkey_ptr, rec) {
-
-        schema_rec = (schema_rec_t *)rec;
+        lnode = glue_to_list_node (curr);
         column_node = (ast_node_t *) calloc (1, sizeof (ast_node_t));
         column_node->entity_type = SQL_IDENTIFIER;
         column_node->u.identifier.ident_type = SQL_COLUMN_NAME;
-        strncpy (column_node->u.identifier.identifier.name, schema_rec->column_name, SQL_COLUMN_NAME_MAX_SIZE);
+        strncpy (column_node->u.identifier.identifier.name, lnode->data, SQL_COLUMN_NAME_MAX_SIZE);
         ast_add_child (table_name_node, column_node);
 
-    } BPTREE_ITERATE_ALL_RECORDS_END(schema_table, bpkey_ptr, rec);
+    } ITERATE_GLTHREAD_END(&ctable_val->col_list_head, curr) 
 
     return true;
 }

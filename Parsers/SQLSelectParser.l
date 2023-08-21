@@ -178,9 +178,13 @@
     return INTEGER;
 }
 
+%{
+/*
 [0-9]*.[0-9]+ {
     return DECIMAL_NUMBER;
 }
+*/
+%}
 
 
 [a-zA-Z0-9]+ {
@@ -339,9 +343,12 @@ parse_columns (ast_node_t *parent) {
             }
             break;
         case WILDCARD:
-            if (!sql_process_select_wildcard(NULL, parent)) {
-                return EOL;
-            }
+            ast_node_t *astnode = (ast_node_t *)calloc (1,sizeof (ast_node_t));
+            astnode->entity_type = SQL_IDENTIFIER;
+            astnode->u.identifier.ident_type = SQL_COLUMN_NAME;
+            strncpy (astnode->u.identifier.identifier.name, yytext, 
+            sizeof (astnode->u.identifier.identifier.name));
+            ast_add_child (parent, astnode);
            // printf ("Colmn name is : %s\n", yytext);
             token_code = yylex();
             break;
@@ -550,7 +557,7 @@ parse_tables(ast_node_t *select_kw) {
     }
 }
 
-static void 
+static bool
 parse_select_query (ast_node_t *root) {
 
     int token_code;
@@ -565,30 +572,44 @@ parse_select_query (ast_node_t *root) {
    switch (token_code) {
     case SQL_FROM:
         token_code = parse_tables(root);
-        FOR_ALL_AST_CHILD((&parent_temp), curr) {
-            curr->next = NULL;
-            curr->parent = NULL;
-            ast_add_child (root->child_list, curr);
-        }FOR_ALL_AST_CHILD_END;
+        if (parent_temp.child_list->next == NULL &&
+                strcmp (parent_temp.child_list->u.identifier.identifier.name, "*") == 0) {
+            /* If user typed select * .... */
+            ast_node_t *star_node = parent_temp.child_list;
+            parent_temp.child_list = NULL;
+            star_node->parent = NULL;
+            ast_destroy_tree (star_node);
+            if (!sql_process_select_wildcard  (NULL, root->child_list)) {
+                return false;
+            }
+        }
+        else {
+            FOR_ALL_AST_CHILD((&parent_temp), curr) {
+                curr->next = NULL;
+                curr->parent = NULL;
+                ast_add_child (root->child_list, curr);
+            }FOR_ALL_AST_CHILD_END;
+        }
         switch(token_code) {
             case SQL_WHERE:
                 token_code = parse_where_conditions(root);
                  switch(token_code) {
                     case EOL:
-                        return;
+                        return true;
                  }
                 break;
             case EOL:
-                return;
+                return true;
         }
         break;
     case EOL:
-        return;
+        return false;
     break;
         default:
         PARSER_ERROR_EXIT(token_code, 0);
         break;
    }
+   return true;
 }
 
 static  void  
@@ -601,6 +622,7 @@ parse_update_query ()  {}
 static void 
 parse_sql_query () {
 
+    bool rc;
     ast_node_t *astroot = NULL;
     paranthesis_cnt = 0;
 
@@ -616,10 +638,15 @@ parse_sql_query () {
             astroot = (ast_node_t *)calloc (1, sizeof (ast_node_t));
             astroot->entity_type = SQL_QUERY_TYPE;
             astroot->u.q_type = SQL_SELECT_Q;
-            parse_select_query  (astroot);
+            rc = parse_select_query  (astroot);
             //ast_print (astroot, 0);
             if (paranthesis_cnt) {
                 printf ("Error : Unbalanced Paranthesis\n");
+                 ast_destroy_tree_from_root (astroot);
+                return;
+            }
+            if (!rc) {
+                ast_destroy_tree_from_root (astroot);
                 return;
             }
             sql_process_select_query (NULL, astroot);

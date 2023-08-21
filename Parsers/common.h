@@ -15,6 +15,7 @@
 #define QUOTATION_MARK 1007
 #define  DECIMAL_NUMBER    1008
 #define QUIT    1009
+#define USELESS_TOKEN   1010
 
 #define PARSER_ERROR_EXIT(code, expected_code) \
     if (code != expected_code) yyerror (code, expected_code, yytext, yylineno)

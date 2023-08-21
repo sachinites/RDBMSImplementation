@@ -64,35 +64,37 @@ typedef struct qep_struct_ {
    
     struct {
 
-        join_predicate_t *join_pred[2];
-         bool join_pred_or;  /* join predicates is joined by OR is true, else AND*/
+        expt_node_t *expt_root;
+
     } join;
 
     struct {
 
         int n;
         qp_col_t **col_list;
+        expt_node_t *expt_root;
 
     } groupby;
-
-    having_t *having[2];
-    bool having_pred_or; 
 
     struct {
 
         int n;
         qp_col_t **sel_colmns;
+
     } select;
 
     struct {
 
         bool distinct;
         qp_col_t col;
+
     } distinct;
 
     struct {
+
         bool orderby;
         qp_col_t col;
+
     } orderby;
 
     uint32_t limit;  /* 0 means no limit*/
