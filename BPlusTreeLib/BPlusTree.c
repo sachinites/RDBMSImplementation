@@ -478,11 +478,13 @@ void BPlusTree_Delete(BPlusTree_t *tree,
 	BPlusTreeNode* Leaf = Find(tree, key, false);
 	int i = Binary_Search(tree, Leaf, key);
 	if (tree->comp_fn (&Leaf->key[i], key, tree->key_mdata, tree->key_mdata_size) != 0) return; // don't have this key
-	tree->key_fmt_fn (key, key_output_buffer , sizeof (key_output_buffer ));
-	tree->value_fmt_fn ((void *)Leaf->child[i], value_output_buffer, sizeof (value_output_buffer) );
-	printf("Delete: key = %s, original value = %s\n", 
-		key_output_buffer ,
-		value_output_buffer );
+	if (tree->key_fmt_fn && tree->value_fmt_fn) {
+		tree->key_fmt_fn (key, key_output_buffer , sizeof (key_output_buffer ));
+		tree->value_fmt_fn ((void *)Leaf->child[i], value_output_buffer, sizeof (value_output_buffer) );
+		printf("Delete: key = %s, original value = %s\n", 
+					key_output_buffer ,
+					value_output_buffer );
+	}
 	void *key_to_free = Leaf->key[i].key;
    	Delete(tree, Leaf, key); 
 	free(key_to_free);

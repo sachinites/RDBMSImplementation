@@ -407,7 +407,7 @@ sql_compute_group_by_clause_keys (qep_struct_t *qep_struct,  joined_row_t  *join
 }
 
 void
-qep_execute (qep_struct_t *qep_struct) {
+qep_execute_select (qep_struct_t *qep_struct) {
 
     int row_no = 0;
     qp_col_t *col;
@@ -588,6 +588,44 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
                             (sql_compute_group_by_key_size (qep_struct), 
                             hashfromkey, equalkeys);    
     qep_init_where_clause (qep_struct, root);
+}
+
+void
+qep_execute_delete (qep_struct_t *qep_struct) {
+
+    void *rec;
+    glthread_t *curr;
+    list_node_t *lnode;
+    uint32_t count = 0;
+    BPluskey_t *bpkey;
+    list_node_t list_node_head;
+
+    list_node_head.data = NULL;
+    init_glthread (&list_node_head.glue);
+
+    BPTREE_ITERATE_ALL_RECORDS_BEGIN(qep_struct->ctable_val1->rdbms_table, bpkey, rec) {
+
+        rec = qep_enforce_where (qep_struct->ctable_val1->schema_table, rec, qep_struct->expt_root);
+        if (!rec) continue;
+        count++;
+        lnode = (list_node_t *) calloc (1, sizeof (list_node_t));
+        lnode->data = (void *)bpkey;
+        init_glthread (&lnode->glue);
+        glthread_add_next (&list_node_head.glue, &lnode->glue);
+
+    } BPTREE_ITERATE_ALL_RECORDS_END(qep_struct->ctable_val1->rdbms_table, bpkey, rec) ;
+
+    ITERATE_GLTHREAD_BEGIN(&list_node_head.glue, curr) {
+        
+        lnode = glue_to_list_node(curr);
+        bpkey = (BPluskey_t *) lnode->data;
+        BPlusTree_Delete (qep_struct->ctable_val1->rdbms_table, bpkey);
+        remove_glthread(&lnode->glue);
+        free(lnode);
+
+    } ITERATE_GLTHREAD_END(&list_node_head.glue, curr) ;
+
+    printf ("(%u rows affected)\n", count);
 }
 
 void 

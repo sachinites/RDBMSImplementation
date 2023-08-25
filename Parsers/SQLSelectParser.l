@@ -62,6 +62,10 @@
 "insert into" {
     return SQL_INSERT_Q;
 }
+"delete" {
+    return SQL_DELETE_Q;
+}
+
 "varchar" {
     return SQL_STRING;
 }
@@ -359,7 +363,7 @@ parse_columns (ast_node_t *parent) {
 
 
 static int 
-parse_where_condition(ast_node_t *select_root, where_literal_t **wlit) {
+parse_where_condition(ast_node_t *root, where_literal_t **wlit) {
 
     int value;
     int op_code;
@@ -383,7 +387,7 @@ parse_where_condition(ast_node_t *select_root, where_literal_t **wlit) {
     ast_tmplate.entity_type = SQL_IDENTIFIER;
     ast_tmplate.u.identifier.ident_type = SQL_TABLE_NAME;
 
-    table_name_node = ast_find (select_root, &ast_tmplate);
+    table_name_node = ast_find (root, &ast_tmplate);
     assert (table_name_node);
 
     (*wlit)->where_token_type = WHERE_LITERAL_WHERE_COND;
@@ -617,6 +621,7 @@ parse_update_query ()  {}
 
 #include "SQLCreateParser.c"
 #include "SQLInsertIntoParser.c"
+#include "SQLDeleteParser.c"
 #include "../core/sql_intf.h"
 
 static void 
@@ -673,6 +678,14 @@ parse_sql_query () {
              parse_insert_query (astroot);
              //ast_print (astroot, 0);
              sql_process_insert_query(NULL, astroot);
+             break;
+        case SQL_DELETE_Q:
+            astroot = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+             astroot->entity_type = SQL_QUERY_TYPE;
+             astroot->u.q_type = SQL_DELETE_Q;
+             if (parse_delete_query (astroot)) {
+                sql_process_delete_query(NULL, astroot);
+             }
              break;
         case EOL:
             ast_destroy_tree_from_root (astroot);

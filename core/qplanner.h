@@ -107,7 +107,10 @@ typedef struct qep_struct_ {
 } qep_struct_t;
 
 void
-qep_execute (qep_struct_t *qep_struct) ;
+qep_execute_select (qep_struct_t *qep_struct) ;
+
+void
+qep_execute_delete (qep_struct_t *qep_struct) ;
 
 void 
 qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *root);

@@ -9,6 +9,7 @@
 #include "Catalog.h"
 #include "sql_const.h"
 #include "select.h"
+#include "sql_delete.h"
 #include "../gluethread/glthread.h"
 
 extern BPlusTree_t TableCatalogDef;
@@ -243,3 +244,40 @@ sql_show_table_catalog (BPlusTree_t *TableCatalog) {
     printf ("(%d rows)\n", rows);
 }
 
+bool
+sql_process_delete_query (BPlusTree_t *TableCatalog, ast_node_t *delete_root)  {
+
+    ast_node_t ast_tmplate;
+    BPluskey_t bpkey;
+    ctable_val_t *ctable_val;
+    BPlusTree_t *tcatalog = TableCatalog ? TableCatalog : &TableCatalogDef;
+
+    ast_tmplate.entity_type = SQL_IDENTIFIER;
+    ast_tmplate.u.identifier.ident_type = SQL_TABLE_NAME;
+
+    ast_node_t *table_name_node = ast_find (delete_root, &ast_tmplate);
+
+    if (!table_name_node) return false;
+
+    unsigned char *table_name = table_name_node->u.identifier.identifier.name;
+
+    bpkey.key =  table_name;
+    bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
+
+    ctable_val = (ctable_val_t *)BPlusTree_Query_Key (tcatalog, &bpkey);
+    
+    if (!ctable_val || !ctable_val->schema_table) {
+        printf ("ERROR : relation does not exist\n");
+        return false;
+    }
+
+    BPlusTree_t *schema_table = ctable_val->schema_table;
+    BPlusTree_t *data_table = ctable_val->rdbms_table;
+
+    if (!sql_validate_delete_query_data (schema_table, delete_root)) {
+        return false;
+    }
+
+    sql_process_delete_query_internal (tcatalog , delete_root);
+    return true;
+}

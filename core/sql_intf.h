@@ -12,6 +12,9 @@ sql_process_create_query (BPlusTree_t *TableCatalog, ast_node_t *root);
 bool 
 sql_process_insert_query (BPlusTree_t *TableCatalog, ast_node_t *root);
 
+bool
+sql_process_delete_query(BPlusTree_t *TableCatalog, ast_node_t *root) ;
+
 void 
 sql_show_table_catalog (BPlusTree_t *TableCatalog);
 
