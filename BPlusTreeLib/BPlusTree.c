@@ -29,7 +29,7 @@ void BPlusTree_init (BPlusTree_t *tree,
 	tree->comp_fn = comp_fn;
 	tree->key_fmt_fn = key_fmt_fn;
 	tree->value_fmt_fn = value_fmt_fn;
-	tree->MaxChildNumber = MaxChildNumber + 1;
+	tree->MaxChildNumber = MaxChildNumber;
 	tree->free_fn = free_fn;
 }
 

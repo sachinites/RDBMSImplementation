@@ -347,6 +347,7 @@ parse_columns (ast_node_t *parent) {
             }
             break;
         case WILDCARD:
+        {
             ast_node_t *astnode = (ast_node_t *)calloc (1,sizeof (ast_node_t));
             astnode->entity_type = SQL_IDENTIFIER;
             astnode->u.identifier.ident_type = SQL_COLUMN_NAME;
@@ -356,6 +357,7 @@ parse_columns (ast_node_t *parent) {
            // printf ("Colmn name is : %s\n", yytext);
             token_code = yylex();
             break;
+        }
         default: ;
     }
     return token_code;

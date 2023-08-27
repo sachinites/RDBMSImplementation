@@ -590,6 +590,8 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
     qep_init_where_clause (qep_struct, root);
 }
 
+#include <arpa/inet.h>
+
 void
 qep_execute_delete (qep_struct_t *qep_struct) {
 
@@ -598,6 +600,7 @@ qep_execute_delete (qep_struct_t *qep_struct) {
     list_node_t *lnode;
     uint32_t count = 0;
     BPluskey_t *bpkey;
+    BPluskey_t *bpkey_copy;
     list_node_t list_node_head;
 
     list_node_head.data = NULL;
@@ -607,9 +610,13 @@ qep_execute_delete (qep_struct_t *qep_struct) {
 
         rec = qep_enforce_where (qep_struct->ctable_val1->schema_table, rec, qep_struct->expt_root);
         if (!rec) continue;
-        count++;
         lnode = (list_node_t *) calloc (1, sizeof (list_node_t));
-        lnode->data = (void *)bpkey;
+        /* Do not cache the direct ptr to the keys in a linkedList, because on node deletion, 
+            B+Tree internally restructure itself and re-adjust key pointers ! Hence cache the
+            copy of the keys to delete later*/
+        bpkey_copy = (BPluskey_t *) calloc (1, sizeof (BPluskey_t));
+        *bpkey_copy = *bpkey;
+        lnode->data = (void *)bpkey_copy;
         init_glthread (&lnode->glue);
         glthread_add_next (&list_node_head.glue, &lnode->glue);
 
@@ -620,12 +627,14 @@ qep_execute_delete (qep_struct_t *qep_struct) {
         lnode = glue_to_list_node(curr);
         bpkey = (BPluskey_t *) lnode->data;
         BPlusTree_Delete (qep_struct->ctable_val1->rdbms_table, bpkey);
+        free(bpkey);
         remove_glthread(&lnode->glue);
         free(lnode);
+        count++;
 
     } ITERATE_GLTHREAD_END(&list_node_head.glue, curr) ;
 
-    printf ("(%u rows affected)\n", count);
+    printf ("DELETE %u\n", count);
 }
 
 void 

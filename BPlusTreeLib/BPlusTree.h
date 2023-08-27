@@ -1,9 +1,13 @@
 #ifndef __BPlusTree_H__
 #define __BPlusTree_H__
 
-#define MAX_CHILD_NUMBER 5
+#define MAX_CHILD_NUMBER 4
 #include <stdint.h>
 #include <stdbool.h>
+
+/*
+* This is downloaded from https://github.com/parachvte/B-Plus-Tree
+*/
 
 typedef struct key_mdata_ key_mdata_t ;
 
@@ -17,8 +21,8 @@ typedef struct BPluskey {
 typedef struct BPlusTreeNode {
 	bool isRoot, isLeaf;
 	int key_num;
-	BPluskey_t key[MAX_CHILD_NUMBER];
-	void* child[MAX_CHILD_NUMBER];
+	BPluskey_t key[MAX_CHILD_NUMBER + 1];
+	void* child[MAX_CHILD_NUMBER + 2 ];
 	struct BPlusTreeNode* father;
 	struct BPlusTreeNode* next;
 	struct BPlusTreeNode* last;
