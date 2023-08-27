@@ -204,43 +204,24 @@ sql_show_table_catalog (BPlusTree_t *TableCatalog) {
 
     int i;
     int rows = 0;
-    BPluskey_t *key;
-    BPlusTreeNode *bnode;
+    void *rec_ptr;
+    BPluskey_t *key_ptr;
     unsigned char table_name[SQL_TABLE_NAME_MAX_SIZE];
     
     BPlusTree_t *tcatalog = TableCatalog ? TableCatalog : &TableCatalogDef;
-
-    bnode = tcatalog->Root;
-    
-    if (!bnode) return;
-
-    while (!bnode->isLeaf) {
-        bnode = bnode->child[0];
-    }
-
-    if (!bnode) return;
 
     printf ("           List of relations\n");
     printf (" Schema    |           Name           | Type  | Owner  \n");
     printf ("-----------+--------------------------+-------+--------------\n");
 
-    while (bnode) {
-        
-        for (i = 0; i < bnode->key_num; i++) {
+    BPTREE_ITERATE_ALL_RECORDS_BEGIN(tcatalog, key_ptr, rec_ptr) {
 
-            key = &bnode->key[i];
+        tcatalog->key_fmt_fn (key_ptr, table_name, SQL_TABLE_NAME_MAX_SIZE);
+        printf (" public    | %-23s  | table | postgres  \n", table_name);
+        rows++;
 
-            tcatalog->key_fmt_fn (key, table_name, SQL_TABLE_NAME_MAX_SIZE);
-            
-            printf (" public    | %-23s  | table | postgres  \n", table_name);
-            if (bnode->next) {
-                printf ("-----------+--------------------------+-------+--------------\n");
-            }
-            rows++;
-        }
+    } BPTREE_ITERATE_ALL_RECORDS_END(tcatalog, key_ptr, rec_ptr)
 
-        bnode = bnode->next;
-    }
     printf ("(%d rows)\n", rows);
 }
 

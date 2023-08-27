@@ -611,7 +611,7 @@ qep_execute_delete (qep_struct_t *qep_struct) {
         rec = qep_enforce_where (qep_struct->ctable_val1->schema_table, rec, qep_struct->expt_root);
         if (!rec) continue;
         lnode = (list_node_t *) calloc (1, sizeof (list_node_t));
-        /* Do not cache the direct ptr to the keys in a linkedList, because on node deletion, 
+        /* Do not cache the direct ptr to the keys in a linkedList, because on node deletion,
             B+Tree internally restructure itself and re-adjust key pointers ! Hence cache the
             copy of the keys to delete later*/
         bpkey_copy = (BPluskey_t *) calloc (1, sizeof (BPluskey_t));
