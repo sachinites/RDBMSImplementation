@@ -18,7 +18,7 @@ void BPlusTree_init (BPlusTree_t *tree,
 							BPlusTree_key_com_fn comp_fn, 
 							BPlusTree_key_format_fn key_fmt_fn,
 							BPlusTree_value_format_fn value_fmt_fn,
-							uint16_t MaxChildNumber,
+							uint16_t MaxChildNumber, // not used
 							BPlusTree_value_free_fn free_fn
 							) {
 
@@ -29,7 +29,7 @@ void BPlusTree_init (BPlusTree_t *tree,
 	tree->comp_fn = comp_fn;
 	tree->key_fmt_fn = key_fmt_fn;
 	tree->value_fmt_fn = value_fmt_fn;
-	tree->MaxChildNumber = MaxChildNumber;
+	tree->MaxChildNumber = MAX_CHILD_NUMBER;
 	tree->free_fn = free_fn;
 }
 
