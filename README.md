@@ -1,6 +1,12 @@
 # RDBMSImplementation
 Implement your own RDBMs
 
+Snapshot from the project ( 31 Aug 2023 )
+
+![Capture](https://github.com/sachinites/RDBMSImplementation/assets/17794924/d052caa5-5734-41a7-b00a-c04f1243b821)
+
+
+
 Here is a complete Tutorial : http://chi.cs.uchicago.edu/chidb/index.html
 
 Lots of Research papers are here : http://www.cs.cmu.edu/afs/cs/academic/class/15721-f01/www/readings.html
