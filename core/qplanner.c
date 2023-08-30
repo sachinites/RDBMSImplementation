@@ -21,7 +21,7 @@
 extern BPlusTree_t TableCatalogDef;
 
 static void *
- qep_enforce_where (BPlusTree_t  *schema_table, void *record, expt_node_t *expt_root) {
+ qep_enforce_where (qep_struct_t *qep_struct, BPlusTree_t  *schema_table, void *record, expt_node_t *expt_root) {
 
     if (!record) return NULL;
     if (!expt_root) return record;
@@ -36,7 +36,7 @@ static void *
      schema_table_array[0] = schema_table;
      rec_array[0] = record;
 
-    bool rc = sql_evaluate_where_expression_tree (expt_root, &joined_row);
+    bool rc = sql_evaluate_where_expression_tree (qep_struct, expt_root, &joined_row);
     
     if (rc) return record;
     return NULL;
@@ -117,7 +117,7 @@ table_iterators_first (qep_struct_t *qep_struct,
                         &titer->table_iter_data[table_id].bpnode,
                         &titer->table_iter_data[table_id].index);
 
-            rec = qep_enforce_where(
+            rec = qep_enforce_where(qep_struct,
                         titer->table_iter_data[table_id].ctable_val->schema_table, 
                         rec, qep_struct->expt_root);
 
@@ -151,7 +151,7 @@ table_iterators_next (qep_struct_t *qep_struct,
                     &titer->table_iter_data[table_id].bpnode,
                     &titer->table_iter_data[table_id].index);
 
-        rec = qep_enforce_where(
+        rec = qep_enforce_where(qep_struct,
                     titer->table_iter_data[table_id].ctable_val->schema_table,
                     rec, qep_struct->expt_root);
 
@@ -181,7 +181,7 @@ table_iterators_next (qep_struct_t *qep_struct,
                             &titer->table_iter_data[table_id].bpnode,
                             &titer->table_iter_data[table_id].index);
 
-            rec = qep_enforce_where(
+            rec = qep_enforce_where(qep_struct,
                             titer->table_iter_data[table_id].ctable_val->schema_table,
                             rec, qep_struct->expt_root);
 
@@ -221,7 +221,7 @@ qep_execute_join_predicate (qep_struct_t *qep_struct, joined_row_t *joined_row) 
     
     if (qep_struct->expt_root) {
     
-        rc  = sql_evaluate_where_expression_tree (qep_struct->expt_root, joined_row);
+        rc  = sql_evaluate_where_expression_tree (qep_struct, qep_struct->expt_root, joined_row);
     }
 
     return rc;
@@ -354,7 +354,7 @@ qep_execute_select (qep_struct_t *qep_struct) {
             }
             if (col->agg_fn == SQL_AGG_FN_NONE)
             {
-                val = sql_get_column_value_from_joined_row(joined_row, col);
+                val = sql_get_column_value_from_joined_row(joined_row, col, qep_struct->join.table_cnt);
                 memcpy(col->computed_value, val, col->schema_rec->dtype_size);
             }
             else
@@ -363,7 +363,7 @@ qep_execute_select (qep_struct_t *qep_struct) {
                
                 if (row_no == 1)
                 {
-                    val = sql_get_column_value_from_joined_row(joined_row, col);
+                    val = sql_get_column_value_from_joined_row(joined_row, col, qep_struct->join.table_cnt);
                     if (col->agg_fn == SQL_COUNT) {
                         *(int *)(col->computed_value) = 1;
                     }
@@ -373,7 +373,7 @@ qep_execute_select (qep_struct_t *qep_struct) {
                 }
                 else
                 {
-                    val = sql_get_column_value_from_joined_row(joined_row, col);
+                    val = sql_get_column_value_from_joined_row(joined_row, col, qep_struct->join.table_cnt);
                     sql_compute_aggregate(col->agg_fn, val, col->computed_value, col->schema_rec->dtype, col->schema_rec->dtype_size, row_no);
                 }
             }
@@ -527,7 +527,7 @@ qep_execute_delete (qep_struct_t *qep_struct) {
 
     BPTREE_ITERATE_ALL_RECORDS_BEGIN(qep_struct->ctable_val[0]->rdbms_table, bpkey, rec) {
 
-        rec = qep_enforce_where (qep_struct->ctable_val[0]->schema_table, rec, qep_struct->expt_root);
+        rec = qep_enforce_where (qep_struct, qep_struct->ctable_val[0]->schema_table, rec, qep_struct->expt_root);
         if (!rec) continue;
         lnode = (list_node_t *) calloc (1, sizeof (list_node_t));
         /* Do not cache the direct ptr to the keys in a linkedList, because on node deletion,
@@ -561,6 +561,8 @@ qep_deinit (qep_struct_t *qep_struct) {
 
     int i;
     qp_col_t *col;
+
+    free (qep_struct->ctable_val);
 
     if (qep_struct->expt_root) {
         expt_destroy (qep_struct->expt_root);

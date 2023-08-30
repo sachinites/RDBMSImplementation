@@ -5,6 +5,7 @@
 #include "rdbms_struct.h"
 
 typedef struct  joined_row_  joined_row_t;
+typedef struct qep_struct_ qep_struct_t ;
 
 typedef enum {
 
@@ -40,7 +41,7 @@ typedef struct where_cond_ {
 } where_cond_t;
 
 bool 
-sql_where_compute (where_cond_t *wc, joined_row_t *joined_row);
+sql_where_compute (qep_struct_t *qep_struct, where_cond_t *wc, joined_row_t *joined_row);
 
 /* Expression Tree*/
 typedef enum {
@@ -96,7 +97,7 @@ expt_node_t *
 sql_where_convert_postfix_to_expression_tree (where_literal_t **arr, int size);
 
 bool 
-sql_evaluate_where_expression_tree ( expt_node_t *root, joined_row_t *joined_row);
+sql_evaluate_where_expression_tree (qep_struct_t *qep_struct, expt_node_t *root, joined_row_t *joined_row) ;
 
 void 
 expt_destroy(expt_node_t *root);

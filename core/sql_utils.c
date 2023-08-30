@@ -280,19 +280,19 @@ sql_compute_column_text_name (qp_col_t *col, unsigned char *column_name, int siz
 }
 
 static void *
-joined_row_search ( BPlusTree_t * BPlusTree, joined_row_t *joined_row) {
+joined_row_search ( BPlusTree_t * BPlusTree, joined_row_t *joined_row, int table_cnt) {
 
     int i;
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < table_cnt; i++) {
         if (joined_row->schema_table_array[i] == BPlusTree) return joined_row->rec_array[i];
     }
     return NULL;
 }
 
 void *
-sql_get_column_value_from_joined_row (joined_row_t *joined_row, qp_col_t *col) {
+sql_get_column_value_from_joined_row (joined_row_t *joined_row, qp_col_t *col, int table_cnt) {
 
-   void *rec = joined_row_search (col->ctable_val->schema_table, joined_row);
+   void *rec = joined_row_search (col->ctable_val->schema_table, joined_row, table_cnt);
     if (!rec) return NULL;
     return (void *)((char *)rec + col->schema_rec->offset);
 }

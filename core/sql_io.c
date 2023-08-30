@@ -11,9 +11,6 @@
 #include "qplanner.h"
 #include "sql_utils.h"
 
-extern void *
-sql_get_column_value_from_joined_row (joined_row_t *joined_row, qp_col_t *col);
-
 static void 
 print_line(int num_columns, int column_width) {
     for (int i = 0; i < num_columns; i++) {

@@ -275,7 +275,7 @@ sql_where_compare (void *lval , int lval_size,
 }
 
 bool 
-sql_where_compute (where_cond_t *wc, joined_row_t *joined_row) {
+sql_where_compute (qep_struct_t *qep_struct, where_cond_t *wc, joined_row_t *joined_row) {
 
     void *lval;
     void *rval;
@@ -287,7 +287,7 @@ sql_where_compute (where_cond_t *wc, joined_row_t *joined_row) {
     /* Compute lval*/
     lcol = &wc->col;
     l_value_size = lcol->schema_rec->dtype_size;
-    lval = sql_get_column_value_from_joined_row (joined_row, lcol);
+    lval = sql_get_column_value_from_joined_row (joined_row, lcol, qep_struct->join.table_cnt);
     if (!lval) return true;
 
     /* Compute rval*/
@@ -295,7 +295,7 @@ sql_where_compute (where_cond_t *wc, joined_row_t *joined_row) {
 
         case WH_COL:
             rcol = &wc->right_op.u.col;
-            rval =  sql_get_column_value_from_joined_row (joined_row, rcol);
+            rval =  sql_get_column_value_from_joined_row (joined_row, rcol, qep_struct->join.table_cnt);
             if (!rval) return true;
             r_value_size = rcol->schema_rec->dtype_size;
             assert (lcol->schema_rec->dtype == rcol->schema_rec->dtype);
@@ -316,7 +316,7 @@ sql_where_compute (where_cond_t *wc, joined_row_t *joined_row) {
 }
 
 bool 
-sql_evaluate_where_expression_tree ( expt_node_t *root, joined_row_t *joined_row)  {
+sql_evaluate_where_expression_tree (qep_struct_t *qep_struct, expt_node_t *root, joined_row_t *joined_row)  {
 
     switch (root->expt_node_type) {
 
@@ -324,23 +324,23 @@ sql_evaluate_where_expression_tree ( expt_node_t *root, joined_row_t *joined_row
             switch (root->u.lop) {
                 case SQL_AND:
                 {
-                    bool rcl = sql_evaluate_where_expression_tree (root->left, joined_row);
+                    bool rcl = sql_evaluate_where_expression_tree (qep_struct, root->left, joined_row);
                     if (rcl == false) return false;
-                    return rcl && sql_evaluate_where_expression_tree (root->right, joined_row);
+                    return rcl && sql_evaluate_where_expression_tree (qep_struct, root->right, joined_row);
                 }
                 case SQL_OR:
                 {
-                    bool rcl = sql_evaluate_where_expression_tree (root->left, joined_row);
+                    bool rcl = sql_evaluate_where_expression_tree (qep_struct, root->left, joined_row);
                     if (rcl == true) return true;
-                    return sql_evaluate_where_expression_tree (root->right, joined_row);               
+                    return sql_evaluate_where_expression_tree (qep_struct, root->right, joined_row);               
                 }
                 case SQL_NOT:
-                    return ! ( sql_evaluate_where_expression_tree (
+                    return ! ( sql_evaluate_where_expression_tree (qep_struct,
                                 root->right ? root->right : root->left, joined_row));
             }
         break;
         case WHERE_COND:
-            return sql_where_compute (root->u.wc, joined_row);
+            return sql_where_compute (qep_struct, root->u.wc, joined_row);
         default: ;
             assert(0);
             return false;
