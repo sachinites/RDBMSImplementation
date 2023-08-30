@@ -65,9 +65,7 @@ typedef struct join_predicate_ {
 typedef struct qep_struct_ {
 
     /* We cannot use more than three tables in our SQL query*/
-    ctable_val_t *ctable_val1;
-    ctable_val_t *ctable_val2;
-    ctable_val_t *ctable_val3;
+    ctable_val_t **ctable_val;
     expt_node_t *expt_root;
    
     struct {

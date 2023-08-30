@@ -49,10 +49,11 @@ ast_node_get_root (ast_node_t *ast_node) ;
 
 #define FOR_ALL_AST_CHILD(astnode_ptr, ptr)     \
     {                                                                                \
+    if (astnode_ptr)    {                                                   \
     ast_node_t *_temp;                                                  \
     for (ptr = astnode_ptr->child_list; ptr; ptr = _temp){  \
     _temp = ptr->next;
 
- #define FOR_ALL_AST_CHILD_END }}
+ #define FOR_ALL_AST_CHILD_END }}}
  
 #endif 

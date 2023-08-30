@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <memory.h>
+#include <arpa/inet.h>
 #include "../stack/stack.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "qplanner.h"
@@ -80,10 +81,7 @@ qep_init_where_clause (qep_struct_t *qep_struct, ast_node_t *root) {
 
 static void 
 table_iterators_init (qep_struct_t *qep,
-                                table_iterators_t **_titer, 
-                                ctable_val_t *ctable_val1,
-                                ctable_val_t *ctable_val2,
-                                ctable_val_t *ctable_val3) {
+                                table_iterators_t **_titer) {
 
     int i;
 
@@ -98,20 +96,7 @@ table_iterators_init (qep_struct_t *qep,
     for (i = 0 ; i < titer->table_cnt ; i++) {
         titer->table_iter_data[i].bpnode = NULL;
         titer->table_iter_data[i].index = 0;
-
-        switch (i) {
-
-            case 0:
-                titer->table_iter_data[i].ctable_val = ctable_val1;
-                break;
-            case 1:
-                titer->table_iter_data[i].ctable_val = ctable_val2;
-                break;
-            case 2:
-                titer->table_iter_data[i].ctable_val = ctable_val3;
-                break;
-            default: ;
-        }
+        titer->table_iter_data[i].ctable_val  = qep->ctable_val[i];
     }
 }
 
@@ -232,6 +217,17 @@ static bool
 qep_execute_join_predicate (qep_struct_t *qep_struct, joined_row_t *joined_row) {
 
     /* Let the join predicate is always true*/
+    bool rc = true;
+    
+    if (qep_struct->expt_root) {
+    
+        rc  = sql_evaluate_where_expression_tree (qep_struct->expt_root, joined_row);
+    }
+
+    return rc;
+
+    /* Evaluate Join Predicate here */
+
     return true;
 }
 
@@ -430,6 +426,7 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
 
     int i ;
     int n_cols = 0;
+    int table_cnt = 0;
     BPluskey_t bpkey;
     ctable_val_t *ctable_val;
     ast_node_t ast_tmplate, *curr;
@@ -439,7 +436,13 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
     ast_tmplate.u.kw = SQL_FROM;
     ast_node_t *from_kw = ast_find (root, &ast_tmplate);
 
-    for (curr = from_kw->child_list, i = 1; curr; curr = curr->next, i++) {
+    for (curr = from_kw->child_list; curr; curr = curr->next) {
+        table_cnt++;
+    }
+
+    qep_struct->ctable_val = (ctable_val_t **) calloc (table_cnt, sizeof (ctable_val_t * ));
+
+    for (curr = from_kw->child_list, i = 0; curr; curr = curr->next, i++) {
 
         bpkey.key = curr->u.identifier.identifier.name;
         bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
@@ -450,20 +453,10 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
             printf ("Error : relation %s does not exist\n", curr->u.identifier.identifier.name);
             return false;
         }
-        switch (i) {
-            case 1:
-                qep_struct->ctable_val1 = ctable_val;
-                break;
-            case 2:
-                qep_struct->ctable_val2 = ctable_val;
-                break;
-            case 3:
-                qep_struct->ctable_val3 = ctable_val;
-                break;
-        }
+        qep_struct->ctable_val[i] = ctable_val ;
     }
     
-    qep_struct->join.table_cnt = i - 1;
+    qep_struct->join.table_cnt = table_cnt;
 
     ast_node_t *column_node;
 
@@ -474,7 +467,7 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
     FOR_ALL_AST_CHILD (select_kw, column_node) {
         n_cols++;
     } FOR_ALL_AST_CHILD_END;
-
+    
     qep_struct->select.n = n_cols;
     qep_struct->select.sel_colmns = (qp_col_t **)calloc (n_cols, sizeof (qp_col_t *));
     i = 0;
@@ -509,11 +502,7 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
     qep_struct->is_join_started = false;
     qep_struct->is_join_finished = false;
 
-    table_iterators_init (qep_struct,
-                                    &qep_struct->titer,
-                                    qep_struct->ctable_val1,
-                                    qep_struct->ctable_val2,
-                                    qep_struct->ctable_val3);
+    table_iterators_init (qep_struct, &qep_struct->titer);
 
     qep_struct->ht = create_hashtable
                             (sql_compute_group_by_key_size (qep_struct), 
@@ -521,8 +510,6 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
 
     qep_init_where_clause (qep_struct, root);
 }
-
-#include <arpa/inet.h>
 
 void
 qep_execute_delete (qep_struct_t *qep_struct) {
@@ -538,9 +525,9 @@ qep_execute_delete (qep_struct_t *qep_struct) {
     list_node_head.data = NULL;
     init_glthread (&list_node_head.glue);
 
-    BPTREE_ITERATE_ALL_RECORDS_BEGIN(qep_struct->ctable_val1->rdbms_table, bpkey, rec) {
+    BPTREE_ITERATE_ALL_RECORDS_BEGIN(qep_struct->ctable_val[0]->rdbms_table, bpkey, rec) {
 
-        rec = qep_enforce_where (qep_struct->ctable_val1->schema_table, rec, qep_struct->expt_root);
+        rec = qep_enforce_where (qep_struct->ctable_val[0]->schema_table, rec, qep_struct->expt_root);
         if (!rec) continue;
         lnode = (list_node_t *) calloc (1, sizeof (list_node_t));
         /* Do not cache the direct ptr to the keys in a linkedList, because on node deletion,
@@ -558,7 +545,7 @@ qep_execute_delete (qep_struct_t *qep_struct) {
         
         lnode = glue_to_list_node(curr);
         bpkey = (BPluskey_t *) lnode->data;
-        BPlusTree_Delete (qep_struct->ctable_val1->rdbms_table, bpkey);
+        BPlusTree_Delete (qep_struct->ctable_val[0]->rdbms_table, bpkey);
         free(bpkey);
         remove_glthread(&lnode->glue);
         free(lnode);

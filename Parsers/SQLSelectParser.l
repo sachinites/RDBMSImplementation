@@ -314,7 +314,13 @@ parse_plain_coumns(ast_node_t *parent) {
     while (1) {
 
         token_code = yylex();
-        PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
+
+        if (token_code != SQL_IDENTIFIER &&
+            token_code != SQL_TABLE_COLMN_NAME) {
+        
+            PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
+        }
+
        // printf ("Colmn name is : %s\n", yytext);
        ast_node_t *astnode = (ast_node_t *)calloc (1,sizeof (ast_node_t));
        astnode->entity_type = SQL_IDENTIFIER;
@@ -469,6 +475,7 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
             break;
         case SQL_IDENTIFIER:
         case SQL_STRING_VALUE:
+        case SQL_TABLE_COLMN_NAME:
             strcpy (operand_col_name, yytext);
             memset ( table_name, 0, sizeof (table_name));
             table_name_ptr = table_name;
@@ -487,7 +494,7 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
                                 table_name_ptr, 
                                 lone_col_name, &wc->right_op.u.col)) {
                 printf ("Error : Unrecognized Column <%s::%s>\n", 
-                    table_name_ptr, operand_col_name);
+                    table_name_ptr, lone_col_name);
                return SQL_PARSE_ERROR;
             }
             break;
@@ -736,7 +743,7 @@ parse_sql_query () {
             astroot = (ast_node_t *)calloc (1, sizeof (ast_node_t));
              astroot->entity_type = SQL_QUERY_TYPE;
              astroot->u.q_type = SQL_DELETE_Q;
-             if (parse_delete_query (astroot)) {
+             if (parse_delete_query (astroot) == SQL_PARSE_OK) {
                 sql_process_delete_query(NULL, astroot);
              }
              break;
