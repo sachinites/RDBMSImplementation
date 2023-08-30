@@ -36,8 +36,8 @@ typedef struct qp_col_ {
 
 typedef struct joined_row_ {
 
-    BPlusTree_t *schema_table[3];
-    void *rec[3];
+    BPlusTree_t **schema_table_array;
+    void **rec_array;
 
 } joined_row_t;
 

@@ -10,6 +10,6 @@ void
 sql_process_select_query_internal (BPlusTree_t *tcatalog,
                                                          ast_node_t *root);
 bool 
-sql_validate_select_query_data (BPlusTree_t *schema_table, ast_node_t *root);
+sql_validate_select_query_data (BPlusTree_t *tcatalog, ast_node_t *root);
 
 #endif 

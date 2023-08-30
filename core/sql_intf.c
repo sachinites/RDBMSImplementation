@@ -17,26 +17,9 @@ extern BPlusTree_t TableCatalogDef;
 void 
 sql_process_select_query (BPlusTree_t *TableCatalog, ast_node_t *root) {
 
-    BPluskey_t bpkey;
-    ctable_val_t *ctable_val;
     BPlusTree_t *tcatalog = TableCatalog ? TableCatalog : &TableCatalogDef;
-    ast_node_t *table_name_node = root->child_list;
-    unsigned char *table_name = table_name_node->u.identifier.identifier.name;
 
-    bpkey.key =  table_name;
-    bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
-
-    ctable_val = (ctable_val_t *)BPlusTree_Query_Key (tcatalog, &bpkey);
-    
-    if (!ctable_val || !ctable_val->schema_table) {
-        printf ("ERROR : relation does not exist\n");
-        return;
-    }
-
-    BPlusTree_t *schema_table = ctable_val->schema_table;
-    BPlusTree_t *data_table = ctable_val->rdbms_table;
-
-    if (!sql_validate_select_query_data (schema_table, root)) {
+    if (!sql_validate_select_query_data (tcatalog, root)) {
         return ;
     }
 

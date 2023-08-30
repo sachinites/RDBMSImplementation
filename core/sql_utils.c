@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <stdio.h>
+#include <assert.h>
 #include "Catalog.h"
 #include "sql_utils.h"
 #include "sql_const.h"
@@ -283,7 +284,7 @@ joined_row_search ( BPlusTree_t * BPlusTree, joined_row_t *joined_row) {
 
     int i;
     for (i = 0; i < 3; i++) {
-        if (joined_row->schema_table[i] == BPlusTree) return joined_row->rec[i];
+        if (joined_row->schema_table_array[i] == BPlusTree) return joined_row->rec_array[i];
     }
     return NULL;
 }
@@ -292,6 +293,26 @@ void *
 sql_get_column_value_from_joined_row (joined_row_t *joined_row, qp_col_t *col) {
 
    void *rec = joined_row_search (col->ctable_val->schema_table, joined_row);
-   assert (rec);
+    if (!rec) return NULL;
     return (void *)((char *)rec + col->schema_rec->offset);
+}
+
+void 
+parser_split_table_column_name ( unsigned char *composite_col_name, 
+                                                        unsigned char *table_name_out,
+                                                        unsigned char *col_name_out) {
+
+    const char del[2] = ".";
+    unsigned char composite_col_name_dup[SQL_COMPOSITE_COLUMN_NAME_SIZE] = {0};
+
+    strncpy (composite_col_name_dup, composite_col_name, SQL_COMPOSITE_COLUMN_NAME_SIZE);
+    char *str1 = strtok (composite_col_name_dup, del);
+    char *str2 = strtok (NULL, del);
+    if (str2 == NULL) {
+        strncpy (col_name_out, str1, SQL_COLUMN_NAME_MAX_SIZE);
+        table_name_out[0] = '\0';
+        return;
+    }
+    strncpy (table_name_out, str1, SQL_TABLE_NAME_MAX_SIZE);
+    strncpy (col_name_out, str2, SQL_COLUMN_NAME_MAX_SIZE);
 }

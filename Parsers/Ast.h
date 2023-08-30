@@ -29,6 +29,12 @@ ast_add_child (ast_node_t *parent, ast_node_t *child);
 ast_node_t *
 ast_find (ast_node_t *root, ast_node_t *tmplate);
 
+ast_node_t *
+ast_find_identifer (ast_node_t *root, ast_node_t *tmplate);
+
+ast_node_t *
+ast_find_up (ast_node_t *curr_node, ast_node_t *tmplate);;
+
 void 
 ast_destroy_tree_from_root (ast_node_t *root);
 

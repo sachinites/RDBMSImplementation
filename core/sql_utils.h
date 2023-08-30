@@ -31,4 +31,9 @@ sql_compute_column_text_name (qp_col_t *col, unsigned char *column_name, int siz
 void *
 sql_get_column_value_from_joined_row (joined_row_t *joined_row, qp_col_t *col);
 
+void 
+parser_split_table_column_name ( unsigned char *composite_col_name, 
+                                                        unsigned char *table_name_out,
+                                                        unsigned char *col_name_out);
+
 #endif 

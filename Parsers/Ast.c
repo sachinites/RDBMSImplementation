@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <memory.h>
+#include <assert.h>
 #include "Ast.h"
 
 typedef struct where_literal_ where_literal_t;
@@ -56,10 +57,46 @@ ast_find (ast_node_t *root, ast_node_t *tmplate) {
     return NULL;
 }
 
+ast_node_t *
+ast_find_identifer (ast_node_t *root, ast_node_t *tmplate) {
+
+    ast_node_t *cur;
+    ast_node_t *res;
+    
+    assert (tmplate->entity_type == SQL_IDENTIFIER);
+
+    if (!root) return NULL;
+    
+    if (ast_match (root, tmplate) && 
+            strncmp (root->u.identifier.identifier.name, 
+                           tmplate->u.identifier.identifier.name, 
+                           sizeof (tmplate->u.identifier.identifier.name)) == 0) return root;
+
+    FOR_ALL_AST_CHILD(root, cur) {
+
+       res =  ast_find_identifer (cur, tmplate);
+       if (res) return res;
+
+    }  FOR_ALL_AST_CHILD_END;
+
+    return NULL;
+}
+
+ast_node_t *
+ast_find_up (ast_node_t *curr_node, ast_node_t *tmplate) {
+
+    if (ast_match (curr_node, tmplate)) return curr_node;
+
+    while (curr_node = curr_node->parent) {
+        if (ast_match (curr_node, tmplate)) return curr_node;
+    }
+    return NULL;
+}
+
 static void 
 ast_node_free (ast_node_t *node) {
 
-    if (node->entity_type == SQL_WHERE_CLAUSE &&
+    if (node->entity_type == SQL_IDENTIFIER &&
             node->u.identifier.ident_type == SQL_PTR) {
 
         void *array_ptr = NULL;
@@ -123,7 +160,6 @@ ast_node_print (ast_node_t *root, int depth) {
                     printf ("Agg fn : avg\n");
                     break;                
                 case SQL_AGG_FN_NONE:
-                case SQL_MAX_MAX:
                     printf ("Agg fn : None\n");
                     break;
                 break;
@@ -139,6 +175,7 @@ ast_node_print (ast_node_t *root, int depth) {
         case SQL_IDENTIFIER:
             switch (root->u.identifier.ident_type) {
                 case SQL_TABLE_NAME:
+                case SQL_TABLE_COLMN_NAME:
                     printf ("Table name = %s\n", root->u.identifier.identifier.name);
                     break;
                 case SQL_COLUMN_NAME:

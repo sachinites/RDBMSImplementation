@@ -10,6 +10,7 @@ typedef struct schema_rec_ schema_rec_t ;
 typedef struct ast_node_ ast_node_t;
 typedef struct BPlusTree BPlusTree_t;
 typedef  struct hashtable hashtable_t;
+typedef struct stack Stack_t;
 
 typedef enum qp_stage_id {
 
@@ -28,11 +29,18 @@ typedef enum qp_stage_id {
 
 } qp_stage_id_t;
 
+typedef struct table_iter_data_ {
+
+    BPlusTreeNode *bpnode;
+    int index;
+    ctable_val_t *ctable_val;
+} table_iter_data_t;
+
 typedef struct table_iterators_ {
 
-    BPlusTreeNode *bpnode[3];
-    int index[3];
-    ctable_val_t *ctable_val[3];
+    int table_cnt;
+    table_iter_data_t table_iter_data[0];
+
 } table_iterators_t;
 
 
@@ -64,6 +72,7 @@ typedef struct qep_struct_ {
    
     struct {
 
+        int table_cnt;
         expt_node_t *expt_root;
 
     } join;
@@ -100,9 +109,10 @@ typedef struct qep_struct_ {
     uint32_t limit;  /* 0 means no limit*/
 
     /* other variables*/
-    table_iterators_t titer;
     bool is_join_started;
+    bool is_join_finished;
     hashtable_t *ht;
+    table_iterators_t *titer;
 
 } qep_struct_t;
 
@@ -112,7 +122,7 @@ qep_execute_select (qep_struct_t *qep_struct) ;
 void
 qep_execute_delete (qep_struct_t *qep_struct) ;
 
-void 
+bool
 qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *root);
 
 void 

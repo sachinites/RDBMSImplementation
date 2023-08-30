@@ -288,7 +288,7 @@ sql_where_compute (where_cond_t *wc, joined_row_t *joined_row) {
     lcol = &wc->col;
     l_value_size = lcol->schema_rec->dtype_size;
     lval = sql_get_column_value_from_joined_row (joined_row, lcol);
-    assert (lval);
+    if (!lval) return true;
 
     /* Compute rval*/
     switch (wc->right_op.w_opd) {
@@ -296,6 +296,7 @@ sql_where_compute (where_cond_t *wc, joined_row_t *joined_row) {
         case WH_COL:
             rcol = &wc->right_op.u.col;
             rval =  sql_get_column_value_from_joined_row (joined_row, rcol);
+            if (!rval) return true;
             r_value_size = rcol->schema_rec->dtype_size;
             assert (lcol->schema_rec->dtype == rcol->schema_rec->dtype);
             return sql_where_compare (lval, l_value_size, rval, r_value_size, lcol->schema_rec->dtype, wc->op);

@@ -289,7 +289,7 @@ Catalog_get_column (BPlusTree_t *tcatalog,
 }
 
 bool
-sql_process_select_wildcard (BPlusTree_t *tcatalog, ast_node_t *table_name_node) {
+sql_process_select_wildcard (BPlusTree_t *tcatalog, ast_node_t *select_kw, ast_node_t *table_name_node) {
 
     void *rec;
     glthread_t *curr;
@@ -322,8 +322,11 @@ sql_process_select_wildcard (BPlusTree_t *tcatalog, ast_node_t *table_name_node)
         column_node = (ast_node_t *) calloc (1, sizeof (ast_node_t));
         column_node->entity_type = SQL_IDENTIFIER;
         column_node->u.identifier.ident_type = SQL_COLUMN_NAME;
-        strncpy (column_node->u.identifier.identifier.name, lnode->data, SQL_COLUMN_NAME_MAX_SIZE);
-        ast_add_child (table_name_node, column_node);
+        snprintf (column_node->u.identifier.identifier.name, 
+                      sizeof (column_node->u.identifier.identifier.name),
+                      "%s.%s",
+                      table_name_node->u.identifier.identifier.name, (char *)lnode->data);
+        ast_add_child (select_kw, column_node);
 
     } ITERATE_GLTHREAD_END(&ctable_val->col_list_head, curr) 
 

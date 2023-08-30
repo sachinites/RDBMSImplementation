@@ -109,7 +109,7 @@ insert_q_parse_table_name (ast_node_t *insert_kw) {
     return yylex();
 }
 
-static void 
+static int
 parse_insert_query ( ast_node_t *insert_kw) {
     
     int token_code = insert_q_parse_table_name (insert_kw);
@@ -139,4 +139,5 @@ parse_insert_query ( ast_node_t *insert_kw) {
             PARSER_ERROR_EXIT(token_code, BRACK_END);
             break;
     }
+    return SQL_PARSE_OK;
 }

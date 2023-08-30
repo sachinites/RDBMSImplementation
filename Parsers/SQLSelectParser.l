@@ -48,6 +48,7 @@
 #include "../core/sql_const.h"
 #include "../core/sql_where.h"
 #include "../core/Catalog.h"
+#include "../core/sql_utils.h"
 
 %}
 
@@ -190,9 +191,13 @@
 */
 %}
 
-
 [a-zA-Z0-9]+ {
     return SQL_IDENTIFIER;
+}
+
+[a-zA-Z0-9]+\.[a-zA-Z0-9]+ {
+
+    return SQL_TABLE_COLMN_NAME;
 }
 
 ^[a-zA-Z]+(?:[\s.]+[a-zA-Z]+)*$ {
@@ -212,14 +217,17 @@
 
 static int paranthesis_cnt = 0;
 
-static void 
+static int
 parse_first_aggregated_column (int token_code, ast_node_t *parent) {
 
     //printf ("Aggregated Colmn name is : %s", yytext);
     token_code = yylex();
     PARSER_ERROR_EXIT(token_code, BRACK_START);
     token_code = yylex();
-    PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
+    if (token_code != SQL_IDENTIFIER &&
+         token_code != SQL_TABLE_COLMN_NAME) {
+        PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
+    }
     //printf ("(%s", yytext);
     ast_node_t *column_name_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
     column_name_node->entity_type =  SQL_IDENTIFIER;
@@ -229,6 +237,7 @@ parse_first_aggregated_column (int token_code, ast_node_t *parent) {
     token_code = yylex();
     PARSER_ERROR_EXIT(token_code, BRACK_END);
     //printf (")\n");
+    return SQL_PARSE_OK;
 }
 
 static int
@@ -237,6 +246,7 @@ parse_aggregated_columns(ast_node_t *parent) {
     int token_code;
     ast_node_t *agg_fn_node ;
     ast_node_t *column_name_node;
+
     /* Parse list of AGG columns 
     <function_name>(colmn_name) , . . . 
     */
@@ -256,7 +266,10 @@ parse_aggregated_columns(ast_node_t *parent) {
                 token_code = yylex();
                 PARSER_ERROR_EXIT(token_code, BRACK_START);
                 token_code = yylex();
-                PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
+                 if (token_code != SQL_IDENTIFIER &&
+                     token_code != SQL_TABLE_COLMN_NAME) {
+                    PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
+                }
                // printf ("(%s", yytext);
                column_name_node = (ast_node_t *)calloc (1,sizeof (ast_node_t));
                column_name_node->entity_type = SQL_IDENTIFIER;
@@ -274,13 +287,13 @@ parse_aggregated_columns(ast_node_t *parent) {
                 }
             break;
             default:
-                PARSER_ERROR_EXIT(token_code, 0);
+                break;
         }
     }
     return token_code;
 }
 
-static void 
+static int
  parse_first_plain_column (int token_code, ast_node_t *parent) {
 
     //printf ("Colmn name is : %s\n", yytext);
@@ -290,6 +303,7 @@ static void
     strncpy (col_node->u.identifier.identifier.name, yytext, 
         sizeof (col_node->u.identifier.identifier.name));
     ast_add_child (parent, col_node);
+    return SQL_PARSE_OK;
  }
 
 static int
@@ -319,7 +333,7 @@ parse_plain_coumns(ast_node_t *parent) {
 static int
 parse_columns (ast_node_t *parent) {
 
- int token_code = yylex();
+     int token_code = yylex();
 
     switch (token_code) {
 
@@ -340,6 +354,7 @@ parse_columns (ast_node_t *parent) {
             }
             break;
         case SQL_IDENTIFIER:
+        case SQL_TABLE_COLMN_NAME:
             parse_first_plain_column (token_code, parent);
             token_code = yylex();
             if (token_code == COMMA) {
@@ -365,16 +380,17 @@ parse_columns (ast_node_t *parent) {
 
 
 static int 
-parse_where_condition(ast_node_t *root, where_literal_t **wlit) {
+parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
 
     int value;
     int op_code;
-    ast_node_t ast_tmplate;
     where_cond_t *wc;
-    ast_node_t *table_name_node;
+    ast_node_t ast_tmplate;
 
-    char col_name [SQL_COLUMN_NAME_MAX_SIZE] = {0};
-    char operand_col_name [SQL_COLUMN_NAME_MAX_SIZE] = {0};
+    ast_node_t *root = where_kw->parent;
+
+    char in_col_name [SQL_COMPOSITE_COLUMN_NAME_SIZE] = {0};
+    char operand_col_name [SQL_COMPOSITE_COLUMN_NAME_SIZE] = {0};
     char operand_identifer [SQL_OPERAND_MAX_VALUE] = {0};
 
     int token_code = yylex();
@@ -386,22 +402,37 @@ parse_where_condition(ast_node_t *root, where_literal_t **wlit) {
         (*wlit)++;
         token_code = yylex();
     }
-    ast_tmplate.entity_type = SQL_IDENTIFIER;
-    ast_tmplate.u.identifier.ident_type = SQL_TABLE_NAME;
-
-    table_name_node = ast_find (root, &ast_tmplate);
-    assert (table_name_node);
 
     (*wlit)->where_token_type = WHERE_LITERAL_WHERE_COND;
     wc = &(*wlit)->u.wc;
 
-    PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
-    strcpy (col_name, yytext);
+    if (token_code != SQL_IDENTIFIER &&
+        token_code != SQL_TABLE_COLMN_NAME) {
+        
+        PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
+    }
 
-    if (!Catalog_get_column (NULL, table_name_node->u.identifier.identifier.name, col_name, &wc->col) ) {
+    strcpy (in_col_name, yytext);
+
+    char lone_col_name [SQL_COLUMN_NAME_MAX_SIZE] = {0};
+    char table_name [SQL_TABLE_NAME_MAX_SIZE] = {0};
+    char *table_name_ptr = table_name;
+
+    parser_split_table_column_name (in_col_name, table_name, lone_col_name);
+
+    if (table_name[0] == '\0') {
+        /* Pick the first table from the FROM list */
+        ast_tmplate.entity_type = SQL_KEYWORD;
+        ast_tmplate.u.kw = SQL_FROM;
+        ast_node_t *from_kw = ast_find (root, &ast_tmplate);
+        assert(from_kw);
+        table_name_ptr = from_kw->child_list->u.identifier.identifier.name;
+    }
+
+    if (!Catalog_get_column (NULL, table_name_ptr, lone_col_name, &wc->col) ) {
         printf ("Error : Unrecognized Column <%s::%s>\n", 
-            table_name_node->u.identifier.identifier.name, col_name);
-        return EOL;
+            table_name_ptr, in_col_name);
+        return SQL_PARSE_ERROR;
     }
 
     token_code = yylex();
@@ -419,7 +450,7 @@ parse_where_condition(ast_node_t *root, where_literal_t **wlit) {
         break;
         default:
             printf ("%d operator not supported\n", token_code);
-            exit(0);
+            return SQL_PARSE_ERROR;
     }
 
     //printf ("%s op(%d) ", col_name, token_code);
@@ -439,14 +470,25 @@ parse_where_condition(ast_node_t *root, where_literal_t **wlit) {
         case SQL_IDENTIFIER:
         case SQL_STRING_VALUE:
             strcpy (operand_col_name, yytext);
-            printf ("%s\n", operand_col_name);
+            memset ( table_name, 0, sizeof (table_name));
+            table_name_ptr = table_name;
+            memset (lone_col_name, 0, sizeof (lone_col_name));
+            parser_split_table_column_name (operand_col_name, table_name, lone_col_name);
+            if (table_name[0] == '\0') {
+                /* Pick the first table from the FROM list */
+                ast_tmplate.entity_type = SQL_KEYWORD;
+                ast_tmplate.u.kw = SQL_FROM;
+                ast_node_t *from_kw = ast_find (root, &ast_tmplate);
+                assert(from_kw);
+                table_name_ptr = from_kw->child_list->u.identifier.identifier.name;
+            }
             wc->right_op.w_opd = WH_COL;
             if (!Catalog_get_column (NULL, 
-                                table_name_node->u.identifier.identifier.name, 
-                                operand_col_name, &wc->right_op.u.col)) {
+                                table_name_ptr, 
+                                lone_col_name, &wc->right_op.u.col)) {
                 printf ("Error : Unrecognized Column <%s::%s>\n", 
-                    table_name_node->u.identifier.identifier.name, operand_col_name);
-                return EOL;                
+                    table_name_ptr, operand_col_name);
+               return SQL_PARSE_ERROR;
             }
             break;
         case QUOTATION_MARK:
@@ -492,30 +534,25 @@ parse_where_condition(ast_node_t *root, where_literal_t **wlit) {
 }
 
 static int
-parse_where_conditions(ast_node_t *select_root) {
+parse_where_conditions(ast_node_t *where_kw) {
 
     int token_code;
     where_literal_t *wlit;
     
-    ast_node_t *where_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
-    where_node->entity_type = SQL_KEYWORD;
-    where_node->u.kw = SQL_WHERE;
-    ast_add_child (select_root, where_node);
-
     where_literal_t *where_literals_arr = 
         (where_literal_t *) calloc ( SQL_MAX_WHERE_LITERAL_ARRAY_SIZE, sizeof (where_literal_t));
     
     ast_node_t *where_literals_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
-    where_literals_node->entity_type =  SQL_WHERE_CLAUSE;
+    where_literals_node->entity_type =  SQL_IDENTIFIER;
     where_literals_node->u.identifier.ident_type = SQL_PTR;
     memcpy ((void *)where_literals_node->u.identifier.identifier.name, (void *)&where_literals_arr, sizeof (void *));
-    ast_add_child (where_node, where_literals_node);
+    ast_add_child (where_kw, where_literals_node);
 
     wlit = &where_literals_arr[0];
 
     while(1) {
 
-        token_code = parse_where_condition(select_root, &wlit);
+        token_code = parse_where_condition(where_kw, &wlit);
 
         switch (token_code) {
 
@@ -563,59 +600,72 @@ parse_tables(ast_node_t *select_kw) {
     }
 }
 
-static bool
+static int
 parse_select_query (ast_node_t *root) {
 
     int token_code;
-    ast_node_t *curr;
-    ast_node_t parent_temp;
-  //token_code = yylex();
-  //PARSER_ERROR_EXIT(token_code, SQL_SELECT_Q);
-  
-   memset (&parent_temp, 0, sizeof (parent_temp));
-   token_code = parse_columns(&parent_temp);
+    ast_node_t *curr, *select_kw;
+    ast_node_t *from_kw, *where_kw;
+
+    select_kw = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+    select_kw->entity_type = SQL_KEYWORD;
+    select_kw->u.kw = SQL_SELECT;
+    ast_add_child (root, select_kw);
+   
+   token_code = parse_columns(select_kw /* selet keyword */);
 
    switch (token_code) {
+
     case SQL_FROM:
-        token_code = parse_tables(root);
-        if (parent_temp.child_list->next == NULL &&
-                strcmp (parent_temp.child_list->u.identifier.identifier.name, "*") == 0) {
+
+        from_kw = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+        from_kw->entity_type = SQL_KEYWORD;
+        from_kw->u.kw = SQL_FROM;
+        ast_add_child (root, from_kw);
+
+        token_code = parse_tables(from_kw /* FROM keyword*/);
+
+        if (select_kw->child_list->next == NULL &&
+                strcmp (select_kw->child_list->u.identifier.identifier.name, "*") == 0) {
             /* If user typed select * .... */
-            ast_node_t *star_node = parent_temp.child_list;
-            parent_temp.child_list = NULL;
+            ast_node_t *star_node = select_kw->child_list;
+            select_kw->child_list = NULL;
             star_node->parent = NULL;
             ast_destroy_tree (star_node);
-            if (!sql_process_select_wildcard  (NULL, root->child_list)) {
-                return false;
+            for (curr = from_kw->child_list; curr; curr = curr->next) {
+                if (!sql_process_select_wildcard  (NULL, select_kw, curr)) {
+                    return SQL_PARSE_ERROR;
+                }
             }
         }
-        else {
-            FOR_ALL_AST_CHILD((&parent_temp), curr) {
-                curr->next = NULL;
-                curr->parent = NULL;
-                ast_add_child (root->child_list, curr);
-            }FOR_ALL_AST_CHILD_END;
-        }
+
         switch(token_code) {
+
             case SQL_WHERE:
-                token_code = parse_where_conditions(root);
+
+                where_kw = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+                where_kw->entity_type = SQL_KEYWORD;
+                where_kw->u.kw = SQL_WHERE;
+                ast_add_child (root, where_kw);
+
+                token_code = parse_where_conditions(where_kw);
                  switch(token_code) {
                     case EOL:
-                        return true;
+                        return SQL_PARSE_OK;
                  }
                 break;
             case EOL:
-                return true;
+                return SQL_PARSE_OK;
         }
         break;
     case EOL:
-        return false;
+        return SQL_PARSE_OK;
     break;
         default:
         PARSER_ERROR_EXIT(token_code, 0);
         break;
    }
-   return true;
+   return SQL_PARSE_OK;
 }
 
 static  void  
@@ -630,6 +680,7 @@ static void
 parse_sql_query () {
 
     bool rc;
+    int err_code;
     ast_node_t *astroot = NULL;
     paranthesis_cnt = 0;
 
@@ -645,14 +696,14 @@ parse_sql_query () {
             astroot = (ast_node_t *)calloc (1, sizeof (ast_node_t));
             astroot->entity_type = SQL_QUERY_TYPE;
             astroot->u.q_type = SQL_SELECT_Q;
-            rc = parse_select_query  (astroot);
+            err_code = parse_select_query  (astroot);
             //ast_print (astroot, 0);
             if (paranthesis_cnt) {
                 printf ("Error : Unbalanced Paranthesis\n");
                  ast_destroy_tree_from_root (astroot);
                 return;
             }
-            if (!rc) {
+            if (err_code == SQL_PARSE_ERROR) {
                 ast_destroy_tree_from_root (astroot);
                 return;
             }
@@ -689,6 +740,7 @@ parse_sql_query () {
                 sql_process_delete_query(NULL, astroot);
              }
              break;
+        case SQL_PARSE_OK:
         case EOL:
             ast_destroy_tree_from_root (astroot);
             return;

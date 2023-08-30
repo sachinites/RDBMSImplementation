@@ -1,7 +1,7 @@
 #ifndef __SQLPARSER_STRUCT__
 #define __SQLPARSER_STRUCT__
 
-#define SQL_IDENTIFIER_LEN  64
+#define SQL_IDENTIFIER_LEN  192 /* > SQL_COMPOSITE_COLUMN_NAME_SIZE */
 
 typedef enum sql_entity_ {
 
@@ -11,10 +11,8 @@ typedef enum sql_entity_ {
     SQL_OPERATOR,
     SQL_IDENTIFIER,
     SQL_DTYPE,
-    SQL_DTYPE_ATTR,
-    SQL_WHERE_CLAUSE,
-    SQL_UNKNOWN
-
+    SQL_DTYPE_ATTR
+    
 } sql_entity_type_t;
 
 typedef enum sql_query_type_{
@@ -36,7 +34,6 @@ typedef enum sql_agg_fn_ {
     SQL_COUNT,
     SQL_AVG,
     SQL_AGG_FN_NONE,
-    SQL_MAX_MAX = 5
  
 } sql_agg_fn_t;
 
@@ -48,6 +45,7 @@ typedef enum sql_keywords_ {
     SQL_HAVING,
     SQL_PRIMARY_KEY,
     SQL_NOT_NULL,
+    SQL_SELECT,
     SQL_KEYWORD_MAX,
     
 } sql_keywords_t;
@@ -96,6 +94,7 @@ typedef enum sql_ident_type_ {
 
     SQL_TABLE_NAME = 81,
     SQL_COLUMN_NAME ,
+    SQL_TABLE_COLMN_NAME,
     SQL_INTEGER_VALUE,
     SQL_STRING_VALUE ,
     SQL_IPV4_ADDR_VALUE ,

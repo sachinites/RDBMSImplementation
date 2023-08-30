@@ -127,7 +127,7 @@ create_q_parse_table_name ( ast_node_t *create_kw) {
     return token_code;
 }
 
-static void 
+static int
 parse_create_query( ast_node_t *create_kw) {
     
     int token_code = create_q_parse_table_name (create_kw);
@@ -136,6 +136,7 @@ parse_create_query( ast_node_t *create_kw) {
     while (1) {
 
         switch (token_code) {
+
             case SQL_PRIMARY_KEY:
             case SQL_NOT_NULL:
                 token_code = yylex();
@@ -148,10 +149,13 @@ parse_create_query( ast_node_t *create_kw) {
                     if (token_code != EOL) {
                         PARSER_ERROR_EXIT(token_code, EOL);
                     }
-                    return;
+                break;
+            case EOL:
+                return SQL_PARSE_OK;
             default:
                 PARSER_ERROR_EXIT(token_code, 0);
         }
     }
+    return SQL_PARSE_OK;
 }
 

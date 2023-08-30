@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <memory.h>
+#include "../stack/stack.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "qplanner.h"
 #include "Catalog.h"
@@ -24,11 +25,15 @@ static void *
     if (!record) return NULL;
     if (!expt_root) return record;
     
-     joined_row_t  joined_row;
+     joined_row_t  joined_row = {0, 0};
+    BPlusTree_t *schema_table_array[1];
+    void *rec_array[1];
 
-     memset (&joined_row, 0, sizeof (joined_row));
-     joined_row.schema_table[0] = schema_table;
-     joined_row.rec[0] = record;
+     joined_row.schema_table_array= schema_table_array;
+     joined_row.rec_array = rec_array;
+
+     schema_table_array[0] = schema_table;
+     rec_array[0] = record;
 
     bool rc = sql_evaluate_where_expression_tree (expt_root, &joined_row);
     
@@ -36,25 +41,13 @@ static void *
     return NULL;
  }
 
-
-static void 
-table_iterators_init (table_iterators_t *titer, 
-                                ctable_val_t *ctable_val1,
-                                ctable_val_t *ctable_val2,
-                                ctable_val_t *ctable_val3) {
-
-    titer->ctable_val[0] = ctable_val1;
-    titer->ctable_val[1] = ctable_val2;
-    titer->ctable_val[2] = ctable_val3;
-}
-
 static void 
 qep_init_where_clause (qep_struct_t *qep_struct, ast_node_t *root) {
 
     int size_out = 0;
     ast_node_t ast_tmplate;
 
-    ast_tmplate.entity_type = SQL_WHERE_CLAUSE;
+    ast_tmplate.entity_type = SQL_IDENTIFIER;
     ast_tmplate.u.kw = SQL_PTR;
 
     ast_node_t *where_clause_node = ast_find (root, &ast_tmplate);
@@ -85,275 +78,161 @@ qep_init_where_clause (qep_struct_t *qep_struct, ast_node_t *root) {
     free (where_literals_postfix);
 }
 
+static void 
+table_iterators_init (qep_struct_t *qep,
+                                table_iterators_t **_titer, 
+                                ctable_val_t *ctable_val1,
+                                ctable_val_t *ctable_val2,
+                                ctable_val_t *ctable_val3) {
+
+    int i;
+
+    (*_titer) = (table_iterators_t *)calloc (1, 
+                        sizeof (table_iterators_t) + 
+                        (sizeof (table_iter_data_t) * qep->join.table_cnt));
+    
+    table_iterators_t *titer = (*_titer);
+
+    titer->table_cnt = qep->join.table_cnt;
+    
+    for (i = 0 ; i < titer->table_cnt ; i++) {
+        titer->table_iter_data[i].bpnode = NULL;
+        titer->table_iter_data[i].index = 0;
+
+        switch (i) {
+
+            case 0:
+                titer->table_iter_data[i].ctable_val = ctable_val1;
+                break;
+            case 1:
+                titer->table_iter_data[i].ctable_val = ctable_val2;
+                break;
+            case 2:
+                titer->table_iter_data[i].ctable_val = ctable_val3;
+                break;
+            default: ;
+        }
+    }
+}
+
 static void
-table_iterators_first (qep_struct_t *qep_struct, table_iterators_t *titer, void **rec1, void **rec2, void **rec3) {
-    titer->bpnode[0] = NULL;
-    titer->index[0] = 0;
-    titer->bpnode[1] = NULL;
-    titer->index[1] = 0;
-    titer->bpnode[2] = NULL;
-    titer->index[2] = 0;
+table_iterators_first (qep_struct_t *qep_struct, 
+                                 table_iterators_t *titer, 
+                                 void **rec_array,
+                                 int table_id){
 
-    do {
-        *rec1 = BPlusTree_get_next_record (titer->ctable_val[0]->rdbms_table, &titer->bpnode[0], &titer->index[0]);
-        *rec1 =  qep_enforce_where (qep_struct->ctable_val1->schema_table, *rec1, qep_struct->expt_root);
-    } while (!(*rec1) && titer->bpnode[0]);
+        void *rec = NULL;
 
-    if (!titer->bpnode[0]) {
-        *rec1 = NULL;
-        *rec2 = NULL;
-        *rec3 = NULL;
-        return;
-    }
+        if (table_id < 0) return;
 
-    if (!titer->ctable_val[1]) return;
+        do
+        {
+            rec = BPlusTree_get_next_record(
+                        titer->table_iter_data[table_id].ctable_val->rdbms_table,
+                        &titer->table_iter_data[table_id].bpnode,
+                        &titer->table_iter_data[table_id].index);
 
-    do {
-        *rec2 = BPlusTree_get_next_record (titer->ctable_val[1]->rdbms_table, &titer->bpnode[1], &titer->index[1]);
-        *rec2 =  qep_enforce_where (qep_struct->ctable_val2->schema_table, *rec2, qep_struct->expt_root);
-    } while (!(*rec2) && titer->bpnode[1]);
+            rec = qep_enforce_where(
+                        titer->table_iter_data[table_id].ctable_val->schema_table, 
+                        rec, qep_struct->expt_root);
 
-    if (!titer->bpnode[1]) {
-        *rec2 = NULL;
-        *rec3 = NULL;
-        return;
-    }
+        } while (!(rec) && titer->table_iter_data[table_id].bpnode);
 
+        rec_array[table_id] = rec;
 
-    if (!titer->ctable_val[2]) return;
+        /* No need to scan further*/
+        if (!rec) {
+            qep_struct->is_join_finished = true;
+            return;
+        }
 
-    do {
-        *rec3 = BPlusTree_get_next_record (titer->ctable_val[2]->rdbms_table, &titer->bpnode[2], &titer->index[2]);
-        *rec3 =  qep_enforce_where (qep_struct->ctable_val3->schema_table, *rec3, qep_struct->expt_root);
-    } while (!(*rec3) && titer->bpnode[2]);
-
-    if (!titer->bpnode[2]) {
-        *rec3 = NULL;
-        return;
-    }
-
+        table_iterators_first (qep_struct, titer, rec_array, table_id -1);
 }
 
-static bool
-table_iterators_next (qep_struct_t *qep_struct, table_iterators_t *titer, void **rec1, void **rec2, void **rec3) {
+static void
+table_iterators_next (qep_struct_t *qep_struct, 
+                                  table_iterators_t *titer, 
+                                  void **rec_array,
+                                  int table_id) {
 
-    /* If [2] table is present*/
-    if (titer->ctable_val[2]) {
+    void *rec = NULL;
 
-        /* if [2] table is still iterating, get next record from [2]*/
-        if (titer->bpnode[2]) {
-            do {
-                *rec3 = BPlusTree_get_next_record(titer->ctable_val[2]->rdbms_table, &titer->bpnode[2], &titer->index[2]);
-                *rec3 =  qep_enforce_where (qep_struct->ctable_val3->schema_table, *rec3, qep_struct->expt_root);
-            } while (!(*rec3) && titer->bpnode[2]);
+    if (table_id < 0) return ;
 
-            if (!titer->bpnode[2])
-            {
-            *rec3 = NULL;
-            return false;
-            }
-            return true;
-        }
-        else {
-            /* Iteration of [2] table is finished, increment iteraator of [1] table*/
+    do
+    {
+        rec = BPlusTree_get_next_record(
+                    titer->table_iter_data[table_id].ctable_val->rdbms_table,
+                    &titer->table_iter_data[table_id].bpnode,
+                    &titer->table_iter_data[table_id].index);
 
-                if (titer->bpnode[1]) {
+        rec = qep_enforce_where(
+                    titer->table_iter_data[table_id].ctable_val->schema_table,
+                    rec, qep_struct->expt_root);
 
-                    do {
-                        *rec2 = BPlusTree_get_next_record (titer->ctable_val[1]->rdbms_table, &titer->bpnode[1], &titer->index[1]);
-                        *rec2 =  qep_enforce_where (qep_struct->ctable_val2->schema_table, *rec2, qep_struct->expt_root);
-                    } while   (!(*rec2) && titer->bpnode[1]);
+    } while (!(rec) && titer->table_iter_data[table_id].bpnode);
 
-                    if (!titer->bpnode[1]) {
-                        *rec2 = NULL;
-                        *rec3 = NULL;
-                        return false;
-                    }
-
-                    do {
-                        *rec3 = BPlusTree_get_next_record (titer->ctable_val[2]->rdbms_table, &titer->bpnode[2], &titer->index[2]);
-                        *rec3 =  qep_enforce_where (qep_struct->ctable_val3->schema_table, *rec3, qep_struct->expt_root);
-                    }  while (!(*rec3) && titer->bpnode[2]);
-
-                    if (!titer->bpnode[2]) {
-                        *rec3 = false;
-                        return false;
-                    }
-                    return true;
-                }
-
-                else {
-
-                    /*  Iteration of [1] table is finished, increment iterator of [0] table */
-                    if (titer->bpnode[0]) {
-                        do {
-                            *rec1 = BPlusTree_get_next_record (titer->ctable_val[0]->rdbms_table, &titer->bpnode[0], &titer->index[0]);
-                            *rec1 =  qep_enforce_where (qep_struct->ctable_val1->schema_table, *rec1, qep_struct->expt_root);
-                        }  while (!(*rec1) && titer->bpnode[0]);
-
-                        if (!titer->bpnode[0]) {
-                            *rec1 = NULL;
-                            *rec2 = NULL;
-                            *rec3 = NULL;
-                            return false;
-                        }
-
-                        do {
-                            *rec2 = BPlusTree_get_next_record (titer->ctable_val[1]->rdbms_table, &titer->bpnode[1], &titer->index[1]);
-                            *rec2 =  qep_enforce_where (qep_struct->ctable_val2->schema_table, *rec2, qep_struct->expt_root);
-                        }while   (!(*rec2) && titer->bpnode[1]);
-
-                        if (!titer->bpnode[1]) {
-                            *rec2 = NULL;
-                            *rec3 = NULL;
-                            return false;
-                        }
-
-                        do {
-                            *rec3 = BPlusTree_get_next_record (titer->ctable_val[2]->rdbms_table, &titer->bpnode[2], &titer->index[2]);
-                            *rec3 =  qep_enforce_where (qep_struct->ctable_val3->schema_table, *rec3, qep_struct->expt_root);
-                        }  while (!(*rec3) && titer->bpnode[2]);
-
-                        if (!titer->bpnode[2]) {
-                            *rec3 = false;
-                            return false;
-                        }
-
-                        return true;
-                    }
-                    else {
-                        /* Iteration of [0] table is also finished*/
-                        *rec1 = NULL;
-                        *rec2 = NULL;
-                        *rec3 = NULL;
-                        return false;
-                    }
-                }
-        }
-        return true;
+    /* If record is found*/
+    if (rec) {
+            rec_array[table_id] = rec;
+            return;
     }
+    else {
+        rec_array[table_id] = NULL;
+        table_iterators_next(qep_struct, titer, rec_array, table_id - 1);
 
-    /* If table [2] is not present*/
-    if (titer->ctable_val[1]) {
-
-        if (titer->bpnode[1]) {
-            
-            do {
-                *rec2 = BPlusTree_get_next_record (titer->ctable_val[1]->rdbms_table, &titer->bpnode[1], &titer->index[1]);            
-                *rec2 =  qep_enforce_where (qep_struct->ctable_val2->schema_table, *rec2, qep_struct->expt_root);
-            } while   (!(*rec2) && titer->bpnode[1]);
-
-            if (!titer->bpnode[1]) {
-                *rec2 = NULL;
-                *rec3 = NULL;
-                return false;
-            }            
-
-            return true;
+        /* If We could not find qualified record in the top level table, abort the iteration */
+        if (table_id == 0) {
+            qep_struct->is_join_finished = true;
+            return;
         }
-        else {
 
-            if (titer->bpnode[0]) {
+        /* If secondary table finds that parent table could not find any qualified records, abort the iteration*/
+        if (!rec_array[table_id - 1]) return;
 
-                do {
-                    *rec1 = BPlusTree_get_next_record (titer->ctable_val[0]->rdbms_table, &titer->bpnode[0], &titer->index[0]);
-                    *rec1 =  qep_enforce_where (qep_struct->ctable_val1->schema_table, *rec1, qep_struct->expt_root);
-                }  while (!(*rec1) && titer->bpnode[0]);
-
-                if (!titer->bpnode[0]) {
-                    *rec1 = NULL;
-                    *rec2 = NULL;
-                    *rec3 = NULL;
-                    return false;
-                }
-
-                do {
-                    *rec2 = BPlusTree_get_next_record (titer->ctable_val[1]->rdbms_table, &titer->bpnode[1], &titer->index[1]);
-                    *rec2 =  qep_enforce_where (qep_struct->ctable_val2->schema_table, *rec2, qep_struct->expt_root);                    
-                } while   (!(*rec2) && titer->bpnode[1]);
-
-                if (!titer->bpnode[1]) {
-                    *rec2 = NULL;
-                    *rec3 = NULL;
-                    return false;
-                }
-
-                return true;
-            }
-            else {
-                *rec1 = NULL;
-                *rec2 = NULL;
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /* If table [1] is not present*/
-     if (titer->bpnode[0]) {
         do {
-            *rec1 = BPlusTree_get_next_record (titer->ctable_val[0]->rdbms_table, &titer->bpnode[0], &titer->index[0]);
-            *rec1 =  qep_enforce_where (qep_struct->ctable_val1->schema_table, *rec1, qep_struct->expt_root);
-        } while (!(*rec1) && titer->bpnode[0]);
+            rec = BPlusTree_get_next_record(
+                            titer->table_iter_data[table_id].ctable_val->rdbms_table,
+                            &titer->table_iter_data[table_id].bpnode,
+                            &titer->table_iter_data[table_id].index);
 
-        if (!titer->bpnode[0]) {
-            *rec1 = NULL;
-            *rec2 = NULL;
-            *rec3 = NULL;
-            return false;
-        }
-        return true;
-     }
-     else {
-        *rec1 = NULL;
-        return false;
-     }
+            rec = qep_enforce_where(
+                            titer->table_iter_data[table_id].ctable_val->schema_table,
+                            rec, qep_struct->expt_root);
 
-    return true;
+        } while (!(rec) && titer->table_iter_data[table_id].bpnode);
+
+        assert(rec);
+        rec_array[table_id] = rec;
+    }
 }
 
-
-
-
 static bool
-qep_execute_join (qep_struct_t *qep_struct, void **rec1, void **rec2, void **rec3) {
+qep_execute_join (qep_struct_t *qep_struct, void **rec_array) {
+
+    int i;
 
    if (!qep_struct->is_join_started) {
 
-        table_iterators_first (qep_struct, &qep_struct->titer, rec1, rec2, rec3);
+        table_iterators_first (qep_struct, qep_struct->titer, rec_array, qep_struct->join.table_cnt -1);
+
         qep_struct->is_join_started = true;
-        return (*rec1 || *rec2 || *rec3);
+
+        /* We could not get Ist Qualified record from each joined tables*/
+        if (qep_struct->is_join_finished) return false;
+        return true;
    }
 
-   return table_iterators_next (qep_struct, &qep_struct->titer, rec1, rec2, rec3);
+    table_iterators_next (qep_struct, qep_struct->titer, rec_array, qep_struct->join.table_cnt -1);
+    return !qep_struct->is_join_finished;
 }
 
-static joined_row_t *
-qep_execute_join_predicate (qep_struct_t *qep_struct, void *rec1, void *rec2, void *rec3) {
 
-    joined_row_t *joined_row;
+static bool
+qep_execute_join_predicate (qep_struct_t *qep_struct, joined_row_t *joined_row) {
 
-    if (!rec1 && !rec2 && !rec3) return NULL;
-
-
-    /* Here apply the join predicate, let us assume the join predicate is always true*/
-
-
-    joined_row = (joined_row_t *)calloc (1, sizeof (joined_row_t));
-
-    if (rec1) {
-        joined_row->schema_table[0] = qep_struct->ctable_val1->schema_table;
-        joined_row->rec[0] = rec1;
-    }
-    if (rec2) {
-        joined_row->schema_table[1] = qep_struct->ctable_val2->schema_table;
-        joined_row->rec[1] = rec2;
-    }
-    if (rec3) {
-        joined_row->schema_table[2] = qep_struct->ctable_val3->schema_table;
-        joined_row->rec[2] = rec3;
-    }
-    return joined_row;
+    /* Let the join predicate is always true*/
+    return true;
 }
 
 /* HashTable Setup */
@@ -409,16 +288,24 @@ sql_compute_group_by_clause_keys (qep_struct_t *qep_struct,  joined_row_t  *join
 void
 qep_execute_select (qep_struct_t *qep_struct) {
 
+    int i;
     int row_no = 0;
     qp_col_t *col;
     bool is_aggregation = false;
-    joined_row_t *joined_row = NULL;
 
-    void *rec1 = NULL, *rec2 = NULL, *rec3 = NULL;
+    joined_row_t *joined_row = (joined_row_t *) calloc (1, sizeof (joined_row_t));
+    joined_row->rec_array = (void **) calloc (qep_struct->join.table_cnt, sizeof (void *));
+    joined_row->schema_table_array = (BPlusTree_t **)
+        calloc (qep_struct->join.table_cnt, sizeof (BPlusTree_t *));
 
-    while (qep_execute_join (qep_struct, &rec1, &rec2, &rec3)) {
+    for (i = 0; i < qep_struct->join.table_cnt; i++) {
+        joined_row->schema_table_array[i] = 
+            qep_struct->titer->table_iter_data[i].ctable_val->schema_table;
+    }
 
-        if (!(joined_row =  qep_execute_join_predicate(qep_struct, rec1, rec2, rec3))) {
+    while (qep_execute_join (qep_struct,  joined_row->rec_array)) {
+
+        if (!qep_execute_join_predicate(qep_struct, joined_row)) {
             continue;
         }
 
@@ -496,8 +383,6 @@ qep_execute_select (qep_struct_t *qep_struct) {
             }
         }
 
-        free(joined_row);
-
         /* Output */
         /* Case 1 :  No Group by Clause, Non-Aggregated Columns */
         if (!qep_struct->groupby.n && !is_aggregation) {
@@ -514,6 +399,10 @@ qep_execute_select (qep_struct_t *qep_struct) {
         }
 
     } // join loop ends
+
+    free (joined_row->rec_array);
+    free (joined_row->schema_table_array);
+    free (joined_row);
 
     /* Case 1 :  No Group by Clause, Non-Aggregated Columns */
     if (!qep_struct->groupby.n && !is_aggregation) {
@@ -536,40 +425,78 @@ qep_execute_select (qep_struct_t *qep_struct) {
     }
 }
    
-void 
+bool
 qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *root) {
 
+    int i ;
     int n_cols = 0;
     BPluskey_t bpkey;
-    ast_node_t ast_tmplate;
+    ctable_val_t *ctable_val;
+    ast_node_t ast_tmplate, *curr;
 
     memset (&ast_tmplate, 0, sizeof (ast_tmplate));
-    ast_tmplate.entity_type = SQL_IDENTIFIER;
-    ast_tmplate.u.identifier.ident_type = SQL_TABLE_NAME;
-    ast_node_t *table_name_node = ast_find (root, &ast_tmplate);
-    bpkey.key = table_name_node->u.identifier.identifier.name;
-    bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
-    ctable_val_t *ctable_val = (ctable_val_t *) BPlusTree_Query_Key (tcatalog, &bpkey);
-    assert (ctable_val);
-    qep_struct->ctable_val1 = ctable_val;
+    ast_tmplate.entity_type = SQL_KEYWORD;
+    ast_tmplate.u.kw = SQL_FROM;
+    ast_node_t *from_kw = ast_find (root, &ast_tmplate);
+
+    for (curr = from_kw->child_list, i = 1; curr; curr = curr->next, i++) {
+
+        bpkey.key = curr->u.identifier.identifier.name;
+        bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
+
+        ctable_val = (ctable_val_t *) BPlusTree_Query_Key (tcatalog, &bpkey);
+
+        if (!ctable_val) {
+            printf ("Error : relation %s does not exist\n", curr->u.identifier.identifier.name);
+            return false;
+        }
+        switch (i) {
+            case 1:
+                qep_struct->ctable_val1 = ctable_val;
+                break;
+            case 2:
+                qep_struct->ctable_val2 = ctable_val;
+                break;
+            case 3:
+                qep_struct->ctable_val3 = ctable_val;
+                break;
+        }
+    }
     
+    qep_struct->join.table_cnt = i - 1;
+
     ast_node_t *column_node;
 
-    FOR_ALL_AST_CHILD (table_name_node, column_node) {
+    ast_tmplate.entity_type = SQL_KEYWORD;
+    ast_tmplate.u.kw = SQL_SELECT;
+    ast_node_t *select_kw = ast_find (root, &ast_tmplate);
+
+    FOR_ALL_AST_CHILD (select_kw, column_node) {
         n_cols++;
     } FOR_ALL_AST_CHILD_END;
 
     qep_struct->select.n = n_cols;
     qep_struct->select.sel_colmns = (qp_col_t **)calloc (n_cols, sizeof (qp_col_t *));
-    int i = 0;
+    i = 0;
     ast_node_t *agg_node;
-    FOR_ALL_AST_CHILD (table_name_node, column_node) {
+    unsigned char table_name_out [SQL_TABLE_NAME_MAX_SIZE];
+    unsigned char lone_col_name [SQL_COLUMN_NAME_MAX_SIZE];
+    unsigned char *table_name_ptr = table_name_out;
+
+    FOR_ALL_AST_CHILD (select_kw, column_node) {
         qep_struct->select.sel_colmns[i] = (qp_col_t *)calloc (1, sizeof (qp_col_t));
+        parser_split_table_column_name (column_node->u.identifier.identifier.name, table_name_out, lone_col_name);
+        table_name_ptr = (table_name_out[0] == '\0') ? from_kw->child_list->u.identifier.identifier.name: \
+                                        table_name_out;
+        bpkey.key = table_name_ptr;
+        bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
+        ctable_val = (ctable_val_t *) BPlusTree_Query_Key (tcatalog, &bpkey);
         qep_struct->select.sel_colmns[i]->ctable_val = ctable_val;
-        bpkey.key = column_node->u.identifier.identifier.name;
+        bpkey.key = lone_col_name;
         bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
         qep_struct->select.sel_colmns[i]->schema_rec = 
             (schema_rec_t *) BPlusTree_Query_Key (ctable_val->schema_table, &bpkey);
+        assert(qep_struct->select.sel_colmns[i]->schema_rec);
         qep_struct->select.sel_colmns[i]->agg_fn = SQL_AGG_FN_NONE;
         FOR_ALL_AST_CHILD (column_node, agg_node) {
             if (agg_node->entity_type != SQL_AGG_FN) continue;
@@ -580,13 +507,18 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
     } FOR_ALL_AST_CHILD_END;
 
     qep_struct->is_join_started = false;
-    table_iterators_init (&qep_struct->titer,
+    qep_struct->is_join_finished = false;
+
+    table_iterators_init (qep_struct,
+                                    &qep_struct->titer,
                                     qep_struct->ctable_val1,
                                     qep_struct->ctable_val2,
                                     qep_struct->ctable_val3);
+
     qep_struct->ht = create_hashtable
                             (sql_compute_group_by_key_size (qep_struct), 
                             hashfromkey, equalkeys);    
+
     qep_init_where_clause (qep_struct, root);
 }
 
@@ -671,4 +603,5 @@ qep_deinit (qep_struct_t *qep_struct) {
         qep_struct->ht = NULL;
     }
 
+    free (qep_struct->titer);
 }
