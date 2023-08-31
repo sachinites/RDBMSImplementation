@@ -100,7 +100,7 @@ typedef struct qep_struct_ {
     struct {
 
         bool orderby;
-        qp_col_t col;
+        qp_col_t *col;
 
     } orderby;
 
