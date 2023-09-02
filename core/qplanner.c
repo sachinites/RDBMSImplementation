@@ -218,7 +218,7 @@ qep_execute_join (qep_struct_t *qep_struct, void **rec_array) {
 static bool
 qep_execute_join_predicate (qep_struct_t *qep_struct, joined_row_t *joined_row) {
 
-   if (!qep_struct->expt_root) return false;
+   if (!qep_struct->expt_root) return true;
    return sql_evaluate_where_expression_tree (qep_struct, qep_struct->expt_root, joined_row);
 }
 
