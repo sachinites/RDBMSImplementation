@@ -31,13 +31,17 @@ typedef struct qp_col_ {
     schema_rec_t *schema_rec;
     sql_agg_fn_t agg_fn;
     void *computed_value;
-
+    int owner_table_id;
 }qp_col_t;
 
 typedef struct joined_row_ {
 
+    // size : could be 1 when where is enforced on a single table OR
+    // table_cnt when where is enforced on Joined Row
+    int size;  
     BPlusTree_t **schema_table_array;
     void **rec_array;
+    int *table_id_array;    
 
 } joined_row_t;
 

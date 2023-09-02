@@ -23,20 +23,25 @@ extern  void
 sql_process_group_by (qep_struct_t *qep_struct) ;
 
 static void *
- qep_enforce_where (qep_struct_t *qep_struct, BPlusTree_t  *schema_table, void *record, expt_node_t *expt_root) {
+ qep_enforce_where (qep_struct_t *qep_struct, BPlusTree_t  *schema_table, void *record, expt_node_t *expt_root, int table_id) {
 
     if (!record) return NULL;
     if (!expt_root) return record;
     
-     joined_row_t  joined_row = {0, 0};
+    joined_row_t  joined_row;
+    memset (&joined_row, 0, sizeof (joined_row));
+
     BPlusTree_t *schema_table_array[1];
     void *rec_array[1];
+    int table_id_array[1];
 
      joined_row.schema_table_array= schema_table_array;
      joined_row.rec_array = rec_array;
-
+     joined_row.table_id_array = table_id_array;
+     joined_row.size = 1;
      schema_table_array[0] = schema_table;
      rec_array[0] = record;
+     table_id_array[0] = table_id;
 
     bool rc = sql_evaluate_where_expression_tree (qep_struct, expt_root, &joined_row);
     
@@ -123,7 +128,7 @@ table_iterators_first (qep_struct_t *qep_struct,
 
             rec = qep_enforce_where(qep_struct,
                         titer->table_iter_data[table_id].ctable_val->schema_table, 
-                        rec, qep_struct->expt_root);
+                        rec, qep_struct->expt_root, table_id);
 
         } while (!(rec) && titer->table_iter_data[table_id].bpnode);
 
@@ -157,7 +162,7 @@ table_iterators_next (qep_struct_t *qep_struct,
 
         rec = qep_enforce_where(qep_struct,
                     titer->table_iter_data[table_id].ctable_val->schema_table,
-                    rec, qep_struct->expt_root);
+                    rec, qep_struct->expt_root, table_id);
 
     } while (!(rec) && titer->table_iter_data[table_id].bpnode);
 
@@ -187,7 +192,7 @@ table_iterators_next (qep_struct_t *qep_struct,
 
             rec = qep_enforce_where(qep_struct,
                             titer->table_iter_data[table_id].ctable_val->schema_table,
-                            rec, qep_struct->expt_root);
+                            rec, qep_struct->expt_root, table_id);
 
         } while (!(rec) && titer->table_iter_data[table_id].bpnode);
 
@@ -218,7 +223,7 @@ qep_execute_join (qep_struct_t *qep_struct, void **rec_array) {
 static bool
 qep_execute_join_predicate (qep_struct_t *qep_struct, joined_row_t *joined_row) {
 
-   if (!qep_struct->expt_root) return false;
+   if (!qep_struct->expt_root) return true;
    return sql_evaluate_where_expression_tree (qep_struct, qep_struct->expt_root, joined_row);
 }
 
@@ -281,13 +286,20 @@ qep_execute_select (qep_struct_t *qep_struct) {
     bool is_aggregation = false;
 
     joined_row_t joined_row;
+
+    joined_row.size = qep_struct->join.table_cnt;
+
     joined_row.rec_array = (void **) calloc (qep_struct->join.table_cnt, sizeof (void *));
+
     joined_row.schema_table_array = (BPlusTree_t **)
         calloc (qep_struct->join.table_cnt, sizeof (BPlusTree_t *));
+
+    joined_row.table_id_array = (int *)calloc (1, sizeof (int));
 
     for (i = 0; i < qep_struct->join.table_cnt; i++) {
         joined_row.schema_table_array[i] = 
             qep_struct->titer->table_iter_data[i].ctable_val->schema_table;
+        joined_row.table_id_array[i] = i;
     }
 
     while (qep_execute_join (qep_struct,  joined_row.rec_array)) {
@@ -306,12 +318,15 @@ qep_execute_select (qep_struct_t *qep_struct) {
 
             void *ht_key = sql_compute_group_by_clause_keys (qep_struct, &joined_row);
             list_node_t *lnode_head = (list_node_t *)hashtable_search (qep_struct->ht , ht_key);
+
             if (lnode_head) {
                 list_node_t *new_lnode = (list_node_t *)calloc (1, sizeof (list_node_t ));
                 joined_row_t *dup_joined_row = (joined_row_t *)calloc (1, sizeof (joined_row_t));
                 memcpy (dup_joined_row, &joined_row, sizeof (joined_row));
                 joined_row.rec_array = NULL;
                 joined_row.schema_table_array = NULL;
+                joined_row.table_id_array = NULL;
+                joined_row.size = 0;
                 new_lnode->data = (void *)dup_joined_row;
                 init_glthread (&new_lnode->glue);
                 glthread_add_last (&lnode_head->glue, &new_lnode->glue);/* To be Optimized to O(1)*/
@@ -326,6 +341,8 @@ qep_execute_select (qep_struct_t *qep_struct) {
                 memcpy (dup_joined_row, &joined_row, sizeof (joined_row));
                 joined_row.rec_array = NULL;
                 joined_row.schema_table_array = NULL;
+                joined_row.table_id_array = NULL;
+                joined_row.size = 0;
                 new_lnode->data = (void *)dup_joined_row;
                 init_glthread (&new_lnode->glue);
                 glthread_add_last (&lnode_head->glue, &new_lnode->glue);
@@ -344,7 +361,6 @@ qep_execute_select (qep_struct_t *qep_struct) {
 
         for (i = 0; i < qep_struct->select.n; i++)
         {
-
             col = qep_struct->select.sel_colmns[i];
 
             if (!col->computed_value)
@@ -353,7 +369,7 @@ qep_execute_select (qep_struct_t *qep_struct) {
             }
             if (col->agg_fn == SQL_AGG_FN_NONE)
             {
-                val = sql_get_column_value_from_joined_row(&joined_row, col, qep_struct->join.table_cnt);
+                val = sql_get_column_value_from_joined_row(&joined_row, col);
                 memcpy(col->computed_value, val, col->schema_rec->dtype_size);
             }
             else
@@ -362,7 +378,7 @@ qep_execute_select (qep_struct_t *qep_struct) {
                
                 if (row_no == 1)
                 {
-                    val = sql_get_column_value_from_joined_row(&joined_row, col, qep_struct->join.table_cnt);
+                    val = sql_get_column_value_from_joined_row(&joined_row, col);
                     if (col->agg_fn == SQL_COUNT) {
                         *(int *)(col->computed_value) = 1;
                     }
@@ -372,8 +388,12 @@ qep_execute_select (qep_struct_t *qep_struct) {
                 }
                 else
                 {
-                    val = sql_get_column_value_from_joined_row(&joined_row, col, qep_struct->join.table_cnt);
-                    sql_compute_aggregate(col->agg_fn, val, col->computed_value, col->schema_rec->dtype, col->schema_rec->dtype_size, row_no);
+                    val = sql_get_column_value_from_joined_row(&joined_row, col);
+                    sql_compute_aggregate(col->agg_fn, val,
+                                                            col->computed_value, 
+                                                            col->schema_rec->dtype,
+                                                            col->schema_rec->dtype_size,
+                                                            row_no);
                 }
             }
         }
@@ -397,6 +417,7 @@ qep_execute_select (qep_struct_t *qep_struct) {
 
     free (joined_row.rec_array);
     free (joined_row.schema_table_array);
+    free(joined_row.table_id_array);
 
     /* Case 1 :  No Group by Clause, Non-Aggregated Columns */
     if (!qep_struct->groupby.n && !is_aggregation) {
@@ -424,6 +445,7 @@ bool
 qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *root) {
 
     int i ;
+    int table_id;
     int n_cols = 0;
     int table_cnt = 0;
     BPluskey_t bpkey;
@@ -478,8 +500,36 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
     FOR_ALL_AST_CHILD (select_kw, column_node) {
         qep_struct->select.sel_colmns[i] = (qp_col_t *)calloc (1, sizeof (qp_col_t));
         parser_split_table_column_name (column_node->u.identifier.identifier.name, table_name_out, lone_col_name);
-        table_name_ptr = (table_name_out[0] == '\0') ? from_kw->child_list->u.identifier.identifier.name: \
+        table_name_ptr = (table_name_out[0] == '\0') ? 
+                                        from_kw->child_list->u.identifier.identifier.name: \
                                         table_name_out;
+
+        /* Lookup Table id of the owning table*/
+        if (table_name_out[0] == '\0') {
+            /* If column is specified wihout its table name in SQL query,
+                then ISt table specified after FROM is taken*/
+            table_id = 0;
+        }
+        else if (column_node->data) {
+            /* If column node itself carries the table id, then use it. COlumn node
+                will have table IDs if user specified * in select SQL query. 
+                see sql_process_select_wildcard( ) */
+            table_id = *(int *)column_node->data;
+        }
+        else {
+            /* Otherwise pick the table Id from table node to which the column belongs*/
+            ast_tmplate.entity_type = SQL_IDENTIFIER;
+            ast_tmplate.u.kw = SQL_TABLE_NAME;
+            strncpy(ast_tmplate.u.identifier.identifier.name, table_name_ptr, SQL_TABLE_NAME_MAX_SIZE);
+            ast_node_t *table_node = ast_find_identifer (from_kw, &ast_tmplate);
+            if (!table_node) {
+                printf ("Error : Could not find owner table for column %s\n", 
+                    column_node->u.identifier.identifier.name);
+                return false;
+            }
+            table_id = *(int *)table_node->data;
+        }
+
         bpkey.key = table_name_ptr;
         bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
         ctable_val = (ctable_val_t *) BPlusTree_Query_Key (tcatalog, &bpkey);
@@ -489,6 +539,7 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
         qep_struct->select.sel_colmns[i]->schema_rec = 
             (schema_rec_t *) BPlusTree_Query_Key (ctable_val->schema_table, &bpkey);
         assert(qep_struct->select.sel_colmns[i]->schema_rec);
+        qep_struct->select.sel_colmns[i]->owner_table_id = table_id;
         qep_struct->select.sel_colmns[i]->agg_fn = SQL_AGG_FN_NONE;
         FOR_ALL_AST_CHILD (column_node, agg_node) {
             if (agg_node->entity_type != SQL_AGG_FN) continue;
@@ -526,7 +577,7 @@ qep_execute_delete (qep_struct_t *qep_struct) {
 
     BPTREE_ITERATE_ALL_RECORDS_BEGIN(qep_struct->ctable_val[0]->rdbms_table, bpkey, rec) {
 
-        rec = qep_enforce_where (qep_struct, qep_struct->ctable_val[0]->schema_table, rec, qep_struct->expt_root);
+        rec = qep_enforce_where (qep_struct, qep_struct->ctable_val[0]->schema_table, rec, qep_struct->expt_root, 0);
         if (!rec) continue;
         lnode = (list_node_t *) calloc (1, sizeof (list_node_t));
         /* Do not cache the direct ptr to the keys in a linkedList, because on node deletion,

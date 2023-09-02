@@ -326,6 +326,8 @@ sql_process_select_wildcard (BPlusTree_t *tcatalog, ast_node_t *select_kw, ast_n
                       sizeof (column_node->u.identifier.identifier.name),
                       "%s.%s",
                       table_name_node->u.identifier.identifier.name, (char *)lnode->data);
+        column_node->data = (int *)calloc (1, sizeof (int));
+        *(int *)column_node->data = *(int *)table_name_node->data;
         ast_add_child (select_kw, column_node);
 
     } ITERATE_GLTHREAD_END(&ctable_val->col_list_head, curr) 

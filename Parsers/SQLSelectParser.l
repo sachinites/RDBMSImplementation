@@ -588,7 +588,7 @@ static int
 parse_tables(ast_node_t *select_kw) {
 
     int token_code;
-
+    int id = 0;
     while(1) {
 
         token_code = yylex();
@@ -597,7 +597,10 @@ parse_tables(ast_node_t *select_kw) {
         ast_node_t *tble_name_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
         tble_name_node->entity_type = SQL_IDENTIFIER;
         tble_name_node->u.identifier.ident_type = SQL_TABLE_NAME;
-        strncpy(tble_name_node->u.identifier.identifier.name, yytext, sizeof (tble_name_node->u.identifier.identifier.name));
+        strncpy(tble_name_node->u.identifier.identifier.name, 
+                    yytext, sizeof (tble_name_node->u.identifier.identifier.name));
+        tble_name_node->data = (int *)calloc(1, sizeof (int));
+        *(int *)tble_name_node->data = id++;
         ast_add_child (select_kw, tble_name_node);
         token_code = yylex();
         if (token_code == COMMA) {

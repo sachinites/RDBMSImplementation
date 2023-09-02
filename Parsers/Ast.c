@@ -103,6 +103,7 @@ ast_node_free (ast_node_t *node) {
         memcpy (&array_ptr, (void *)node->u.identifier.identifier.name, sizeof (void *));
         sql_where_literals_array_free (array_ptr);
     }
+    if (node->data) free(node->data);
     free (node);
 }
 

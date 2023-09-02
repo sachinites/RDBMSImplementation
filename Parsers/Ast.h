@@ -18,6 +18,7 @@ typedef struct ast_node_ {
             str_identifier_t identifier;
         } identifier;
     }u;
+    void *data;         /* any other data you want to store*/
     struct ast_node_ *child_list;
     struct ast_node_ *parent;
     struct ast_node_ *next;

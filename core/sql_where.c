@@ -287,7 +287,7 @@ sql_where_compute (qep_struct_t *qep_struct, where_cond_t *wc, joined_row_t *joi
     /* Compute lval*/
     lcol = &wc->col;
     l_value_size = lcol->schema_rec->dtype_size;
-    lval = sql_get_column_value_from_joined_row (joined_row, lcol, qep_struct->join.table_cnt);
+    lval = sql_get_column_value_from_joined_row (joined_row, lcol);
     if (!lval) return true;
 
     /* Compute rval*/
@@ -295,7 +295,7 @@ sql_where_compute (qep_struct_t *qep_struct, where_cond_t *wc, joined_row_t *joi
 
         case WH_COL:
             rcol = &wc->right_op.u.col;
-            rval =  sql_get_column_value_from_joined_row (joined_row, rcol, qep_struct->join.table_cnt);
+            rval =  sql_get_column_value_from_joined_row (joined_row, rcol);
             if (!rval) return true;
             r_value_size = rcol->schema_rec->dtype_size;
             assert (lcol->schema_rec->dtype == rcol->schema_rec->dtype);
