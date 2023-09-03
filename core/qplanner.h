@@ -71,8 +71,6 @@ typedef struct qep_struct_ {
     struct {
 
         int table_cnt;
-        expt_node_t *expt_root;
-
     } join;
 
     struct {

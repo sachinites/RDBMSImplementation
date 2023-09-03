@@ -27,7 +27,7 @@ sql_print_hdr (qp_col_t **col_list, int n_cols ) {
 
     int i;
     qp_col_t *col;
-    unsigned char column_name[SQL_COLUMN_TEXT_NAME_MAX_SIZE];
+    unsigned char column_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
     int num_columns = n_cols;
 
     int column_width = 20; // Default column width
@@ -58,7 +58,7 @@ void sql_emit_select_output(int n_col,
     int i;
     qp_col_t *qp_col;
     schema_rec_t *schema_rec;
-    unsigned char column_name[SQL_COLUMN_TEXT_NAME_MAX_SIZE];
+    unsigned char column_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
 
     int num_columns = n_col;
 

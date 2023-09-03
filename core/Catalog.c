@@ -75,6 +75,7 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, ast_node_t *root) {
 
     /* Let us create a VAUE for catalog table, so that we can attempt to do insertion of this record as early as possible in catalog table before creating other data structures. This would help us to rewind back if there is any error*/
     ctable_val_t *ctable_val = (ctable_val_t *)calloc (1, sizeof (ctable_val_t));
+    strncpy(ctable_val->table_name, tble_name, SQL_TABLE_NAME_MAX_SIZE);
     ctable_val->schema_table = NULL;
     ctable_val->rdbms_table = NULL;
     init_glthread (&ctable_val->col_list_head);
@@ -86,6 +87,13 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, ast_node_t *root) {
         free(bkey.key);
         return false;
      }
+
+    {
+        bkey.key = (char *)calloc (1, SQL_TABLE_NAME_MAX_SIZE);
+        snprintf (bkey.key, SQL_TABLE_NAME_MAX_SIZE, "%s2", tble_name);
+        bkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
+        BPlusTree_Insert (catalog_table, &bkey, (void *)ctable_val);
+    }
 
     /* Now create a Schema table for this new table. Schema table stores all the attributes and details of a RDBMS table. Every RDBMS table has a schema table*/
 

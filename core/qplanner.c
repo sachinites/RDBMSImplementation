@@ -304,7 +304,9 @@ qep_execute_select (qep_struct_t *qep_struct) {
 
     while (qep_execute_join (qep_struct,  joined_row.rec_array)) {
 
-        if (!qep_execute_join_predicate(qep_struct, &joined_row)) {
+        /* Optimization : If only one table is involved, no need to evaluate join-predicate*/
+        if (qep_struct->join.table_cnt > 1 &&
+                !qep_execute_join_predicate(qep_struct, &joined_row)) {
             continue;
         }
 
@@ -521,7 +523,7 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
             ast_tmplate.entity_type = SQL_IDENTIFIER;
             ast_tmplate.u.kw = SQL_TABLE_NAME;
             strncpy(ast_tmplate.u.identifier.identifier.name, table_name_ptr, SQL_TABLE_NAME_MAX_SIZE);
-            ast_node_t *table_node = ast_find_identifer (from_kw, &ast_tmplate);
+            ast_node_t *table_node = ast_find_identifier (from_kw, &ast_tmplate);
             if (!table_node) {
                 printf ("Error : Could not find owner table for column %s\n", 
                     column_node->u.identifier.identifier.name);

@@ -58,7 +58,7 @@ ast_find (ast_node_t *root, ast_node_t *tmplate) {
 }
 
 ast_node_t *
-ast_find_identifer (ast_node_t *root, ast_node_t *tmplate) {
+ast_find_identifier (ast_node_t *root, ast_node_t *tmplate) {
 
     ast_node_t *cur;
     ast_node_t *res;
@@ -74,7 +74,7 @@ ast_find_identifer (ast_node_t *root, ast_node_t *tmplate) {
 
     FOR_ALL_AST_CHILD(root, cur) {
 
-       res =  ast_find_identifer (cur, tmplate);
+       res =  ast_find_identifier (cur, tmplate);
        if (res) return res;
 
     }  FOR_ALL_AST_CHILD_END;

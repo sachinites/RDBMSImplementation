@@ -31,7 +31,7 @@ ast_node_t *
 ast_find (ast_node_t *root, ast_node_t *tmplate);
 
 ast_node_t *
-ast_find_identifer (ast_node_t *root, ast_node_t *tmplate);
+ast_find_identifier (ast_node_t *root, ast_node_t *tmplate);
 
 ast_node_t *
 ast_find_up (ast_node_t *curr_node, ast_node_t *tmplate);;

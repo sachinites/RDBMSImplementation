@@ -390,8 +390,10 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
 
     int value;
     int op_code;
+    int table_id;
     where_cond_t *wc;
     ast_node_t ast_tmplate;
+    ast_node_t *table_ast_node;
 
     ast_node_t *root = where_kw->parent;
 
@@ -426,13 +428,28 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
 
     parser_split_table_column_name (in_col_name, table_name, lone_col_name);
 
+    ast_tmplate.entity_type = SQL_KEYWORD;
+    ast_tmplate.u.kw = SQL_FROM;
+    ast_node_t *from_kw = ast_find (root, &ast_tmplate);
+    assert(from_kw);
+
     if (table_name[0] == '\0') {
         /* Pick the first table from the FROM list */
-        ast_tmplate.entity_type = SQL_KEYWORD;
-        ast_tmplate.u.kw = SQL_FROM;
-        ast_node_t *from_kw = ast_find (root, &ast_tmplate);
-        assert(from_kw);
         table_name_ptr = from_kw->child_list->u.identifier.identifier.name;
+        table_id =  *(int *)from_kw->child_list->data;
+    }
+    else {
+        ast_tmplate.entity_type = SQL_IDENTIFIER;
+        ast_tmplate.u.kw = SQL_TABLE_NAME;
+        strncpy (ast_tmplate.u.identifier.identifier.name, 
+                      table_name, SQL_TABLE_NAME_MAX_SIZE );
+        table_ast_node = ast_find_identifier (from_kw, &ast_tmplate);
+        if (!table_ast_node) {
+            printf ("Error : Unrecognized Column <%s::%s>\n", 
+                table_name, lone_col_name);
+            return SQL_PARSE_ERROR;
+        }
+        table_id = *(int *)table_ast_node->data;
     }
 
     if (!Catalog_get_column (NULL, table_name_ptr, lone_col_name, &wc->col) ) {
@@ -440,6 +457,7 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
             table_name_ptr, in_col_name);
         return SQL_PARSE_ERROR;
     }
+    wc->col.owner_table_id = table_id;
 
     token_code = yylex();
 
@@ -488,6 +506,21 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
                 ast_node_t *from_kw = ast_find (root, &ast_tmplate);
                 assert(from_kw);
                 table_name_ptr = from_kw->child_list->u.identifier.identifier.name;
+                table_id =  *(int *)from_kw->child_list->data;
+                assert(!table_id);
+            }
+            else {
+                ast_tmplate.entity_type = SQL_IDENTIFIER;
+                ast_tmplate.u.kw = SQL_TABLE_NAME;
+                strncpy (ast_tmplate.u.identifier.identifier.name, 
+                      table_name, SQL_TABLE_NAME_MAX_SIZE );
+                table_ast_node = ast_find_identifier (from_kw, &ast_tmplate);
+                if (!table_ast_node) {
+                    printf ("Error : Unrecognized Column <%s::%s>\n", 
+                        table_name, lone_col_name);
+                    return SQL_PARSE_ERROR;
+                }
+                table_id = *(int *)table_ast_node->data;
             }
             wc->right_op.w_opd = WH_COL;
             if (!Catalog_get_column (NULL, 
@@ -497,6 +530,7 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
                     table_name_ptr, lone_col_name);
                return SQL_PARSE_ERROR;
             }
+            wc->right_op.u.col.owner_table_id = table_id;
             break;
         case QUOTATION_MARK:
             token_code = yylex();
