@@ -236,16 +236,16 @@ const char *token_str (int token_code) {
     return BAGG_FN;
 }
 
-[a-zA-Z0-9]+ {
-    return VAR ;
-}
-
 [0-9]+\.[0-9]+ {
 
     return DECIMAL;
 }
 
-[a-zA-Z0-9]\.[a-zA-Z0-9] {
+[a-zA-Z0-9]+ {
+    return VAR ;
+}
+
+[a-zA-Z0-9]+\.[a-zA-Z0-9]+ {
     return VAR_VAR;
 }
 
@@ -311,9 +311,6 @@ const char *token_str (int token_code) {
     return QUIT;
 }
 
-. {
-    printf ("Non parsable character : %c\n", *yytext);
-}
 
 %%
 
@@ -620,8 +617,12 @@ main (int argc, char **argv) {
     strcpy (current_buffer , 
         "max( sqrt(max(b.n , c)) + max(sqrt(b) * c, d) , sqrt(max(b.n , c)) + max(sqrt(b) * c, d))\n");
 #endif
+#if 0
     strcpy (current_buffer , 
-        "max( sqrt(max(b.n , c)) + max(sqrt(b) * c, d) , sqrt(max(b.n , c)) + max(sqrt(b) * c, d))  >  max( sqrt(max(b.n , c)) + max(sqrt(b) * c, d) , sqrt(max(b.n , c)) + max(sqrt(b) * c, d))\n");
+        "max( sqrt(max(b.n , c)) + max(sqrt(b) * c, d) , sqrt(max(b.n , c)) + max(sqrt(b) * c, d))  !=  max( sqrt(max(b.n , c)) + max(sqrt(b) * c, d) , sqrt(max(b.n , c)) + max(sqrt(b) * c, d))\n");
+#endif
+    strcpy (current_buffer , 
+        "emp.salary * 3 < emp.accntbalance\n");
     yy_scan_string (current_buffer);
     parse_init();
    
