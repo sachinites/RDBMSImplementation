@@ -13,14 +13,14 @@
 #include "sql_io.h"
 #include "sql_utils.h"
 #include "sql_where.h"
+#include "sql_groupby.h"
 #include "../c-hashtable/hashtable.h"
 #include "../c-hashtable/hashtable_itr.h"
 
 
 #define NOT_SUPPORT_YET assert(0)
 extern BPlusTree_t TableCatalogDef;
-extern  void 
-sql_process_group_by (qep_struct_t *qep_struct) ;
+
 
 static void *
  qep_enforce_where (qep_struct_t *qep_struct, BPlusTree_t  *schema_table, void *record, expt_node_t *expt_root, int table_id) {
@@ -48,45 +48,6 @@ static void *
     if (rc) return record;
     return NULL;
  }
-
-static void 
-qep_init_where_clause (qep_struct_t *qep_struct, ast_node_t *root) {
-
-    int size_out = 0;
-    ast_node_t ast_tmplate;
-
-    ast_tmplate.entity_type = SQL_KEYWORD;
-    ast_tmplate.u.kw = SQL_WHERE;
-
-    ast_node_t *where_clause_node = ast_find (root, &ast_tmplate);
-    
-    if (!where_clause_node) return;
-
-    ast_node_t *where_literals_node = where_clause_node->child_list;
-
-    where_literal_t *where_literals_arr = NULL;
-
-    memcpy ((void *)&where_literals_arr,
-                    where_literals_node->u.identifier.identifier.name,
-                    sizeof (void *));
-    assert (where_literals_arr);
-
-    where_literal_t **where_literals_postfix = 
-        sql_where_clause_infix_to_postfix (where_literals_arr, &size_out);
-
-    if (!where_literals_postfix) return;
-#if 0
-    printf ("postfix : \n");
-    sql_debug_print_where_literals2 (where_literals_postfix, size_out);
-#endif
-    qep_struct->expt_root = 
-        sql_where_convert_postfix_to_expression_tree (where_literals_postfix , size_out);
-#if 0
-    printf ("Expression Tree :\n");
-    sql_debug_print_expression_tree (qep_struct->expt_root);
-#endif
-    free (where_literals_postfix);
-}
 
 static void 
 table_iterators_init (qep_struct_t *qep,
@@ -271,12 +232,6 @@ sql_compute_group_by_key_size (qep_struct_t *qep_struct) {
     return size;
 }
 
-static void *
-sql_compute_group_by_clause_keys (qep_struct_t *qep_struct,  joined_row_t  *joined_row) {
-
-    return NULL;
-}
-
 void
 qep_execute_select (qep_struct_t *qep_struct) {
 
@@ -288,12 +243,9 @@ qep_execute_select (qep_struct_t *qep_struct) {
     joined_row_t joined_row;
 
     joined_row.size = qep_struct->join.table_cnt;
-
     joined_row.rec_array = (void **) calloc (qep_struct->join.table_cnt, sizeof (void *));
-
     joined_row.schema_table_array = (BPlusTree_t **)
         calloc (qep_struct->join.table_cnt, sizeof (BPlusTree_t *));
-
     joined_row.table_id_array = (int *)calloc (1, sizeof (int));
 
     for (i = 0; i < qep_struct->join.table_cnt; i++) {
@@ -323,15 +275,10 @@ qep_execute_select (qep_struct_t *qep_struct) {
 
             if (lnode_head) {
                 list_node_t *new_lnode = (list_node_t *)calloc (1, sizeof (list_node_t ));
-                joined_row_t *dup_joined_row = (joined_row_t *)calloc (1, sizeof (joined_row_t));
-                memcpy (dup_joined_row, &joined_row, sizeof (joined_row));
-                joined_row.rec_array = NULL;
-                joined_row.schema_table_array = NULL;
-                joined_row.table_id_array = NULL;
-                joined_row.size = 0;
-                new_lnode->data = (void *)dup_joined_row;
+                new_lnode->data = (void *)joined_row.rec_array;
+                joined_row.rec_array = (void **) calloc (qep_struct->join.table_cnt, sizeof (void *));
                 init_glthread (&new_lnode->glue);
-                glthread_add_last (&lnode_head->glue, &new_lnode->glue);/* To be Optimized to O(1)*/
+                glthread_add_last (&lnode_head->glue, &new_lnode->glue); /* To be Optimized to O(1)*/
                 free(ht_key);
             }
             else {
@@ -339,16 +286,11 @@ qep_execute_select (qep_struct_t *qep_struct) {
                 init_glthread (&lnode_head->glue);
                 lnode_head->data = NULL;
                 list_node_t *new_lnode = (list_node_t *)calloc (1, sizeof (list_node_t ));
-                 joined_row_t *dup_joined_row = (joined_row_t *)calloc (1, sizeof (joined_row_t));
-                memcpy (dup_joined_row, &joined_row, sizeof (joined_row));
-                joined_row.rec_array = NULL;
-                joined_row.schema_table_array = NULL;
-                joined_row.table_id_array = NULL;
-                joined_row.size = 0;
-                new_lnode->data = (void *)dup_joined_row;
+                new_lnode->data = (void *)joined_row.rec_array;
+                joined_row.rec_array = (void **) calloc (qep_struct->join.table_cnt, sizeof (void *));
                 init_glthread (&new_lnode->glue);
-                glthread_add_last (&lnode_head->glue, &new_lnode->glue);
-                assert((!hashtable_insert (qep_struct->ht, ht_key, (void *)lnode_head)));
+                glthread_add_last (&lnode_head->glue, &new_lnode->glue); /* To be Optimized to O(1)*/
+                assert((hashtable_insert (qep_struct->ht, ht_key, (void *)lnode_head)));
             }
             /* Collect all rows in HASTABLE buckets in case there is a groupby clause, if there is
              no group by clause, no need to accumulate rows in this case in hashtable.
@@ -442,7 +384,120 @@ qep_execute_select (qep_struct_t *qep_struct) {
         sql_process_group_by (qep_struct);
     }
 }
-   
+
+static  qp_col_t *
+qep_init_column (qep_struct_t *qep_struct, 
+                             BPlusTree_t *tcatalog,
+                              ast_node_t *from_kw,
+                              ast_node_t *column_node) {
+       
+        int i = 0;
+        int table_id;
+        BPluskey_t bpkey;
+        ast_node_t *agg_node;
+        ast_node_t ast_tmplate;
+        ctable_val_t *ctable_val;
+        unsigned char table_name_out [SQL_TABLE_NAME_MAX_SIZE];
+        unsigned char lone_col_name [SQL_COLUMN_NAME_MAX_SIZE];
+        unsigned char *table_name_ptr = table_name_out;
+
+        qp_col_t *new_col =  (qp_col_t *)calloc (1, sizeof (qp_col_t));
+        parser_split_table_column_name (column_node->u.identifier.identifier.name, table_name_out, lone_col_name);
+        table_name_ptr = (table_name_out[0] == '\0') ? 
+                                        from_kw->child_list->u.identifier.identifier.name: \
+                                        table_name_out;
+
+        /* Lookup Table id of the owning table*/
+        if (table_name_out[0] == '\0') {
+            /* If column is specified wihout its table name in SQL query,
+                then ISt table specified after FROM is taken*/
+            table_id = 0;
+        }
+        else if (column_node->data) {
+            /* If column node itself carries the table id, then use it. COlumn node
+                will have table IDs if user specified * in select SQL query. 
+                see sql_process_select_wildcard( ) */
+            table_id = *(int *)column_node->data;
+        }
+        else {
+            /* Otherwise pick the table Id from table node to which the column belongs*/
+            ast_tmplate.entity_type = SQL_IDENTIFIER;
+            ast_tmplate.u.kw = SQL_TABLE_NAME;
+            strncpy(ast_tmplate.u.identifier.identifier.name, table_name_ptr, SQL_TABLE_NAME_MAX_SIZE);
+            ast_node_t *table_node = ast_find_identifier (from_kw, &ast_tmplate);
+            if (!table_node) {
+                printf ("Error : Could not find owner table for column %s\n", 
+                    column_node->u.identifier.identifier.name);
+                return false;
+            }
+            table_id = *(int *)table_node->data;
+        }
+
+        bpkey.key = table_name_ptr;
+        bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
+        ctable_val = (ctable_val_t *) BPlusTree_Query_Key (tcatalog, &bpkey);
+        new_col->ctable_val = ctable_val;
+        bpkey.key = lone_col_name;
+        bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
+        new_col->schema_rec = 
+            (schema_rec_t *) BPlusTree_Query_Key (ctable_val->schema_table, &bpkey);
+        assert(new_col->schema_rec);
+        new_col->owner_table_id = table_id;
+        new_col->agg_fn = SQL_AGG_FN_NONE;
+        FOR_ALL_AST_CHILD (column_node, agg_node) {
+            if (agg_node->entity_type != SQL_AGG_FN) continue;
+            new_col->agg_fn = agg_node->u.agg_fn;
+            break;
+        } FOR_ALL_AST_CHILD_END;
+        return new_col;
+}
+
+static void 
+qep_init_where_having_clause (qep_struct_t *qep_struct, ast_node_t *root, sql_keywords_t kw) {
+
+    int size_out = 0;
+    ast_node_t ast_tmplate;
+
+    assert (kw == SQL_WHERE || kw == SQL_HAVING);
+    ast_tmplate.entity_type = SQL_KEYWORD;
+    ast_tmplate.u.kw = kw;
+
+    ast_node_t *clause_node = ast_find (root, &ast_tmplate);
+    
+    if (!clause_node) return;
+
+    ast_node_t *where_literals_node = clause_node->child_list;
+
+    where_literal_t *where_literals_arr = NULL;
+
+    memcpy ((void *)&where_literals_arr,
+                    where_literals_node->u.identifier.identifier.name,
+                    sizeof (void *));
+    assert (where_literals_arr);
+
+    where_literal_t **where_literals_postfix = 
+        sql_where_clause_infix_to_postfix (where_literals_arr, &size_out);
+
+    if (!where_literals_postfix) return;
+#if 0
+    printf ("postfix : \n");
+    sql_debug_print_where_literals2 (where_literals_postfix, size_out);
+#endif
+    if (kw == SQL_WHERE) {
+    qep_struct->expt_root = 
+                sql_where_convert_postfix_to_expression_tree (where_literals_postfix , size_out);
+    }
+    else {
+        qep_struct->groupby.expt_root = 
+                sql_where_convert_postfix_to_expression_tree (where_literals_postfix , size_out);
+    }
+#if 0
+    printf ("Expression Tree :\n");
+    sql_debug_print_expression_tree (qep_struct->expt_root);
+#endif
+    free (where_literals_postfix);
+}
+
 bool
 qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *root) {
 
@@ -494,61 +549,17 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
     qep_struct->select.n = n_cols;
     qep_struct->select.sel_colmns = (qp_col_t **)calloc (n_cols, sizeof (qp_col_t *));
     i = 0;
-    ast_node_t *agg_node;
     unsigned char table_name_out [SQL_TABLE_NAME_MAX_SIZE];
     unsigned char lone_col_name [SQL_COLUMN_NAME_MAX_SIZE];
     unsigned char *table_name_ptr = table_name_out;
 
     FOR_ALL_AST_CHILD (select_kw, column_node) {
-        qep_struct->select.sel_colmns[i] = (qp_col_t *)calloc (1, sizeof (qp_col_t));
-        parser_split_table_column_name (column_node->u.identifier.identifier.name, table_name_out, lone_col_name);
-        table_name_ptr = (table_name_out[0] == '\0') ? 
-                                        from_kw->child_list->u.identifier.identifier.name: \
-                                        table_name_out;
 
-        /* Lookup Table id of the owning table*/
-        if (table_name_out[0] == '\0') {
-            /* If column is specified wihout its table name in SQL query,
-                then ISt table specified after FROM is taken*/
-            table_id = 0;
-        }
-        else if (column_node->data) {
-            /* If column node itself carries the table id, then use it. COlumn node
-                will have table IDs if user specified * in select SQL query. 
-                see sql_process_select_wildcard( ) */
-            table_id = *(int *)column_node->data;
-        }
-        else {
-            /* Otherwise pick the table Id from table node to which the column belongs*/
-            ast_tmplate.entity_type = SQL_IDENTIFIER;
-            ast_tmplate.u.kw = SQL_TABLE_NAME;
-            strncpy(ast_tmplate.u.identifier.identifier.name, table_name_ptr, SQL_TABLE_NAME_MAX_SIZE);
-            ast_node_t *table_node = ast_find_identifier (from_kw, &ast_tmplate);
-            if (!table_node) {
-                printf ("Error : Could not find owner table for column %s\n", 
-                    column_node->u.identifier.identifier.name);
-                return false;
-            }
-            table_id = *(int *)table_node->data;
-        }
+        qep_struct->select.sel_colmns[i++] = qep_init_column(qep_struct, 
+                                                                        tcatalog,
+                                                                        from_kw,
+                                                                        column_node);
 
-        bpkey.key = table_name_ptr;
-        bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
-        ctable_val = (ctable_val_t *) BPlusTree_Query_Key (tcatalog, &bpkey);
-        qep_struct->select.sel_colmns[i]->ctable_val = ctable_val;
-        bpkey.key = lone_col_name;
-        bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
-        qep_struct->select.sel_colmns[i]->schema_rec = 
-            (schema_rec_t *) BPlusTree_Query_Key (ctable_val->schema_table, &bpkey);
-        assert(qep_struct->select.sel_colmns[i]->schema_rec);
-        qep_struct->select.sel_colmns[i]->owner_table_id = table_id;
-        qep_struct->select.sel_colmns[i]->agg_fn = SQL_AGG_FN_NONE;
-        FOR_ALL_AST_CHILD (column_node, agg_node) {
-            if (agg_node->entity_type != SQL_AGG_FN) continue;
-            qep_struct->select.sel_colmns[i]->agg_fn = agg_node->u.agg_fn;
-            break;
-        } FOR_ALL_AST_CHILD_END;
-        i++;
     } FOR_ALL_AST_CHILD_END;
 
     qep_struct->is_join_started = false;
@@ -560,7 +571,39 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
                             (sql_compute_group_by_key_size (qep_struct), 
                             hashfromkey, equalkeys);    
 
-    qep_init_where_clause (qep_struct, root);
+    qep_init_where_having_clause  (qep_struct, root, SQL_WHERE);
+
+    /* Initializing Group by Clause BEGIN */
+    ast_tmplate.entity_type = SQL_KEYWORD;
+    ast_tmplate.u.kw = SQL_GROUP_BY;
+    ast_node_t *groupby_kw = ast_find (root, &ast_tmplate);
+     n_cols = 0;
+
+    FOR_ALL_AST_CHILD (groupby_kw, column_node) {
+
+        if (column_node->entity_type == SQL_KEYWORD &&
+                column_node->u.kw == SQL_HAVING) continue;
+        n_cols++;
+    } FOR_ALL_AST_CHILD_END;
+
+    qep_struct->groupby.n = n_cols;
+    qep_struct->groupby.col_list = (qp_col_t **)calloc (n_cols, sizeof (qp_col_t *));
+    i = 0;
+
+    FOR_ALL_AST_CHILD (groupby_kw, column_node) {
+
+        if (column_node->entity_type == SQL_KEYWORD &&
+                column_node->u.kw == SQL_HAVING) continue;
+
+        qep_struct->groupby.col_list[i++] = qep_init_column(qep_struct, 
+                                                                        tcatalog,
+                                                                        from_kw,
+                                                                        column_node);
+
+    } FOR_ALL_AST_CHILD_END;    
+
+    qep_init_where_having_clause (qep_struct, root, SQL_HAVING);
+    /* Initializing Group by Clause DONE */
 }
 
 void
@@ -624,7 +667,15 @@ qep_deinit (qep_struct_t *qep_struct) {
 
         for (i = 0; i < qep_struct->groupby.n; i++) {
             col =  qep_struct->groupby.col_list[i];
+            if (col->computed_value) {
+                free(col->computed_value);
+            }
             free(col);
+        }
+        free(qep_struct->groupby.col_list);
+
+        if (qep_struct->groupby.expt_root) {
+            expt_destroy  (qep_struct->groupby.expt_root) ;
         }
     }
 
@@ -637,6 +688,7 @@ qep_deinit (qep_struct_t *qep_struct) {
             }
             free(col);
         }
+        free ( qep_struct->select.sel_colmns);
     }
 
     if (hashtable_count (qep_struct->ht)) {

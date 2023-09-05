@@ -60,8 +60,6 @@ typedef struct join_predicate_ {
 
 } join_predicate_t;
 
-
-
 typedef struct qep_struct_ {
 
     /* We cannot use more than three tables in our SQL query*/

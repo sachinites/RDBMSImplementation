@@ -109,6 +109,10 @@
     return SQL_WHERE;
 }
 
+"group by" {
+    return SQL_GROUP_BY;
+}
+
 "(" {
     return BRACK_START;
 }
@@ -218,10 +222,10 @@
 static int paranthesis_cnt = 0;
 
 static int
-parse_first_aggregated_column (int token_code, ast_node_t *parent) {
+parse_first_aggregated_column (ast_node_t *parent) {
 
     //printf ("Aggregated Colmn name is : %s", yytext);
-    token_code = yylex();
+    int token_code = yylex();
     PARSER_ERROR_EXIT(token_code, BRACK_START);
     token_code = yylex();
     if (token_code != SQL_IDENTIFIER &&
@@ -294,7 +298,7 @@ parse_aggregated_columns(ast_node_t *parent) {
 }
 
 static int
- parse_first_plain_column (int token_code, ast_node_t *parent) {
+ parse_first_plain_column (ast_node_t *parent) {
 
     //printf ("Colmn name is : %s\n", yytext);
     ast_node_t *col_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
@@ -348,7 +352,7 @@ parse_columns (ast_node_t *parent) {
         case SQL_MAX:
         case SQL_COUNT:
         case SQL_AVG:
-            parse_first_aggregated_column (token_code, parent);
+            parse_first_aggregated_column (parent);
             ast_node_t *column_name_node = parent->child_list;
             ast_node_t *agg_fn_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
             agg_fn_node->entity_type =  SQL_AGG_FN;
@@ -361,7 +365,7 @@ parse_columns (ast_node_t *parent) {
             break;
         case SQL_IDENTIFIER:
         case SQL_TABLE_COLMN_NAME:
-            parse_first_plain_column (token_code, parent);
+            parse_first_plain_column (parent);
             token_code = yylex();
             if (token_code == COMMA) {
                 token_code = parse_plain_coumns(parent);
@@ -605,10 +609,11 @@ parse_where_conditions(ast_node_t *where_kw) {
                 wlit->where_token_type = WHERE_LITERAL_OPERATOR_TOKEN_CODE;
                 wlit->u.token_id = token_code;
             break;
+            case SQL_GROUP_BY:
             case EOL:
                 wlit++;
                 wlit->where_token_type = WHERE_LITERAL_OPERATOR_TOKEN_CODE;
-                wlit->u.token_id = token_code;
+                wlit->u.token_id = EOL;  // denotes end of where condition clause
                 //sql_debug_print_where_literals (where_literals_arr);
                 return token_code;
         }
@@ -643,6 +648,8 @@ parse_tables(ast_node_t *select_kw) {
         return token_code;
     }
 }
+
+#include "SQLGroupByParser.c"
 
 static int
 parse_select_query (ast_node_t *root) {
@@ -694,14 +701,32 @@ parse_select_query (ast_node_t *root) {
 
                 token_code = parse_where_conditions(where_kw);
                  switch(token_code) {
+                    case SQL_GROUP_BY:
+                        token_code = parse_group_by_query(root);
+                        if (token_code == EOL) {
+                            return  SQL_PARSE_OK;
+                        }
+                    break;
                     case EOL:
                         return SQL_PARSE_OK;
                  }
                 break;
+            case SQL_GROUP_BY:
+                token_code = parse_group_by_query(root);
+                if (token_code == EOL) {
+                    return  SQL_PARSE_OK;
+                }        
+            break;            
             case EOL:
                 return SQL_PARSE_OK;
         }
         break;
+    case SQL_GROUP_BY:
+        token_code = parse_group_by_query(root);
+        if (token_code == EOL) {
+            return  SQL_PARSE_OK;
+        }        
+    break;
     case EOL:
         return SQL_PARSE_OK;
     break;
