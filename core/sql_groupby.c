@@ -2,7 +2,10 @@
 #include <assert.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include "../c-hashtable/hashtable.h"
+#include "../c-hashtable/hashtable_itr.h"
 #include "sql_utils.h"
+#include "sql_io.h"
 #include "sql_where.h"
 #include "qplanner.h"
 #include "Catalog.h"
@@ -101,5 +104,107 @@ sql_group_by_init_groupby_trees (qep_struct_t *qep) {
  void 
  sql_process_group_by (qep_struct_t *qep_struct) {
 
-    
+    int i;
+    void *val;
+    qp_col_t *col;
+    glthread_t *curr;
+    list_node_t *lnode;
+    int row_no = 0;
+    struct hashtable_itr *itr;
+    list_node_t *lnode_head;
+    joined_row_t *joined_row;
+    int row_no_per_group = 0;
+
+    itr = hashtable_iterator(qep_struct->groupby.ht);
+
+    do {
+
+        lnode_head = (list_node_t *) hashtable_iterator_value (itr);
+        row_no ++;
+        row_no_per_group = 0;
+
+        /* Fill non-aggregated columns in select list first. This includes
+            the columns mentioned in group-by clause itself*/
+        for (i = 0; i < qep_struct->select.n; i++) {
+
+            col = qep_struct->select.sel_colmns[i];
+            if (col->agg_fn != SQL_AGG_FN_NONE) {
+                continue;
+            }
+            if (!col->computed_value) {
+
+                col->computed_value = calloc(col->schema_rec->dtype_size, 1);
+            }
+            curr = glthread_get_next(&lnode_head->glue);
+            lnode = glue_to_list_node(curr);
+            joined_row = (joined_row_t *) lnode->data;
+            val = sql_get_column_value_from_joined_row(joined_row, col);
+            assert(val);
+            memcpy(col->computed_value, val, col->schema_rec->dtype_size);
+        }
+
+        /* Now fill the aggregated columns in select list*/
+        ITERATE_GLTHREAD_BEGIN (&lnode_head->glue, curr) {
+
+            lnode = glue_to_list_node (curr);
+            joined_row = lnode->data;
+            row_no_per_group++; 
+
+            for (i = 0; i < qep_struct->select.n; i++) {
+
+                col = qep_struct->select.sel_colmns[i];
+                
+                if (col->agg_fn == SQL_AGG_FN_NONE) continue;
+
+                if (!col->computed_value) {
+                    col->computed_value = calloc(col->schema_rec->dtype_size, 1);
+                }
+
+                if (row_no_per_group == 1)
+                {
+                    if (col->agg_fn == SQL_COUNT)
+                    {
+                        *(int *)(col->computed_value) = 1;
+                    }
+                    else
+                    {
+                        val = sql_get_column_value_from_joined_row(joined_row, col);
+                        memset (col->computed_value, 0 , col->schema_rec->dtype_size);
+                        memcpy(col->computed_value, val, col->schema_rec->dtype_size);
+                    }
+                }
+                else
+                {
+                    val = sql_get_column_value_from_joined_row(joined_row, col);
+                    sql_compute_aggregate(col->agg_fn, val,
+                                          col->computed_value,
+                                          col->schema_rec->dtype,
+                                          col->schema_rec->dtype_size,
+                                          row_no_per_group);
+                }
+            }
+
+                
+            remove_glthread(curr);
+            free (joined_row->rec_array);
+            free (joined_row->schema_table_array);
+            free(joined_row->table_id_array);
+            free(joined_row);
+            free (lnode);
+
+        } ITERATE_GLTHREAD_END (&lnode_head->glue, curr);
+
+        if (row_no == 1) {
+            
+            sql_print_hdr  (qep_struct->select.sel_colmns, qep_struct->select.n);
+        }
+
+        sql_emit_select_output (qep_struct->select.n, qep_struct->select.sel_colmns);
+        if (qep_struct->limit == row_no) {
+            break;
+        }
+
+    } while (hashtable_iterator_advance(itr));
+
+    free(itr);
  }

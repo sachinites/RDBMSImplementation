@@ -343,47 +343,78 @@ parse_plain_coumns(ast_node_t *parent) {
 static int
 parse_columns (ast_node_t *parent) {
 
-     int token_code = yylex();
+    ast_node_t *col_node ;
+    ast_node_t *agg_fn_node;
+    int agg_fn_token_code;
+    int token_code = yylex();
 
-    switch (token_code) {
+    while (1) {
 
-        case SQL_SUM:
-        case SQL_MIN:
-        case SQL_MAX:
-        case SQL_COUNT:
-        case SQL_AVG:
-            parse_first_aggregated_column (parent);
-            ast_node_t *column_name_node = parent->child_list;
-            ast_node_t *agg_fn_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
-            agg_fn_node->entity_type =  SQL_AGG_FN;
-            agg_fn_node->u.agg_fn = token_code;
-            ast_add_child (column_name_node, agg_fn_node);
-            token_code = yylex();
-            if (token_code == COMMA) {
-                token_code = parse_aggregated_columns(parent);
+        switch (token_code) {
+
+            case SQL_SUM:
+            case SQL_MIN:
+            case SQL_MAX:
+            case SQL_COUNT:
+            case SQL_AVG:
+                agg_fn_token_code = token_code;
+                token_code = yylex();
+                PARSER_ERROR_EXIT(token_code, BRACK_START);
+                token_code = yylex();
+                if (token_code != SQL_IDENTIFIER &&
+                    token_code != SQL_TABLE_COLMN_NAME) {
+                    PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
+                }
+                col_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+                col_node->entity_type = SQL_IDENTIFIER;
+                col_node->u.identifier.ident_type = SQL_COLUMN_NAME;
+                strncpy (col_node->u.identifier.identifier.name, yytext, 
+                        sizeof (col_node->u.identifier.identifier.name));
+                ast_add_child (parent, col_node);
+                token_code = yylex();
+                PARSER_ERROR_EXIT(token_code, BRACK_END);
+                agg_fn_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+                agg_fn_node->entity_type =  SQL_AGG_FN;
+                agg_fn_node->u.agg_fn =  agg_fn_token_code;
+                ast_add_child (col_node, agg_fn_node);
+
+                token_code = yylex();
+                if (token_code == COMMA) {
+                    token_code = yylex();
+                    continue;
+                }
+                break;
+            case SQL_IDENTIFIER:
+            case SQL_TABLE_COLMN_NAME:
+
+                col_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+                col_node->entity_type = SQL_IDENTIFIER;
+                col_node->u.identifier.ident_type = SQL_COLUMN_NAME;
+                strncpy (col_node->u.identifier.identifier.name, yytext, 
+                        sizeof (col_node->u.identifier.identifier.name));
+                ast_add_child (parent, col_node);
+
+                token_code = yylex();
+                if (token_code == COMMA) {
+                    token_code = yylex();
+                    continue;
+                }
+                break;
+            case WILDCARD:
+            {
+                ast_node_t *astnode = (ast_node_t *)calloc (1,sizeof (ast_node_t));
+                astnode->entity_type = SQL_IDENTIFIER;
+                astnode->u.identifier.ident_type = SQL_COLUMN_NAME;
+                strncpy (astnode->u.identifier.identifier.name, yytext, 
+                sizeof (astnode->u.identifier.identifier.name));
+                ast_add_child (parent, astnode);
+            // printf ("Colmn name is : %s\n", yytext);
+                token_code = yylex();
+                return token_code;
             }
-            break;
-        case SQL_IDENTIFIER:
-        case SQL_TABLE_COLMN_NAME:
-            parse_first_plain_column (parent);
-            token_code = yylex();
-            if (token_code == COMMA) {
-                token_code = parse_plain_coumns(parent);
-            }
-            break;
-        case WILDCARD:
-        {
-            ast_node_t *astnode = (ast_node_t *)calloc (1,sizeof (ast_node_t));
-            astnode->entity_type = SQL_IDENTIFIER;
-            astnode->u.identifier.ident_type = SQL_COLUMN_NAME;
-            strncpy (astnode->u.identifier.identifier.name, yytext, 
-            sizeof (astnode->u.identifier.identifier.name));
-            ast_add_child (parent, astnode);
-           // printf ("Colmn name is : %s\n", yytext);
-            token_code = yylex();
-            break;
+            default:
+                return token_code;
         }
-        default: ;
     }
     return token_code;
 }

@@ -188,6 +188,23 @@ qep_execute_join_predicate (qep_struct_t *qep_struct, joined_row_t *joined_row) 
    return sql_evaluate_where_expression_tree (qep_struct, qep_struct->expt_root, joined_row);
 }
 
+static bool 
+qep_enforce_having_clause_phase1  (qep_struct_t *qep_struct, joined_row_t *joined_row) {
+
+    if (!qep_struct->having.expt_root) return true;
+    qep_struct->having.having_phase = 1;
+    return sql_evaluate_where_expression_tree (qep_struct, qep_struct->having.expt_root, joined_row);
+}
+
+static bool 
+qep_enforce_having_clause_phase2  (qep_struct_t *qep_struct, joined_row_t *joined_row) {
+
+    if (!qep_struct->having.expt_root) return true;
+    qep_struct->having.having_phase = 2;
+    return sql_evaluate_where_expression_tree (qep_struct, qep_struct->having.expt_root, joined_row);
+}
+
+
 /* HashTable Setup */
 #define HASH_PRIME_CONST    5381
 
@@ -240,27 +257,31 @@ qep_execute_select (qep_struct_t *qep_struct) {
     qp_col_t *col;
     bool is_aggregation = false;
 
-    joined_row_t joined_row;
+    joined_row_t joined_row_tmplate;
 
-    joined_row.size = qep_struct->join.table_cnt;
-    joined_row.rec_array = (void **) calloc (qep_struct->join.table_cnt, sizeof (void *));
-    joined_row.schema_table_array = (BPlusTree_t **)
+    joined_row_tmplate.size = qep_struct->join.table_cnt;
+    joined_row_tmplate.rec_array = (void **) calloc (qep_struct->join.table_cnt, sizeof (void *));
+    joined_row_tmplate.schema_table_array = (BPlusTree_t **)
         calloc (qep_struct->join.table_cnt, sizeof (BPlusTree_t *));
-    joined_row.table_id_array = (int *)calloc (1, sizeof (int));
+    joined_row_tmplate.table_id_array = (int *)calloc (1, sizeof (int));
 
     for (i = 0; i < qep_struct->join.table_cnt; i++) {
-        joined_row.schema_table_array[i] = 
+        joined_row_tmplate.schema_table_array[i] = 
             qep_struct->titer->table_iter_data[i].ctable_val->schema_table;
-        joined_row.table_id_array[i] = i;
+        joined_row_tmplate.table_id_array[i] = i;
     }
 
-    while (qep_execute_join (qep_struct,  joined_row.rec_array)) {
+    while (qep_execute_join (qep_struct,  joined_row_tmplate.rec_array)) {
 
         /* Optimization : If only one table is involved, no need to evaluate join-predicate*/
         if (qep_struct->join.table_cnt > 1 &&
-                !qep_execute_join_predicate(qep_struct, &joined_row)) {
+                !qep_execute_join_predicate(qep_struct, &joined_row_tmplate)) {
             continue;
         }
+
+         if (!joined_row_tmplate.rec_array[0]  || !joined_row_tmplate.rec_array[1])  {
+            assert(0);
+         }
 
         row_no++;
         /* Join predicate has been qualified*/
@@ -270,15 +291,25 @@ qep_execute_select (qep_struct_t *qep_struct) {
         /* Check if the query has group by clause */
         if (qep_struct->groupby.n) {
 
-            void *ht_key = sql_compute_group_by_clause_keys (qep_struct, &joined_row);
+            if (!qep_enforce_having_clause_phase1 (qep_struct, &joined_row_tmplate)) {
+                memset(joined_row_tmplate.rec_array, 0 , sizeof (joined_row_tmplate.rec_array));
+                continue;
+            }
+
+            void *ht_key = sql_compute_group_by_clause_keys (qep_struct, &joined_row_tmplate);
             list_node_t *lnode_head = (list_node_t *)hashtable_search (qep_struct->groupby.ht , ht_key);
 
             if (lnode_head) {
                 list_node_t *new_lnode = (list_node_t *)calloc (1, sizeof (list_node_t ));
-                new_lnode->data = (void *)joined_row.rec_array;
-                joined_row.rec_array = (void **) calloc (qep_struct->join.table_cnt, sizeof (void *));
+                joined_row_t *joined_row = (joined_row_t *)calloc (1, sizeof (joined_row_t));
+                *joined_row = joined_row_tmplate;
+                joined_row->rec_array = (void **)calloc (qep_struct->join.table_cnt, sizeof (void *));
+                for (i = 0; i < qep_struct->join.table_cnt; i++) {
+                     joined_row->rec_array[i] = joined_row_tmplate.rec_array[i];
+                }
+                new_lnode->data = (void *)joined_row;
                 init_glthread (&new_lnode->glue);
-                glthread_add_last (&lnode_head->glue, &new_lnode->glue); /* To be Optimized to O(1)*/
+                glthread_add_next (&lnode_head->glue, &new_lnode->glue); /* To be Optimized to O(1)*/
                 free(ht_key);
             }
             else {
@@ -286,10 +317,15 @@ qep_execute_select (qep_struct_t *qep_struct) {
                 init_glthread (&lnode_head->glue);
                 lnode_head->data = NULL;
                 list_node_t *new_lnode = (list_node_t *)calloc (1, sizeof (list_node_t ));
-                new_lnode->data = (void *)joined_row.rec_array;
-                joined_row.rec_array = (void **) calloc (qep_struct->join.table_cnt, sizeof (void *));
+                joined_row_t *joined_row = (joined_row_t *)calloc (1, sizeof (joined_row_t));
+                *joined_row = joined_row_tmplate;
+                joined_row->rec_array = (void **)calloc (qep_struct->join.table_cnt, sizeof (void *));
+                for (i = 0; i < qep_struct->join.table_cnt; i++) {
+                     joined_row->rec_array[i] = joined_row_tmplate.rec_array[i];
+                }
+                new_lnode->data = (void *)joined_row;
                 init_glthread (&new_lnode->glue);
-                glthread_add_last (&lnode_head->glue, &new_lnode->glue); /* To be Optimized to O(1)*/
+                glthread_add_next (&lnode_head->glue, &new_lnode->glue); /* To be Optimized to O(1)*/
                 assert((hashtable_insert (qep_struct->groupby.ht, ht_key, (void *)lnode_head)));
             }
             /* Collect all rows in HASTABLE buckets in case there is a groupby clause, if there is
@@ -313,7 +349,7 @@ qep_execute_select (qep_struct_t *qep_struct) {
             }
             if (col->agg_fn == SQL_AGG_FN_NONE)
             {
-                val = sql_get_column_value_from_joined_row(&joined_row, col);
+                val = sql_get_column_value_from_joined_row(&joined_row_tmplate, col);
                 memcpy(col->computed_value, val, col->schema_rec->dtype_size);
             }
             else
@@ -322,7 +358,7 @@ qep_execute_select (qep_struct_t *qep_struct) {
                
                 if (row_no == 1)
                 {
-                    val = sql_get_column_value_from_joined_row(&joined_row, col);
+                    val = sql_get_column_value_from_joined_row(&joined_row_tmplate, col);
                     if (col->agg_fn == SQL_COUNT) {
                         *(int *)(col->computed_value) = 1;
                     }
@@ -332,7 +368,7 @@ qep_execute_select (qep_struct_t *qep_struct) {
                 }
                 else
                 {
-                    val = sql_get_column_value_from_joined_row(&joined_row, col);
+                    val = sql_get_column_value_from_joined_row(&joined_row_tmplate, col);
                     sql_compute_aggregate(col->agg_fn, val,
                                                             col->computed_value, 
                                                             col->schema_rec->dtype,
@@ -358,17 +394,12 @@ qep_execute_select (qep_struct_t *qep_struct) {
         }
 
     } // join loop ends
-
-    free (joined_row.rec_array);
-    free (joined_row.schema_table_array);
-    free(joined_row.table_id_array);
-
-    /* Case 1 :  No Group by Clause, Non-Aggregated Columns */
+  
+   /* Case 1 :  No Group by Clause, Non-Aggregated Columns */
     if (!qep_struct->groupby.n && !is_aggregation) {
 
         printf ("(%d rows)\n", row_no);
     }
-
 
      /* Case 2 :  No Group by Clause,  Aggregated Columns */
     else if (!qep_struct->groupby.n && is_aggregation) {
@@ -383,6 +414,10 @@ qep_execute_select (qep_struct_t *qep_struct) {
 
         sql_process_group_by (qep_struct);
     }
+
+    free (joined_row_tmplate.rec_array);
+    free (joined_row_tmplate.schema_table_array);
+    free(joined_row_tmplate.table_id_array);
 }
 
 static  qp_col_t *
@@ -488,7 +523,7 @@ qep_init_where_having_clause (qep_struct_t *qep_struct, ast_node_t *root, sql_ke
                 sql_where_convert_postfix_to_expression_tree (where_literals_postfix , size_out);
     }
     else {
-        qep_struct->groupby.expt_root = 
+        qep_struct->having.expt_root = 
                 sql_where_convert_postfix_to_expression_tree (where_literals_postfix , size_out);
     }
 #if 0
@@ -674,8 +709,8 @@ qep_deinit (qep_struct_t *qep_struct) {
         }
         free(qep_struct->groupby.col_list);
 
-        if (qep_struct->groupby.expt_root) {
-            expt_destroy  (qep_struct->groupby.expt_root) ;
+        if (qep_struct->having.expt_root) {
+            expt_destroy  (qep_struct->having.expt_root) ;
         }
     }
 

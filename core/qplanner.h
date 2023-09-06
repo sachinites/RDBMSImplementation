@@ -76,10 +76,17 @@ typedef struct qep_struct_ {
 
         int n;
         qp_col_t **col_list;
-        expt_node_t *expt_root;
+       
         /* Collection of records based on group by fields*/
         hashtable_t *ht;
     } groupby;
+
+    struct {
+
+         expt_node_t *expt_root;
+         int8_t having_phase; // either 1 or 2
+         
+    } having;
 
     struct {
 
