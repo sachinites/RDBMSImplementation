@@ -271,7 +271,7 @@ qep_execute_select (qep_struct_t *qep_struct) {
         if (qep_struct->groupby.n) {
 
             void *ht_key = sql_compute_group_by_clause_keys (qep_struct, &joined_row);
-            list_node_t *lnode_head = (list_node_t *)hashtable_search (qep_struct->ht , ht_key);
+            list_node_t *lnode_head = (list_node_t *)hashtable_search (qep_struct->groupby.ht , ht_key);
 
             if (lnode_head) {
                 list_node_t *new_lnode = (list_node_t *)calloc (1, sizeof (list_node_t ));
@@ -290,7 +290,7 @@ qep_execute_select (qep_struct_t *qep_struct) {
                 joined_row.rec_array = (void **) calloc (qep_struct->join.table_cnt, sizeof (void *));
                 init_glthread (&new_lnode->glue);
                 glthread_add_last (&lnode_head->glue, &new_lnode->glue); /* To be Optimized to O(1)*/
-                assert((hashtable_insert (qep_struct->ht, ht_key, (void *)lnode_head)));
+                assert((hashtable_insert (qep_struct->groupby.ht, ht_key, (void *)lnode_head)));
             }
             /* Collect all rows in HASTABLE buckets in case there is a groupby clause, if there is
              no group by clause, no need to accumulate rows in this case in hashtable.
@@ -567,7 +567,7 @@ qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *ro
 
     table_iterators_init (qep_struct, &qep_struct->titer);
 
-    qep_struct->ht = create_hashtable
+    qep_struct->groupby.ht = create_hashtable
                             (sql_compute_group_by_key_size (qep_struct), 
                             hashfromkey, equalkeys);    
 
@@ -691,9 +691,9 @@ qep_deinit (qep_struct_t *qep_struct) {
         free ( qep_struct->select.sel_colmns);
     }
 
-    if (hashtable_count (qep_struct->ht)) {
-        hashtable_destroy (qep_struct->ht, 1); 
-        qep_struct->ht = NULL;
+    if (hashtable_count (qep_struct->groupby.ht)) {
+        hashtable_destroy (qep_struct->groupby.ht, 1); 
+        qep_struct->groupby.ht = NULL;
     }
 
     free (qep_struct->titer);

@@ -1,6 +1,7 @@
 #ifndef __QPLANNER__
 #define __QPLANNER__
 
+#include "../Tree/libtree.h"
 #include "../Parsers/SQLParserStruct.h"
 #include "sql_const.h"
 #include "sql_where.h"
@@ -76,7 +77,8 @@ typedef struct qep_struct_ {
         int n;
         qp_col_t **col_list;
         expt_node_t *expt_root;
-
+        /* Collection of records based on group by fields*/
+        hashtable_t *ht;
     } groupby;
 
     struct {
@@ -97,7 +99,8 @@ typedef struct qep_struct_ {
 
         bool orderby;
         qp_col_t *col;
-
+        /* AVL tree to store records ordered by 'order by'* field. Default is FCFS*/
+        avltree_t avl_order_by_root;
     } orderby;
 
     uint32_t limit;  /* 0 means no limit*/
@@ -105,7 +108,6 @@ typedef struct qep_struct_ {
     /* other variables*/
     bool is_join_started;
     bool is_join_finished;
-    hashtable_t *ht;
     table_iterators_t *titer;
 
 } qep_struct_t;
