@@ -226,12 +226,12 @@ const char *token_str (int token_code) {
     return INTEGER;
 }
 
-"sqrt" {
+(sqrt|sqr) {
 
     return UAGG_FN;
 }
 
-"max" {
+(max|min) {
 
     return BAGG_FN;
 }
@@ -368,6 +368,7 @@ G (int *t) {
         default:
             RETURN_PARSE_ERROR;
      }
+
 }
 
 parse_rc_t
@@ -621,8 +622,9 @@ main (int argc, char **argv) {
     strcpy (current_buffer , 
         "max( sqrt(max(b.n , c)) + max(sqrt(b) * c, d) , sqrt(max(b.n , c)) + max(sqrt(b) * c, d))  !=  max( sqrt(max(b.n , c)) + max(sqrt(b) * c, d) , sqrt(max(b.n , c)) + max(sqrt(b) * c, d))\n");
 #endif
+#if 1
     strcpy (current_buffer , 
-        "emp.salary * 3 < emp.accntbalance\n");
+        "emp.salary * 3 < emp.accntbalance,   a + b * c < 1 ,   sqrt (max(a, b)) > 4\n");
     yy_scan_string (current_buffer);
     parse_init();
    
@@ -633,9 +635,23 @@ main (int argc, char **argv) {
             break;
         case PARSE_SUCCESS:
             token_code = cyylex();
-            assert(token_code == EOL);
+            while (token_code == COMMA) {
+                printf ("Valid Mathematical Expression\n");
+                err = PARSER_CALL(Q);
+                switch (err) {
+                    case PARSE_ERR:
+                        printf ("Invalid Mathematical Expression\n");
+                        exit(0);
+                    case PARSE_SUCCESS:
+                        token_code = cyylex();
+                        break;
+                }
+            }
+            assert (token_code == EOL);
             printf ("Valid Mathematical Expression\n");
             break;
     }
+#endif 
+
     return 0;
 }
