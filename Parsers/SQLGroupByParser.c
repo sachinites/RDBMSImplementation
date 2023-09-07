@@ -11,6 +11,7 @@ parse_group_by_query (ast_node_t *select_root) {
 
     token_code = yylex();
 
+    while (1) {
     switch(token_code) {
 
         case SQL_IDENTIFIER:
@@ -23,9 +24,14 @@ parse_group_by_query (ast_node_t *select_root) {
             ast_add_child (group_by_node, col_node);
             token_code = yylex();
             if (token_code == COMMA) {
-                token_code = parse_plain_coumns(select_root);
+                token_code = yylex();
+                continue;
             }
+            if (token_code == EOL) return SQL_PARSE_OK;
+            return token_code;
         break;
+    }
+    break;
     }
     if (token_code == EOL) return SQL_PARSE_OK;
     return token_code;

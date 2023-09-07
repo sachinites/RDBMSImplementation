@@ -113,6 +113,10 @@
     return SQL_GROUP_BY;
 }
 
+"having" {
+    return SQL_HAVING;
+}
+
 "(" {
     return BRACK_START;
 }
@@ -220,125 +224,6 @@
 %%
 
 static int paranthesis_cnt = 0;
-
-static int
-parse_first_aggregated_column (ast_node_t *parent) {
-
-    //printf ("Aggregated Colmn name is : %s", yytext);
-    int token_code = yylex();
-    PARSER_ERROR_EXIT(token_code, BRACK_START);
-    token_code = yylex();
-    if (token_code != SQL_IDENTIFIER &&
-         token_code != SQL_TABLE_COLMN_NAME) {
-        PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
-    }
-    //printf ("(%s", yytext);
-    ast_node_t *column_name_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
-    column_name_node->entity_type =  SQL_IDENTIFIER;
-    column_name_node->u.identifier.ident_type = SQL_COLUMN_NAME;
-    strcpy (column_name_node->u.identifier.identifier.name, yytext);
-    ast_add_child (parent, column_name_node);
-    token_code = yylex();
-    PARSER_ERROR_EXIT(token_code, BRACK_END);
-    //printf (")\n");
-    return SQL_PARSE_OK;
-}
-
-static int
-parse_aggregated_columns(ast_node_t *parent) {
-
-    int token_code;
-    ast_node_t *agg_fn_node ;
-    ast_node_t *column_name_node;
-
-    /* Parse list of AGG columns 
-    <function_name>(colmn_name) , . . . 
-    */
-    while(1) {
-        token_code = yylex();
-
-        switch (token_code){
-            case SQL_SUM:
-            case SQL_MIN:
-            case SQL_MAX:
-            case SQL_COUNT:
-            case SQL_AVG:
-               // printf ("Aggregated Colmn name is : %s", yytext);
-                agg_fn_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
-                agg_fn_node->entity_type =  SQL_AGG_FN;
-                agg_fn_node->u.agg_fn = token_code;
-                token_code = yylex();
-                PARSER_ERROR_EXIT(token_code, BRACK_START);
-                token_code = yylex();
-                 if (token_code != SQL_IDENTIFIER &&
-                     token_code != SQL_TABLE_COLMN_NAME) {
-                    PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
-                }
-               // printf ("(%s", yytext);
-               column_name_node = (ast_node_t *)calloc (1,sizeof (ast_node_t));
-               column_name_node->entity_type = SQL_IDENTIFIER;
-               column_name_node->u.identifier.ident_type = SQL_COLUMN_NAME;
-               strncpy (column_name_node->u.identifier.identifier.name, yytext, 
-                    sizeof column_name_node->u.identifier.identifier.name);
-                ast_add_child (column_name_node , agg_fn_node);
-                ast_add_child (parent, column_name_node);
-                token_code = yylex();
-                PARSER_ERROR_EXIT(token_code, BRACK_END);
-               // printf (")\n");
-                token_code = yylex();
-                if (token_code != COMMA) {
-                    return token_code;
-                }
-            break;
-            default:
-                break;
-        }
-    }
-    return token_code;
-}
-
-static int
- parse_first_plain_column (ast_node_t *parent) {
-
-    //printf ("Colmn name is : %s\n", yytext);
-    ast_node_t *col_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
-    col_node->entity_type = SQL_IDENTIFIER;
-    col_node->u.identifier.ident_type = SQL_COLUMN_NAME;
-    strncpy (col_node->u.identifier.identifier.name, yytext, 
-        sizeof (col_node->u.identifier.identifier.name));
-    ast_add_child (parent, col_node);
-    return SQL_PARSE_OK;
- }
-
-static int
-parse_plain_coumns(ast_node_t *parent) {
-
-    int token_code;
-
-    while (1) {
-
-        token_code = yylex();
-
-        if (token_code != SQL_IDENTIFIER &&
-            token_code != SQL_TABLE_COLMN_NAME) {
-        
-            PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
-        }
-
-       // printf ("Colmn name is : %s\n", yytext);
-       ast_node_t *astnode = (ast_node_t *)calloc (1,sizeof (ast_node_t));
-       astnode->entity_type = SQL_IDENTIFIER;
-       astnode->u.identifier.ident_type = SQL_COLUMN_NAME;
-        strncpy (astnode->u.identifier.identifier.name, yytext, 
-        sizeof (astnode->u.identifier.identifier.name));
-        ast_add_child (parent, astnode);
-        token_code = yylex();
-        if (token_code != COMMA) {
-            break;
-        }
-    }
-    return token_code;
-}
 
 static int
 parse_columns (ast_node_t *parent) {
@@ -687,7 +572,7 @@ parse_select_query (ast_node_t *root) {
 
     int token_code;
     ast_node_t *curr, *select_kw;
-    ast_node_t *from_kw, *where_kw;
+    ast_node_t *from_kw, *where_kw, *having_kw;
 
     select_kw = (ast_node_t *)calloc (1, sizeof (ast_node_t));
     select_kw->entity_type = SQL_KEYWORD;
@@ -734,8 +619,21 @@ parse_select_query (ast_node_t *root) {
                  switch(token_code) {
                     case SQL_GROUP_BY:
                         token_code = parse_group_by_query(root);
-                        if (token_code == EOL) {
-                            return  SQL_PARSE_OK;
+                        switch (token_code) {
+                            case EOL:
+                                return  SQL_PARSE_OK;
+                            case SQL_HAVING:
+                                having_kw = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+                                having_kw->entity_type = SQL_KEYWORD;
+                                having_kw->u.kw = SQL_HAVING;
+                                ast_add_child (root, having_kw);
+                                token_code = parse_where_conditions(having_kw);
+                                switch (token_code) {
+                                    case EOL:
+                                        return SQL_PARSE_OK;
+                                    default:
+                                        return SQL_PARSE_ERROR;
+                                }
                         }
                     break;
                     case EOL:
@@ -744,9 +642,22 @@ parse_select_query (ast_node_t *root) {
                 break;
             case SQL_GROUP_BY:
                 token_code = parse_group_by_query(root);
-                if (token_code == EOL) {
-                    return  SQL_PARSE_OK;
-                }        
+                switch (token_code) {
+                    case EOL:
+                        return  SQL_PARSE_OK;
+                    case SQL_HAVING:
+                        having_kw = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+                        having_kw->entity_type = SQL_KEYWORD;
+                        having_kw->u.kw = SQL_HAVING;
+                        ast_add_child (root, having_kw);
+                        token_code = parse_where_conditions(having_kw);
+                        switch (token_code) {
+                            case EOL:
+                                return SQL_PARSE_OK;
+                            default:
+                                return SQL_PARSE_ERROR;
+                        }
+                }   
             break;            
             case EOL:
                 return SQL_PARSE_OK;
@@ -754,9 +665,22 @@ parse_select_query (ast_node_t *root) {
         break;
     case SQL_GROUP_BY:
         token_code = parse_group_by_query(root);
-        if (token_code == EOL) {
-            return  SQL_PARSE_OK;
-        }        
+        switch (token_code) {
+            case EOL:
+                return  SQL_PARSE_OK;
+            case SQL_HAVING:
+                having_kw = (ast_node_t *)calloc (1, sizeof (ast_node_t));
+                 having_kw->entity_type = SQL_KEYWORD;
+                 having_kw->u.kw = SQL_HAVING;
+                ast_add_child (root, having_kw);
+                token_code = parse_where_conditions(having_kw);
+                switch (token_code) {
+                    case EOL:
+                    return SQL_PARSE_OK;
+                    default:
+                    return SQL_PARSE_ERROR;
+                }
+        }     
     break;
     case EOL:
         return SQL_PARSE_OK;

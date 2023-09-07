@@ -101,6 +101,12 @@ sql_group_by_init_groupby_trees (qep_struct_t *qep) {
     avltree_init(&qep->orderby.avl_order_by_root, order_by_key_comp_fn);
 }
 
+static bool 
+qep_enforce_having_clause_phase2 (qep_struct_t *qep_struct) {
+
+    return true;
+}
+
  void 
  sql_process_group_by (qep_struct_t *qep_struct) {
 
@@ -115,6 +121,10 @@ sql_group_by_init_groupby_trees (qep_struct_t *qep) {
     joined_row_t *joined_row;
     int row_no_per_group = 0;
 
+    if (hashtable_count(qep_struct->groupby.ht) == 0) {
+        return;
+    }
+    
     itr = hashtable_iterator(qep_struct->groupby.ht);
 
     do {
@@ -187,12 +197,20 @@ sql_group_by_init_groupby_trees (qep_struct_t *qep) {
                 
             remove_glthread(curr);
             free (joined_row->rec_array);
-            free (joined_row->schema_table_array);
-            free(joined_row->table_id_array);
+            /* Do not free below arrays, as they are shared with
+                joined_row_tmplate (only one copy)*/
+            //free (joined_row->schema_table_array);
+            //free(joined_row->table_id_array);
             free(joined_row);
             free (lnode);
 
         } ITERATE_GLTHREAD_END (&lnode_head->glue, curr);
+
+        if (!qep_enforce_having_clause_phase2 (qep_struct)) {
+            if (hashtable_iterator_advance(itr)) continue;
+            break;
+        }
+
 
         if (row_no == 1) {
             

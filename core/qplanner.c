@@ -196,15 +196,6 @@ qep_enforce_having_clause_phase1  (qep_struct_t *qep_struct, joined_row_t *joine
     return sql_evaluate_where_expression_tree (qep_struct, qep_struct->having.expt_root, joined_row);
 }
 
-static bool 
-qep_enforce_having_clause_phase2  (qep_struct_t *qep_struct, joined_row_t *joined_row) {
-
-    if (!qep_struct->having.expt_root) return true;
-    qep_struct->having.having_phase = 2;
-    return sql_evaluate_where_expression_tree (qep_struct, qep_struct->having.expt_root, joined_row);
-}
-
-
 /* HashTable Setup */
 #define HASH_PRIME_CONST    5381
 
@@ -279,10 +270,6 @@ qep_execute_select (qep_struct_t *qep_struct) {
             continue;
         }
 
-         if (!joined_row_tmplate.rec_array[0]  || !joined_row_tmplate.rec_array[1])  {
-            assert(0);
-         }
-
         row_no++;
         /* Join predicate has been qualified*/
 
@@ -292,7 +279,6 @@ qep_execute_select (qep_struct_t *qep_struct) {
         if (qep_struct->groupby.n) {
 
             if (!qep_enforce_having_clause_phase1 (qep_struct, &joined_row_tmplate)) {
-                memset(joined_row_tmplate.rec_array, 0 , sizeof (joined_row_tmplate.rec_array));
                 continue;
             }
 
