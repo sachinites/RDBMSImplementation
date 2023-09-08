@@ -46,8 +46,8 @@ create_q_parse_columns (ast_node_t *table_name) {
             PARSER_ERROR_EXIT(token_code, BRACK_START);
         }
         token_code = yylex();
-        if (token_code != INTEGER) {
-            PARSER_ERROR_EXIT(token_code, INTEGER);
+        if (token_code != SQL_INT) {
+            PARSER_ERROR_EXIT(token_code, SQL_INT);
         }        
         int a = atoi (yytext);
         if (a >= 256) {

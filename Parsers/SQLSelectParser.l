@@ -1,39 +1,3 @@
-/* This file implements the SQL Parser which accespts all SQL queries satisfying the below Grammar 
-
-    <sql_query>         ::= <select_query> | <update_query> | <delete_query>
-
-    <select_query>     ::=  SELECT <columns> FROM <tables> WHERE <conditions>
-
-    <columns>            ::= <plain_columns> | <aggregate_colmns> | *
-
-    <plain_columns>  ::= <column> | <column> , <plain_columns>
-
-    <aggregate_columns>     ::= <agg_column> | <agg_column> , <aggregate_columns>
-
-    <agg_column> ::= <function>(<column>)
-
-    <tables> ::= <table> | <table> , <tables>
-
-    <conditions> ::= <condition> | <condition> <lop> <conditions>
-
-    <condition>  ::= <column> <mop> <digits> |  <column> <mop> <column> | <column> <mop> 'identifer'
-
-    <function>     ::= COUNT | SUM | AVG | MIN | MAX
-
-     <column>      ::= identifier
-
-     <table>          ::= identifier
-
-     <lop>  ::= AND | OR | NOT | IN | BETWEEN | LIKE | EXISTS
-
-     <digits> := <digit> | <digit><digits>
-
-     <digit> ::= 0|1|2|3|4|5|6|7|8|9
-
-     <mop>  ::= <   |   >   |   =   |   != 
-*/
-
-
 %{
 
 #include <stdio.h>
@@ -55,7 +19,7 @@ typedef enum parse_rc_ {
 
 
 #define MAX_STRING_SIZE 512
-#define MAX_STACK_SIZE  200
+#define MAX_STACK_SIZE  512
 
 static unsigned char current_buffer[MAX_STRING_SIZE] = {0};
 static unsigned char *curr_ptr = current_buffer;
@@ -66,7 +30,7 @@ typedef struct stack {
     int data[MAX_STACK_SIZE];
 } stack_t;
 
-stack_t undo_stack = {-1, {0}};
+static stack_t undo_stack = {-1, {0}};
 
 static void 
 push(int data) {
@@ -148,7 +112,6 @@ process_white_space(int n) {
         RETURN_PARSE_SUCCESS;   \
     }}
 
-
 /* ========================================
             Warning : Do  Not Modify this file above this line 
     ======================================= */
@@ -157,6 +120,7 @@ process_white_space(int n) {
 
 
 /* User specific header files */
+#include "SQLParserStruct.h"
 #include "common.h"
 #include "Ast.h"
 #include "../core/sql_const.h"
@@ -171,12 +135,15 @@ process_white_space(int n) {
 "select" {
     return SQL_SELECT_Q;
 }
+
 "create table" {
     return SQL_CREATE_Q;
 }
+
 "insert into" {
     return SQL_INSERT_Q;
 }
+
 "delete" {
     return SQL_DELETE_Q;
 }
@@ -184,33 +151,43 @@ process_white_space(int n) {
 "varchar" {
     return SQL_STRING;
 }
+
 "int" {
     return SQL_INT;
 }
+
 "float" {
     return SQL_FLOAT;
 }
+
 "ipv4" {
     return SQL_IPV4_ADDR;
 }
+
 "primary key" {
     return SQL_PRIMARY_KEY;
 }
+
 "not null" {
     return SQL_NOT_NULL;
 }
+
 "max" {
     return SQL_MAX;
 }
+
 "sum" {
     return SQL_SUM;
 }
+
 "min" {
     return SQL_MIN;
 }
+
 "count" {
     return SQL_COUNT;
 }
+
 "avg" {
     return SQL_AVG;
 }
@@ -267,6 +244,46 @@ process_white_space(int n) {
     return SQL_OR;
 }
 
+"*" {
+    return SQL_MATH_MUL;
+}
+
+"+" {
+    return SQL_MATH_PLUS;
+}
+
+"-" {
+    return SQL_MATH_MINUS;
+}
+
+"/" {
+    return SQL_MATH_DIV;
+}
+
+"sqrt" {
+    return SQL_MATH_SQRT;
+}
+
+"sqr" {
+    return SQL_MATH_SQR;
+}
+
+"mmax" {
+    return SQL_MATH_MAX;
+}
+
+"mmin" {
+    return SQL_MATH_MIN;
+}
+
+"sin" {
+    return SQL_MATH_SIN;
+}
+
+"pow" {
+    return SQL_MATH_POW;
+}
+
 \n {
     return EOL;
 }
@@ -280,7 +297,6 @@ process_white_space(int n) {
 }
 
 "," {
-
     return COMMA;
 }
 
@@ -302,32 +318,23 @@ process_white_space(int n) {
 }
 
 [1-9][0-9]* {
-    return INTEGER;
+    return SQL_INT;
 }
 
-%{
-/*
-[0-9]*.[0-9]+ {
+[0-9]*\.[0-9]+ {
     return DECIMAL_NUMBER;
 }
-*/
-%}
 
 [a-zA-Z0-9]+ {
     return SQL_IDENTIFIER;
 }
 
 [a-zA-Z0-9]+\.[a-zA-Z0-9]+ {
-
-    return SQL_TABLE_COLMN_NAME;
+    return SQL_IDENTIFIER_IDENTIFIER;
 }
 
-^[a-zA-Z]+(?:[\s.]+[a-zA-Z]+)*$ {
+^[a-zA-Z0-9][a-zA-Z0-9_.,-_'"!()\[\]{} ]* {
     return SQL_STRING_VALUE;
-}
-
-"*" {
-    return WILDCARD;
 }
 
 . {
@@ -336,6 +343,12 @@ process_white_space(int n) {
 }
 
 %%
+
+/* #include other parser .c src files here */
+#include "ExpressionParser.c"
+
+
+
 
 static int paranthesis_cnt = 0;
 
@@ -361,7 +374,7 @@ parse_columns (ast_node_t *parent) {
                 PARSER_ERROR_EXIT(token_code, BRACK_START);
                 token_code = yylex();
                 if (token_code != SQL_IDENTIFIER &&
-                    token_code != SQL_TABLE_COLMN_NAME) {
+                    token_code != SQL_IDENTIFIER_IDENTIFIER) {
                     PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
                 }
                 col_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
@@ -384,7 +397,7 @@ parse_columns (ast_node_t *parent) {
                 }
                 break;
             case SQL_IDENTIFIER:
-            case SQL_TABLE_COLMN_NAME:
+            case SQL_IDENTIFIER_IDENTIFIER:
 
                 col_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
                 col_node->entity_type = SQL_IDENTIFIER;
@@ -399,7 +412,7 @@ parse_columns (ast_node_t *parent) {
                     continue;
                 }
                 break;
-            case WILDCARD:
+            case SQL_MATH_MUL:
             {
                 ast_node_t *astnode = (ast_node_t *)calloc (1,sizeof (ast_node_t));
                 astnode->entity_type = SQL_IDENTIFIER;
@@ -467,7 +480,7 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
     }
 
     if (token_code != SQL_IDENTIFIER &&
-        token_code != SQL_TABLE_COLMN_NAME) {
+        token_code != SQL_IDENTIFIER_IDENTIFIER) {
         
         PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
     }
@@ -540,7 +553,7 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
 
     switch (token_code) {
 
-        case INTEGER:
+        case SQL_INT:
             value = atoi (yytext);
             wc->right_op.w_opd = WH_VALUE;
             wc->right_op.u.value.dtype = SQL_INT;
@@ -562,7 +575,7 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
             switch (token_code) {
                 case SQL_IDENTIFIER:
                 case SQL_STRING_VALUE:
-                case SQL_TABLE_COLMN_NAME:
+                case SQL_IDENTIFIER_IDENTIFIER:
                     memset(in_col_name , 0, sizeof (in_col_name));
                     memset (operand_col_name, 0 , sizeof (operand_col_name));
                     strcpy (operand_col_name, yytext);
@@ -612,7 +625,7 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
 
         case SQL_IDENTIFIER:
         case SQL_STRING_VALUE:
-        case SQL_TABLE_COLMN_NAME:
+        case SQL_IDENTIFIER_IDENTIFIER:
             strcpy (operand_col_name, yytext);
             memset ( table_name, 0, sizeof (table_name));
             table_name_ptr = table_name;
@@ -765,6 +778,29 @@ parse_tables(ast_node_t *select_kw) {
 }
 
 #include "SQLGroupByParser.c"
+
+
+
+/* This file implements the SQL Parser which accespts all SQL queries satisfying the below Grammar 
+
+    <sql_query>         ::= <select_query> | <update_query> | <delete_query>
+    <select_query>     ::=  SELECT <columns> FROM <tables> WHERE <conditions>
+    <columns>            ::= <plain_columns> | <aggregate_colmns> | *
+    <plain_columns>  ::= <column> | <column> , <plain_columns>
+    <aggregate_columns>     ::= <agg_column> | <agg_column> , <aggregate_columns>
+    <agg_column> ::= <function>(<column>)
+    <tables> ::= <table> | <table> , <tables>
+    <conditions> ::= <condition> | <condition> <lop> <conditions>
+    <condition>  ::= <column> <mop> <digits> |  <column> <mop> <column> | <column> <mop> 'identifer'
+    <function>     ::= COUNT | SUM | AVG | MIN | MAX
+     <column>      ::= identifier
+     <table>          ::= identifier
+     <lop>  ::= AND | OR | NOT | IN | BETWEEN | LIKE | EXISTS
+     <digits> := <digit> | <digit><digits>
+     <digit> ::= 0|1|2|3|4|5|6|7|8|9
+     <mop>  ::= <   |   >   |   =   |   != 
+*/
+
 
 static int
 parse_select_query (ast_node_t *root) {
@@ -981,6 +1017,8 @@ parse_sql_query () {
     ast_destroy_tree_from_root (astroot);
 }
 
+#if 0
+
 int 
 main (int argc, char **argv) {
 
@@ -989,3 +1027,28 @@ main (int argc, char **argv) {
     }
     return 0;
 }
+
+#else 
+
+int 
+main (int argc, char **argv) {
+
+    strcpy (current_buffer , "a + b * c\n");
+    yy_scan_string (current_buffer);
+    parse_init();
+   
+   err = PARSER_CALL(E);
+
+    token_code = cyylex ();
+    assert (token_code == EOL);
+    
+    yy_scan_string (current_buffer);
+    while (token_code != EOL) {
+
+        printf ("token_len = %d, token_code = %d, token_text = %s\n", yyleng, token_code, yytext);
+        token_code = cyylex();
+    }
+    return 0;
+}
+
+#endif 

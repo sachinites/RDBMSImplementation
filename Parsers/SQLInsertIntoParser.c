@@ -21,7 +21,7 @@ static int
     token_code = yylex();
     switch (token_code) {
 
-        case INTEGER:
+        case SQL_INT:
             a = atoi (yytext);
             astnode = (ast_node_t *)calloc (1, sizeof (ast_node_t));
             astnode->entity_type =  SQL_IDENTIFIER;

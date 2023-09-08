@@ -94,7 +94,7 @@ typedef enum sql_ident_type_ {
 
     SQL_TABLE_NAME = 81,
     SQL_COLUMN_NAME ,
-    SQL_TABLE_COLMN_NAME,
+    SQL_IDENTIFIER_IDENTIFIER,
     SQL_INTEGER_VALUE,
     SQL_STRING_VALUE ,
     SQL_IPV4_ADDR_VALUE ,
@@ -103,6 +103,25 @@ typedef enum sql_ident_type_ {
     SQL_IDNT_TYPE_MAX
 
 } sql_identifier_type_t;
+
+
+/* Math Functions */
+typedef enum math_fns_ {
+
+    SQL_MATH_MAX = 91,      // max(a,b)
+    SQL_MATH_MIN,                // min(a,b)
+    SQL_MATH_PLUS,              //  a + b
+    SQL_MATH_MINUS,           //  a - b
+    SQL_MATH_MUL,               //  a * b
+    SQL_MATH_DIV,                 // a / b
+    SQL_MATH_SQRT,              // sqrt (a)
+    SQL_MATH_SQR,                // sqr(a)
+    SQL_MATH_SIN,                 // sin(a)
+    SQL_MATH_POW,               // pow(a,b) : a power b
+    /* Reserved enums*/
+    SQL_MATH_FNS_MAX = 120 
+
+} math_fns_t;
 
 static inline int
 sql_valid_dtype (int dtype) {

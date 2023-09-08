@@ -31,7 +31,7 @@ typedef struct stack {
     int data[MAX_STACK_SIZE];
 } stack_t;
 
-stack_t undo_stack = {-1, {0}};
+static stack_t undo_stack = {-1, {0}};
 
 static void 
 push(int data) {
@@ -39,7 +39,7 @@ push(int data) {
     undo_stack.data[++undo_stack.top] = data;
 }
 
-int 
+static int 
 pop() {
     assert (undo_stack.top > -1);
     int res = undo_stack.data[undo_stack.top] ;
@@ -115,7 +115,6 @@ process_white_space(int n) {
     else {                                                \
         yyrewind(1);                                \
     }
-
 
 /* ========================================
             Warning : Do  Not Modify this file above this line 

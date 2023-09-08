@@ -15,7 +15,7 @@ parse_group_by_query (ast_node_t *select_root) {
     switch(token_code) {
 
         case SQL_IDENTIFIER:
-        case SQL_TABLE_COLMN_NAME:
+        case SQL_IDENTIFIER_IDENTIFIER:
             col_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
             col_node->entity_type = SQL_IDENTIFIER;
             col_node->u.identifier.ident_type = SQL_COLUMN_NAME;

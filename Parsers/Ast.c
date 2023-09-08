@@ -176,7 +176,7 @@ ast_node_print (ast_node_t *root, int depth) {
         case SQL_IDENTIFIER:
             switch (root->u.identifier.ident_type) {
                 case SQL_TABLE_NAME:
-                case SQL_TABLE_COLMN_NAME:
+                case SQL_IDENTIFIER_IDENTIFIER:
                     printf ("Table name = %s\n", root->u.identifier.identifier.name);
                     break;
                 case SQL_COLUMN_NAME:
