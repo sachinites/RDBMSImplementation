@@ -15,9 +15,14 @@ void
 sql_process_select_query_internal (BPlusTree_t *tcatalog,
                                                          ast_node_t *root) {
 
+    bool rc;
     qep_struct_t qep_struct;
     memset (&qep_struct, 0, sizeof (qep_struct));
-    qep_struct_init (&qep_struct, tcatalog, root);
+    rc = qep_struct_init (&qep_struct, tcatalog, root);
+    if (!rc) {
+        qep_deinit (&qep_struct);
+        return;
+    }
     qep_execute_select (&qep_struct);
     qep_deinit (&qep_struct);
 }

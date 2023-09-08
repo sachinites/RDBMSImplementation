@@ -5,11 +5,12 @@
 #include "sql_utils.h"
 #include "sql_where.h"
 #include "qplanner.h"
+#include "sql_groupby.h"
 #include "Catalog.h"
 #include "../stack/stack.h"
 #include "../Parsers/common.h"
 
-static bool 
+bool 
 sql_where_compare (void *lval , int lval_size, 
                                    void *rval, int rval_size,
                                     sql_dtype_t dtype,
@@ -340,7 +341,12 @@ sql_evaluate_where_expression_tree (qep_struct_t *qep_struct, expt_node_t *root,
             }
         break;
         case WHERE_COND:
-            return sql_where_compute (qep_struct, root->u.wc, joined_row);
+            if (qep_struct->stage_id != QP_NODE_GROUP_BY) {
+                return sql_where_compute (qep_struct, root->u.wc, joined_row);
+            }
+            else {
+                return sql_having_compute (qep_struct, root->u.wc, joined_row);
+            }
         default: ;
             assert(0);
             return false;
@@ -508,6 +514,7 @@ sql_where_clause_infix_to_postfix (where_literal_t *wlit_arr_in, int *size_out)
 
 static expt_node_t*
 sql_create_expt_node_from_where_literal (
+        qep_struct_t *qep_struct,
         where_token_type_t where_token_type,
         int token_id,
         where_cond_t *wc) {
@@ -528,13 +535,23 @@ sql_create_expt_node_from_where_literal (
             expt_node->expt_node_type = WHERE_COND;
             expt_node->u.wc = (where_cond_t *)calloc (1, sizeof (where_cond_t));
             memcpy (expt_node->u.wc, wc, sizeof (*wc));
+
+            expt_node->u.wc->col.grpby_col_to_select_col_linkage = 
+                qp_col_lookup_identical  (qep_struct->select.sel_colmns, qep_struct->select.n, 
+                &expt_node->u.wc->col);
+            if (expt_node->u.wc->right_op.w_opd == WH_COL) {
+                expt_node->u.wc->right_op.u.col.grpby_col_to_select_col_linkage = 
+                    qp_col_lookup_identical  (qep_struct->select.sel_colmns, qep_struct->select.n, 
+                    &expt_node->u.wc->right_op.u.col);
+            }
             return expt_node;
     }
     return NULL;
 }
 
 expt_node_t *
-sql_where_convert_postfix_to_expression_tree (where_literal_t **wlit, int size) {
+sql_where_convert_postfix_to_expression_tree (qep_struct_t *qep_struct,
+                                                                where_literal_t **wlit, int size) {
 
     int i;
     expt_node_t *expt_node;
@@ -544,13 +561,14 @@ sql_where_convert_postfix_to_expression_tree (where_literal_t **wlit, int size) 
 
         if (wlit[i]->where_token_type == WHERE_LITERAL_WHERE_COND) {
             expt_node = sql_create_expt_node_from_where_literal (
+                                    qep_struct,
                                     wlit[i]->where_token_type, 0, &wlit[i]->u.wc);
             push(stack, (void *)expt_node);
         } else {
 
             expt_node_t *right = pop(stack);
             expt_node_t *left = pop(stack);
-            expt_node_t * opNode = sql_create_expt_node_from_where_literal (
+            expt_node_t * opNode = sql_create_expt_node_from_where_literal (qep_struct,
                                                         wlit[i]->where_token_type, wlit[i]->u.token_id, NULL);
             opNode->left = left;
             opNode->right = right;

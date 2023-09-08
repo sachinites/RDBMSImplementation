@@ -5,6 +5,7 @@
 
 typedef struct  joined_row_  joined_row_t;
 typedef struct qep_struct_ qep_struct_t ;
+typedef struct where_cond_ where_cond_t;
 
 typedef struct order_by_avl_node {
 
@@ -21,5 +22,14 @@ sql_compute_group_by_clause_keys (qep_struct_t *qep_struct,  joined_row_t  *join
  
  void 
 sql_group_by_init_groupby_trees (qep_struct_t *qep) ;
+
+ bool 
+sql_having_compute (qep_struct_t *qep_struct, where_cond_t *wc, joined_row_t *joined_row);
+
+bool 
+qep_enforce_having_clause  (qep_struct_t *qep_struct, joined_row_t *joined_row);
+
+int
+sql_compute_group_by_key_size (qep_struct_t *qep_struct) ;
 
 #endif 

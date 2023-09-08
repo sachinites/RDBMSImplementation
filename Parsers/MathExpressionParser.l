@@ -39,7 +39,7 @@ push(int data) {
     undo_stack.data[++undo_stack.top] = data;
 }
 
-int 
+static int 
 pop() {
     assert (undo_stack.top > -1);
     int res = undo_stack.data[undo_stack.top] ;

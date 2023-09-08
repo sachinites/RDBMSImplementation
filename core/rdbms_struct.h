@@ -32,6 +32,9 @@ typedef struct qp_col_ {
     sql_agg_fn_t agg_fn;
     void *computed_value;
     int owner_table_id;
+    /* below is the ptr to the same column mentioned in select list
+        when this column is one of column in having clause conditions*/
+    struct qp_col_ *grpby_col_to_select_col_linkage;
 }qp_col_t;
 
 typedef struct joined_row_ {

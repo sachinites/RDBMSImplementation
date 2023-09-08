@@ -63,6 +63,8 @@ typedef struct join_predicate_ {
 
 typedef struct qep_struct_ {
 
+    qp_stage_id_t stage_id;
+
     /* We cannot use more than three tables in our SQL query*/
     ctable_val_t **ctable_val;
     expt_node_t *expt_root;
@@ -85,7 +87,7 @@ typedef struct qep_struct_ {
 
          expt_node_t *expt_root;
          int8_t having_phase; // either 1 or 2
-         
+
     } having;
 
     struct {

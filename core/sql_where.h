@@ -94,7 +94,7 @@ where_literal_t **
 sql_where_clause_infix_to_postfix (where_literal_t *arr_in, int *size_out);
 
 expt_node_t *
-sql_where_convert_postfix_to_expression_tree (where_literal_t **arr, int size);
+sql_where_convert_postfix_to_expression_tree (qep_struct_t *qep_struct, where_literal_t **arr, int size);
 
 bool 
 sql_evaluate_where_expression_tree (qep_struct_t *qep_struct, expt_node_t *root, joined_row_t *joined_row) ;
@@ -108,13 +108,16 @@ sql_where_literals_array_free (where_literal_t *where_literal_arr) ;
 void 
 sql_debug_print_where_cond (where_cond_t *wc) ;
 
-expt_node_t *
-sql_where_convert_postfix_to_expression_tree (where_literal_t **wlit, int size);
-
 void 
 sql_debug_print_expression_tree_node (expt_node_t *root);
 
 void 
 sql_debug_print_expression_tree (expt_node_t *root) ;
+
+bool 
+sql_where_compare (void *lval , int lval_size, 
+                                   void *rval, int rval_size,
+                                    sql_dtype_t dtype,
+                                    sql_op_t mop) ;
 
 #endif 

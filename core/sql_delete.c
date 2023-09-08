@@ -19,9 +19,14 @@ sql_validate_delete_query_data (BPlusTree_t *schema_table, ast_node_t *delete_ro
 void 
 sql_process_delete_query_internal (BPlusTree_t *tcatalog, ast_node_t *delete_root) {
 
+    bool rc;
     qep_struct_t qep_struct;
     memset (&qep_struct, 0, sizeof (qep_struct));
-    qep_struct_init (&qep_struct, tcatalog, delete_root);
+    rc = qep_struct_init (&qep_struct, tcatalog, delete_root);
+    if (!rc) {
+        qep_deinit (&qep_struct);
+        return;
+    }
     qep_execute_delete (&qep_struct);
     qep_deinit (&qep_struct);
 }

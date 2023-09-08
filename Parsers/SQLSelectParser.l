@@ -43,6 +43,120 @@
 #include <time.h>
 #include <assert.h>
 #include <arpa/inet.h>
+
+int yylex();
+
+typedef enum parse_rc_ {
+
+    PARSE_ERR,
+    PARSE_SUCCESS
+
+} parse_rc_t;
+
+
+#define MAX_STRING_SIZE 512
+#define MAX_STACK_SIZE  200
+
+static unsigned char current_buffer[MAX_STRING_SIZE] = {0};
+static unsigned char *curr_ptr = current_buffer;
+
+typedef struct stack {
+
+    int top;
+    int data[MAX_STACK_SIZE];
+} stack_t;
+
+stack_t undo_stack = {-1, {0}};
+
+static void 
+push(int data) {
+    assert (undo_stack.top < MAX_STACK_SIZE -1);
+    undo_stack.data[++undo_stack.top] = data;
+}
+
+static int 
+pop() {
+    assert (undo_stack.top > -1);
+    int res = undo_stack.data[undo_stack.top] ;
+    undo_stack.top--;
+    return res;
+}
+
+static int *glex_cnt = NULL;
+
+static void 
+yyrewind (int n) {
+
+    if (n <= 0) return;
+    if (curr_ptr == current_buffer) return;
+    int data_len = 0;
+    while (n)  {
+        data_len += pop(); 
+        n--;
+        (*glex_cnt)--;
+    }
+    curr_ptr -= data_len;
+    yy_scan_string(curr_ptr);
+}
+
+static int 
+cyylex () {
+
+    int token_code =  yylex();
+    curr_ptr += yyleng;
+    push(yyleng);
+    (*glex_cnt)++;
+    return token_code;
+}
+
+static void 
+process_white_space(int n) {
+
+    curr_ptr += n;
+    push(n);
+    (*glex_cnt) += n;
+}
+
+#define parse_init()             \
+    int token_code = 0;          \
+    int lex_lcl_counter = 0;    \
+    parse_rc_t err = PARSE_SUCCESS; \
+    glex_cnt = &lex_lcl_counter
+
+#define RETURN_PARSE_ERROR  \
+    {yyrewind(*glex_cnt); \
+    glex_cnt = t;   \
+    return PARSE_ERR;}
+
+#define RETURN_PARSE_SUCCESS    \
+    {(*t) += lex_lcl_counter;                      \
+     glex_cnt = t;  \
+    return PARSE_SUCCESS;}
+
+#define PARSER_CALL(fn) \
+    fn(&lex_lcl_counter)
+
+#define CHECKPOINT(a)    \
+    a = lex_lcl_counter
+
+#define RESTORE_CHKP(a) \
+    yyrewind(lex_lcl_counter - a)
+    
+#define CHECK_FOR_EOL                \
+    {token_code = cyylex();                   \
+    if (token_code == EOL) {                \
+        RETURN_PARSE_SUCCESS;   \
+    }}
+
+
+/* ========================================
+            Warning : Do  Not Modify this file above this line 
+    ======================================= */
+            /* User specific parsing logic starts below */
+
+
+
+/* User specific header files */
 #include "common.h"
 #include "Ast.h"
 #include "../core/sql_const.h"
@@ -333,6 +447,23 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
 
     (*wlit)->where_token_type = WHERE_LITERAL_WHERE_COND;
     wc = &(*wlit)->u.wc;
+    wc->col.agg_fn = SQL_AGG_FN_NONE;
+
+    int agg_fn_token_code = SQL_AGG_FN_NONE;
+
+    switch (token_code) {
+        case SQL_SUM:
+        case SQL_MIN:
+        case SQL_MAX:
+        case SQL_COUNT:
+        case SQL_AVG:
+            agg_fn_token_code = token_code;
+            token_code = yylex();
+            PARSER_ERROR_EXIT(token_code, BRACK_START);
+            break;
+        default:
+            break;
+    }
 
     if (token_code != SQL_IDENTIFIER &&
         token_code != SQL_TABLE_COLMN_NAME) {
@@ -378,6 +509,12 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
         return SQL_PARSE_ERROR;
     }
     wc->col.owner_table_id = table_id;
+
+    if (agg_fn_token_code != SQL_AGG_FN_NONE) {
+        token_code = yylex();
+        PARSER_ERROR_EXIT(token_code, BRACK_END);
+        wc->col.agg_fn = agg_fn_token_code;
+    }
 
     token_code = yylex();
 
