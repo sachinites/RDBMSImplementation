@@ -460,6 +460,7 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
             agg_fn_token_code = token_code;
             token_code = yylex();
             PARSER_ERROR_EXIT(token_code, BRACK_START);
+            token_code = yylex();
             break;
         default:
             break;
@@ -535,7 +536,6 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
     }
 
     //printf ("%s op(%d) ", col_name, token_code);
-
     token_code = yylex();
 
     switch (token_code) {
@@ -548,6 +548,68 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
             wc->right_op.u.value.val = calloc (wc->right_op.u.value.size, 1);
             *(int *)(wc->right_op.u.value.val) = value;
             break;
+
+        /* Aggregate column in group by clause ?? Dont make sense ! */
+        case SQL_SUM:
+        case SQL_MIN:
+        case SQL_MAX:
+        case SQL_COUNT:
+        case SQL_AVG:
+            agg_fn_token_code = token_code;
+            token_code = yylex();
+            PARSER_ERROR_EXIT(token_code, BRACK_START);
+            token_code = yylex();
+            switch (token_code) {
+                case SQL_IDENTIFIER:
+                case SQL_STRING_VALUE:
+                case SQL_TABLE_COLMN_NAME:
+                    memset(in_col_name , 0, sizeof (in_col_name));
+                    memset (operand_col_name, 0 , sizeof (operand_col_name));
+                    strcpy (operand_col_name, yytext);
+                    memset ( table_name, 0, sizeof (table_name));
+                    table_name_ptr = table_name;
+                    memset (lone_col_name, 0, sizeof (lone_col_name));
+                    parser_split_table_column_name (operand_col_name, table_name, lone_col_name);
+                    if (table_name[0] == '\0') {
+                        /* Pick the first table from the FROM list */
+                        ast_tmplate.entity_type = SQL_KEYWORD;
+                        ast_tmplate.u.kw = SQL_FROM;
+                        ast_node_t *from_kw = ast_find (root, &ast_tmplate);
+                        assert(from_kw);
+                        table_name_ptr = from_kw->child_list->u.identifier.identifier.name;
+                        table_id =  *(int *)from_kw->child_list->data;
+                        assert(!table_id);
+                    }
+                    else {
+                        ast_tmplate.entity_type = SQL_IDENTIFIER;
+                        ast_tmplate.u.kw = SQL_TABLE_NAME;
+                        strncpy (ast_tmplate.u.identifier.identifier.name, 
+                            table_name, SQL_TABLE_NAME_MAX_SIZE );
+                        table_ast_node = ast_find_identifier (from_kw, &ast_tmplate);
+                        if (!table_ast_node) {
+                            printf ("Error : Unrecognized Column <%s::%s>\n", 
+                                table_name, lone_col_name);
+                            return SQL_PARSE_ERROR;
+                        }
+                        table_id = *(int *)table_ast_node->data;
+                    }
+                    if (!Catalog_get_column (NULL, 
+                                        table_name_ptr, 
+                                        lone_col_name, &wc->right_op.u.col)) {
+                        printf ("Error : Unrecognized Column <%s::%s>\n", 
+                            table_name_ptr, lone_col_name);
+                    return SQL_PARSE_ERROR;
+                    }
+                    wc->right_op.u.col.owner_table_id = table_id;
+                    wc->right_op.u.col.agg_fn = agg_fn_token_code;
+                    token_code = yylex();
+                     PARSER_ERROR_EXIT(token_code, BRACK_END);
+                    break;
+                default:
+                    PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
+            }
+        break;
+
         case SQL_IDENTIFIER:
         case SQL_STRING_VALUE:
         case SQL_TABLE_COLMN_NAME:
