@@ -21,8 +21,8 @@ typedef enum parse_rc_ {
 #define MAX_STRING_SIZE 512
 #define MAX_STACK_SIZE  512
 
-static unsigned char current_buffer[MAX_STRING_SIZE] = {0};
-static unsigned char *curr_ptr = current_buffer;
+static unsigned char lex_buffer[MAX_STRING_SIZE] = {0};
+static unsigned char *curr_ptr = lex_buffer;
 
 typedef struct stack {
 
@@ -52,7 +52,7 @@ static void
 yyrewind (int n) {
 
     if (n <= 0) return;
-    if (curr_ptr == current_buffer) return;
+    if (curr_ptr == lex_buffer) return;
     int data_len = 0;
     while (n)  {
         data_len += pop(); 
@@ -63,19 +63,26 @@ yyrewind (int n) {
     yy_scan_string(curr_ptr);
 }
 
+static void 
+yyrewindall() {
+
+    yyrewind(*glex_cnt);
+}
+
 static int 
 cyylex () {
 
     int token_code =  yylex();
     curr_ptr += yyleng;
     push(yyleng);
-    (*glex_cnt)++;
+   (*glex_cnt)++;
     return token_code;
 }
 
 static void 
 process_white_space(int n) {
 
+     if (!glex_cnt) return;
     curr_ptr += n;
     push(n);
     (*glex_cnt) += n;
@@ -83,9 +90,9 @@ process_white_space(int n) {
 
 #define parse_init()             \
     int token_code = 0;          \
-    int lex_lcl_counter = 0;    \
+    int lexc = 0;    \
     parse_rc_t err = PARSE_SUCCESS; \
-    glex_cnt = &lex_lcl_counter
+    glex_cnt = &lexc
 
 #define RETURN_PARSE_ERROR  \
     {yyrewind(*glex_cnt); \
@@ -93,24 +100,45 @@ process_white_space(int n) {
     return PARSE_ERR;}
 
 #define RETURN_PARSE_SUCCESS    \
-    {(*t) += lex_lcl_counter;                      \
+    {(*t) += lexc;                      \
      glex_cnt = t;  \
     return PARSE_SUCCESS;}
 
 #define PARSER_CALL(fn) \
-    fn(&lex_lcl_counter)
+    fn(&lexc)
 
 #define CHECKPOINT(a)    \
-    a = lex_lcl_counter
+    a = lexc
 
 #define RESTORE_CHKP(a) \
-    yyrewind(lex_lcl_counter - a)
+    yyrewind(lexc - a)
     
 #define CHECK_FOR_EOL                \
     {token_code = cyylex();                   \
     if (token_code == EOL) {                \
         RETURN_PARSE_SUCCESS;   \
     }}
+
+static inline int
+cyylexlh() {
+
+    int token_code = cyylex();
+    yyrewind(1);
+    return token_code;
+}
+
+static inline int
+cyylexlb() {
+
+    yyrewind(1);
+    int token_code = cyylex();
+    yyrewind(1);
+    return token_code;
+}
+
+#define PARSER_LOG_ERR(token_obtained, expected_token)  \
+    printf ("%s(%d) : Token Obtained = %d (%s) , expected token = %d\n",    \
+        __FUNCTION__, __LINE__, token_obtained, yytext, expected_token);
 
 /* ========================================
             Warning : Do  Not Modify this file above this line 
@@ -204,9 +232,27 @@ process_white_space(int n) {
     return SQL_GROUP_BY;
 }
 
+"orer by" {
+    return SQL_ORDER_BY;
+}
+
+"limit" {
+    return SQL_LIMIT;
+}
+
+
 "having" {
     return SQL_HAVING;
 }
+
+"asc" {
+    return SQL_ORDERBY_ASC;
+}
+
+"desc" {
+    return SQL_ORDERBY_DSC;
+}
+
 
 "(" {
     return BRACK_START;
@@ -302,10 +348,12 @@ process_white_space(int n) {
 
 [ ] {
     /* Ignore */
+    process_white_space(1);
 }
 
 [\t] {
     /*ignore*/
+    process_white_space(4);
 }
 
 "\\q" {
@@ -325,17 +373,27 @@ process_white_space(int n) {
     return DECIMAL_NUMBER;
 }
 
-[a-zA-Z0-9]+ {
+[a-zA-Z0-9_]+ {
     return SQL_IDENTIFIER;
 }
 
-[a-zA-Z0-9]+\.[a-zA-Z0-9]+ {
+[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+ {
     return SQL_IDENTIFIER_IDENTIFIER;
 }
 
+
+%{
+
+#if 0
 ^[a-zA-Z0-9][a-zA-Z0-9_.,-_'"!()\[\]{} ]* {
+    
     return SQL_STRING_VALUE;
 }
+#endif
+
+%}
+
+
 
 . {
     printf ("Non parsable character : %c\n", *yytext);
@@ -801,7 +859,6 @@ parse_tables(ast_node_t *select_kw) {
      <mop>  ::= <   |   >   |   =   |   != 
 */
 
-
 static int
 parse_select_query (ast_node_t *root) {
 
@@ -931,22 +988,24 @@ static  void
 parse_update_query ()  {}
 
 #include "SQLCreateParser.c"
+#include "SQLCreateParserCFG.c"
+#include "SQLSelectParserCFG.c"
 #include "SQLInsertIntoParser.c"
 #include "SQLDeleteParser.c"
 #include "../core/sql_intf.h"
 
-static void 
-parse_sql_query () {
+static parse_rc_t
+parse_sql_query (int *t) {
 
+    parse_init();
     bool rc;
     int err_code;
     ast_node_t *astroot = NULL;
     paranthesis_cnt = 0;
 
-    printf ("postgres=# ");
-    clock_t t = clock();
+    clock_t tclk = clock();
 
-    int token_code = yylex();
+    token_code = yylex();
 
     switch (token_code) {
 
@@ -960,11 +1019,11 @@ parse_sql_query () {
             if (paranthesis_cnt) {
                 printf ("Error : Unbalanced Paranthesis\n");
                  ast_destroy_tree_from_root (astroot);
-                return;
+                 RETURN_PARSE_ERROR;
             }
             if (err_code == SQL_PARSE_ERROR) {
                 ast_destroy_tree_from_root (astroot);
-                return;
+                RETURN_PARSE_SUCCESS;
             }
             sql_process_select_query (NULL, astroot);
             break;
@@ -976,9 +1035,16 @@ parse_sql_query () {
             astroot = (ast_node_t *)calloc (1, sizeof (ast_node_t));
             astroot->entity_type = SQL_QUERY_TYPE;
             astroot->u.q_type = SQL_CREATE_Q;
-            parse_create_query(astroot);
+            //err = parse_create_query(&lexc, astroot);
+            err = parse_create_query_cfg(&lexc, astroot);
+            if (err == PARSE_ERR) {
+                printf ("Table Creation Failed\n");
+                break;
+            }
             //ast_print (astroot, 0);
             sql_process_create_query(NULL, astroot);
+            token_code = cyylex();
+            assert(token_code == EOL);
             break;
         case SHOW_DB_TABLES:
             sql_show_table_catalog (NULL);
@@ -1002,7 +1068,7 @@ parse_sql_query () {
         case SQL_PARSE_OK:
         case EOL:
             ast_destroy_tree_from_root (astroot);
-            return;
+            RETURN_PARSE_SUCCESS;
         case QUIT:
             exit(0);
         default:
@@ -1011,19 +1077,34 @@ parse_sql_query () {
             break;
     }
 
-    t = clock() - t;
-    double time_taken = ((double)t * 1000)/CLOCKS_PER_SEC; 
+    tclk= clock() - tclk;
+    double time_taken = ((double)tclk * 1000)/CLOCKS_PER_SEC; 
     printf("%f msec\n", time_taken);
     ast_destroy_tree_from_root (astroot);
+    if (err == PARSE_ERR) RETURN_PARSE_ERROR;
+    RETURN_PARSE_SUCCESS;
 }
 
-#if 0
+#if 1
 
 int 
 main (int argc, char **argv) {
 
+    parse_init ();
+    memset (lex_buffer, 0 , sizeof (lex_buffer));
+    yy_scan_string (lex_buffer);
+
     while(1) {
-        parse_sql_query();
+        printf ("postgres=# ");
+        fgets (lex_buffer, sizeof (lex_buffer), stdin);
+        if (lex_buffer[0] == '\n') {
+            lex_buffer[0] = 0;
+            continue;
+        }
+        //parse_sql_query(&lexc);
+        parse_select_query_cfg ();
+        memset (lex_buffer, 0 , sizeof (lex_buffer));
+        yyrewindall() ;
     }
     return 0;
 }
@@ -1033,16 +1114,17 @@ main (int argc, char **argv) {
 int 
 main (int argc, char **argv) {
 
-    strcpy (current_buffer , "a + b * c\n");
-    yy_scan_string (current_buffer);
+    strcpy (lex_buffer , "a + b * c\n");
+    yy_scan_string (lex_buffer);
     parse_init();
    
    err = PARSER_CALL(E);
 
     token_code = cyylex ();
     assert (token_code == EOL);
-    
-    yy_scan_string (current_buffer);
+
+    yy_scan_string (lex_buffer);
+    token_code = cyylex();
     while (token_code != EOL) {
 
         printf ("token_len = %d, token_code = %d, token_text = %s\n", yyleng, token_code, yytext);

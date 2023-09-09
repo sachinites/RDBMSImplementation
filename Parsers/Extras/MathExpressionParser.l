@@ -77,6 +77,7 @@ cyylex () {
 static void 
 process_white_space(int n) {
 
+    if (!glex_cnt) return;
     curr_ptr += n;
     push(n);
     (*glex_cnt) += n;
@@ -84,9 +85,9 @@ process_white_space(int n) {
 
 #define parse_init()             \
     int token_code = 0;          \
-    int lex_lcl_counter = 0;    \
+    int lexc = 0;    \
     parse_rc_t err = PARSE_SUCCESS; \
-    glex_cnt = &lex_lcl_counter
+    glex_cnt = &lexc
 
 #define RETURN_PARSE_ERROR  \
     {yyrewind(*glex_cnt); \
@@ -94,18 +95,18 @@ process_white_space(int n) {
     return PARSE_ERR;}
 
 #define RETURN_PARSE_SUCCESS    \
-    {(*t) += lex_lcl_counter;                      \
+    {(*t) += lexc;                      \
      glex_cnt = t;  \
     return PARSE_SUCCESS;}
 
 #define PARSER_CALL(fn) \
-    fn(&lex_lcl_counter)
+    fn(&lexc)
 
 #define CHECKPOINT(a)    \
-    a = lex_lcl_counter
+    a = lexc
 
 #define RESTORE_CHKP(a) \
-    yyrewind(lex_lcl_counter - a)
+    yyrewind(lexc - a)
     
 #define CHECK_FOR_EOL                \
     {token_code = cyylex();                   \
@@ -613,6 +614,18 @@ Q (int *t) {
 int 
 main (int argc, char **argv) {
 
+#if 1
+    strcpy (current_buffer , 
+        "a + b * c\n");
+    yy_scan_string (current_buffer);
+    parse_init();
+    err = PARSER_CALL(E);
+    token_code = cyylex();
+    assert (token_code == EOL);
+    printf ("Valid Mathematical Expression\n");
+    return 0;
+#endif 
+
 #if 0
     strcpy (current_buffer , 
         "max( sqrt(max(b.n , c)) + max(sqrt(b) * c, d) , sqrt(max(b.n , c)) + max(sqrt(b) * c, d))\n");
@@ -621,7 +634,7 @@ main (int argc, char **argv) {
     strcpy (current_buffer , 
         "max( sqrt(max(b.n , c)) + max(sqrt(b) * c, d) , sqrt(max(b.n , c)) + max(sqrt(b) * c, d))  !=  max( sqrt(max(b.n , c)) + max(sqrt(b) * c, d) , sqrt(max(b.n , c)) + max(sqrt(b) * c, d))\n");
 #endif
-#if 1
+#if 0
     strcpy (current_buffer , 
         "emp.salary * 3 < emp.accntbalance,   a + b * c < 1 ,   sqrt (max(a, b)) > 4\n");
     yy_scan_string (current_buffer);

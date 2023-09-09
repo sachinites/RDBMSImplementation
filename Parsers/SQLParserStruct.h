@@ -43,6 +43,8 @@ typedef enum sql_keywords_ {
     SQL_WHERE,
     SQL_GROUP_BY,
     SQL_HAVING,
+    SQL_ORDER_BY,
+    SQL_LIMIT,
     SQL_PRIMARY_KEY,
     SQL_NOT_NULL,
     SQL_SELECT,
@@ -74,7 +76,8 @@ typedef struct ident_ {
 
 typedef enum sql_dtype_{
 
-    SQL_STRING  = 61,
+    SQL_DTYPE_FIRST = 61,
+    SQL_STRING,
     SQL_INT ,
     SQL_FLOAT,
     SQL_IPV4_ADDR,
@@ -122,6 +125,13 @@ typedef enum math_fns_ {
     SQL_MATH_FNS_MAX = 120 
 
 } math_fns_t;
+
+typedef enum sql_order_ {
+
+    SQL_ORDERBY_ASC,
+    SQL_ORDERBY_DSC
+
+} sql_order_t;
 
 static inline int
 sql_valid_dtype (int dtype) {
