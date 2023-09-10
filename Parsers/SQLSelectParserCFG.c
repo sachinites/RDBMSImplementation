@@ -73,6 +73,7 @@ LMT (int *t, ast_node_t *select_kw) {
      token_code = cyylex();
 
      if (token_code != SQL_INT) {
+        PARSER_LOG_ERR(token_code, SQL_INT);
         RETURN_PARSE_ERROR;
      }
 
@@ -163,7 +164,10 @@ L (int *t, ast_node_t *select_kw) {
     }
 
     token_code = cyylex();
-    if (token_code != SQL_IDENTIFIER) RETURN_PARSE_ERROR;
+    if (token_code != SQL_IDENTIFIER) {
+        PARSER_LOG_ERR(token_code, SQL_IDENTIFIER);
+        RETURN_PARSE_ERROR;
+    }
 
     RETURN_PARSE_SUCCESS;
 }
@@ -260,6 +264,7 @@ TABS (int *t, ast_node_t *select_kw) {
     token_code = cyylex();
 
     if (token_code != SQL_IDENTIFIER) {
+        PARSER_LOG_ERR(token_code, SQL_IDENTIFIER);
         RETURN_PARSE_ERROR;
     }
 
@@ -335,7 +340,10 @@ SEL_Q (int *t, ast_node_t **select_root) {
 
     token_code = cyylex();
 
-    if (token_code != SQL_FROM) RETURN_PARSE_ERROR;
+    if (token_code != SQL_FROM) {
+        PARSER_LOG_ERR(token_code, SQL_FROM);
+        RETURN_PARSE_ERROR;
+    }
 
     err = TABS(&lexc, select_kw);
 
@@ -359,7 +367,11 @@ SEL_Q (int *t, ast_node_t **select_root) {
 
     /* Query Must be completely consumed*/
     token_code = cyylex();
-    if (token_code != SEMI_COLON) RETURN_PARSE_ERROR;
+
+    if (token_code != SEMI_COLON) {
+        PARSER_LOG_ERR(token_code, SEMI_COLON);
+        RETURN_PARSE_ERROR;
+    }
 
     RETURN_PARSE_SUCCESS;
 }

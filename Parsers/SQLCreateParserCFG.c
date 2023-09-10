@@ -108,6 +108,7 @@ CE (int *t, ast_node_t *table_name)  {
                     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
                      token_code = cyylex ();
                      if (token_code != BRACK_END) {
+                        PARSER_LOG_ERR(token_code, BRACK_END);
                         RETURN_PARSE_ERROR;
                      }
                      RETURN_PARSE_SUCCESS;
@@ -121,6 +122,7 @@ CE (int *t, ast_node_t *table_name)  {
             if (err == PARSE_ERR) RETURN_PARSE_ERROR;
             token_code = cyylex ();
              if (token_code != BRACK_END) {
+                PARSER_LOG_ERR(token_code, BRACK_END);
                 RETURN_PARSE_ERROR;
             }
             RETURN_PARSE_SUCCESS;
@@ -195,6 +197,7 @@ CC (int *t, ast_node_t *table_name) {
     token_code = cyylex();
 
     if (token_code != BRACK_START) {
+        PARSER_LOG_ERR(token_code, BRACK_START);
         RETURN_PARSE_ERROR;
     }
 
@@ -205,6 +208,7 @@ CC (int *t, ast_node_t *table_name) {
     token_code = cyylex();
 
     if (token_code != BRACK_END) {
+        PARSER_LOG_ERR(token_code, BRACK_END);
         RETURN_PARSE_ERROR;
     }
 
@@ -222,6 +226,7 @@ CM (int *t, ast_node_t *create_kw) {
         case SQL_IDENTIFIER:
         break;
         default:
+            PARSER_LOG_ERR(token_code, SQL_IDENTIFIER);
             RETURN_PARSE_ERROR;
     }
 
