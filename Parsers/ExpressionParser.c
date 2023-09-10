@@ -313,18 +313,25 @@ parse_rc_t
 Q (int *t) {
 
     parse_init();
+    int chkp_initial;
+    
+    CHECKPOINT(chkp_initial);
 
     token_code = cyylex();
-    if (token_code == BRACK_START) {
+
+    while (token_code == BRACK_START) {
+
         err = PARSER_CALL(Q);
-        if (err == PARSE_ERR) RETURN_PARSE_ERROR;
+        if (err == PARSE_ERR) break;
+        
         token_code = cyylex();
-        if (token_code != BRACK_END) {
-            RETURN_PARSE_ERROR;
-        }
+        if (token_code != BRACK_END) break;
+
         RETURN_PARSE_SUCCESS;   // Q -> (Q)
     }
-    yyrewind(1);
+
+    RESTORE_CHKP(chkp_initial);
+
     err = PARSER_CALL(E);
     switch (err) {
         case PARSE_ERR:

@@ -1095,6 +1095,19 @@ parse_sql_query (int *t) {
 
 #if 1
 
+/* Tested with :
+
+select name1 as N1, name2 as N2, sqrt(age + salary) as N3 from rt1 as RT1, rt2 as RT2 where age > N3 and sqrt
+(age) = sqr(salary) group by mmax(age, salary), salary having (sqrt(age + salary) > 1000) and (bal > 1000) order 
+by RT1 asc limit 2;
+
+select sqr(name) * 3 + 4, sqrt(age * salary) - age * 4 from tab1, tabe where mmax(salary, amount) * 3 < 10000 and 
+salary > sqr(10) group by name, sqr(name) * 3 + 4 having  (sqrt(age * salary)) = (age * 4) order by name asc 
+limit 4;
+
+*/
+
+
 int 
 main (int argc, char **argv) {
 
