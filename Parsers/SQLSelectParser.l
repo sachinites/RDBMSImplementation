@@ -306,6 +306,10 @@ cyylexlb() {
     return SQL_MATH_DIV;
 }
 
+";" {
+    return SEMI_COLON;
+}
+
 "sqrt" {
     return SQL_MATH_SQRT;
 }

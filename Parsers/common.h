@@ -15,6 +15,7 @@
 #define QUIT    1007
 #define SQL_PARSE_ERROR   1008
 #define SQL_PARSE_OK   1009
+#define SEMI_COLON  1010
 
 #define PARSER_ERROR_EXIT(code, expected_code) \
     if (code != expected_code) {                                         \

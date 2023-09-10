@@ -328,6 +328,10 @@ SEL_Q (int *t, ast_node_t **select_root) {
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
+    /* Query Must be completely consumed*/
+    token_code = cyylex();
+    if (token_code != SEMI_COLON) RETURN_PARSE_ERROR;
+    
     RETURN_PARSE_SUCCESS;
 }
 
