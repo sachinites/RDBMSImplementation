@@ -232,7 +232,7 @@ cyylexlb() {
     return SQL_GROUP_BY;
 }
 
-"orer by" {
+"order by" {
     return SQL_ORDER_BY;
 }
 

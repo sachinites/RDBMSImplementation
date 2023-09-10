@@ -97,7 +97,8 @@ ORDER_BY (int *t, ast_node_t *select_kw) {
     if (token_code != SQL_ORDERBY_ASC &&
             token_code != SQL_ORDERBY_DSC) {
 
-        RETURN_PARSE_ERROR;
+        yyrewind(1);
+        RETURN_PARSE_SUCCESS;   // assume it is ASC when not specified
     }
 
     RETURN_PARSE_SUCCESS;
@@ -151,7 +152,7 @@ B (int *t, ast_node_t *select_kw) {
 
     parse_init();
 
-    err = Ineq(&lexc);
+    err = Q(&lexc);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -162,13 +163,16 @@ parse_rc_t
 A (int *t, ast_node_t *select_kw) {
 
     parse_init ();
-
+    
+    int chkp_pre_b;
+    CHECKPOINT(chkp_pre_b);
+    
     err = B(&lexc, NULL);
 
     switch (err) {
 
         case PARSE_ERR:
-            err = Ineq(&lexc);
+            err = Q(&lexc);
             switch (err) {
                 case PARSE_ERR:
                     RETURN_PARSE_ERROR;
@@ -186,7 +190,10 @@ A (int *t, ast_node_t *select_kw) {
                     err = A (&lexc, select_kw);
                     switch (err) {
                         case PARSE_ERR:
-                            RETURN_PARSE_ERROR;
+                            RESTORE_CHKP(chkp_pre_b);
+                            err = Q(&lexc);
+                            if (err == PARSE_ERR) RETURN_PARSE_ERROR;
+                            RETURN_PARSE_SUCCESS; 
                         break;
                         case PARSE_SUCCESS:
                             RETURN_PARSE_SUCCESS; // A-> B LOP A 
@@ -194,7 +201,10 @@ A (int *t, ast_node_t *select_kw) {
                     }
                 break;
                 default:
-                    RETURN_PARSE_ERROR;
+                    RESTORE_CHKP(chkp_pre_b);
+                    err = Q(&lexc);
+                    if (err == PARSE_ERR) RETURN_PARSE_ERROR;
+                    RETURN_PARSE_SUCCESS; 
             }
         break;
     }

@@ -35,7 +35,7 @@ T' -> * F T' |   / F T'  |  $
 Combining everything, final grammar is :
 ===============================
 
-1. Q  ->   E Ineq E  
+1. Q  ->   E Ineq E  | ( Q )
 2. E  ->   T E'
 3. E'  ->  + T E' | - T E' |  $
 4. T  ->   F T'
@@ -314,6 +314,17 @@ Q (int *t) {
 
     parse_init();
 
+    token_code = cyylex();
+    if (token_code == BRACK_START) {
+        err = PARSER_CALL(Q);
+        if (err == PARSE_ERR) RETURN_PARSE_ERROR;
+        token_code = cyylex();
+        if (token_code != BRACK_END) {
+            RETURN_PARSE_ERROR;
+        }
+        RETURN_PARSE_SUCCESS;   // Q -> (Q)
+    }
+    yyrewind(1);
     err = PARSER_CALL(E);
     switch (err) {
         case PARSE_ERR:
