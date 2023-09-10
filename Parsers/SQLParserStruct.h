@@ -48,13 +48,14 @@ typedef enum sql_keywords_ {
     SQL_PRIMARY_KEY,
     SQL_NOT_NULL,
     SQL_SELECT,
+     SQL_AS,
     SQL_KEYWORD_MAX,
     
 } sql_keywords_t;
 
 typedef enum sql_op_ {
 
-    SQL_LESS_THAN = 41,
+    SQL_LESS_THAN = 51,
     SQL_LESS_THAN_EQ ,
     SQL_GREATER_THAN ,
     SQL_GREATER_THAN_EQ,
@@ -65,7 +66,7 @@ typedef enum sql_op_ {
     SQL_NOT,
     SQL_IN,
     SQL_BETWEEN, 
-    SQL_OP_MAX =  52
+    SQL_OP_MAX =  62
 
 } sql_op_t;
 
@@ -76,7 +77,7 @@ typedef struct ident_ {
 
 typedef enum sql_dtype_{
 
-    SQL_DTYPE_FIRST = 61,
+    SQL_DTYPE_FIRST = 71,
     SQL_STRING,
     SQL_INT ,
     SQL_FLOAT,
@@ -87,7 +88,7 @@ typedef enum sql_dtype_{
 
 typedef enum sql_dtype_attr_ {
 
-    SQL_DTYPE_LEN = 71,
+    SQL_DTYPE_LEN = 81,
     SQL_DTYPE_PRIMARY_KEY,
     SQL_DTYPE_NOT_NULL
 
@@ -95,7 +96,7 @@ typedef enum sql_dtype_attr_ {
 
 typedef enum sql_ident_type_ {
 
-    SQL_TABLE_NAME = 81,
+    SQL_TABLE_NAME = 91,
     SQL_COLUMN_NAME ,
     SQL_IDENTIFIER_IDENTIFIER,
     SQL_INTEGER_VALUE,
@@ -111,7 +112,7 @@ typedef enum sql_ident_type_ {
 /* Math Functions */
 typedef enum math_fns_ {
 
-    SQL_MATH_MAX = 91,      // max(a,b)
+    SQL_MATH_MAX = 101,      // max(a,b)
     SQL_MATH_MIN,                // min(a,b)
     SQL_MATH_PLUS,              //  a + b
     SQL_MATH_MINUS,           //  a - b
@@ -128,7 +129,7 @@ typedef enum math_fns_ {
 
 typedef enum sql_order_ {
 
-    SQL_ORDERBY_ASC,
+    SQL_ORDERBY_ASC = 131,
     SQL_ORDERBY_DSC
 
 } sql_order_t;

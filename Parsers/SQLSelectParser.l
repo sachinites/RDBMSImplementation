@@ -290,6 +290,10 @@ cyylexlb() {
     return SQL_OR;
 }
 
+"as" {
+    return SQL_AS;
+}
+
 "*" {
     return SQL_MATH_MUL;
 }

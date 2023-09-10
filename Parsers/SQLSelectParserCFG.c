@@ -3,9 +3,11 @@
 
 Q -> select COLS from TABS WHERE GRPBY ORDERBY LMT
 
-COLS -> ME | ME , COLS
+COLS -> ME L | ME L , COLS
 
-TABS -> <ident> | <ident> , TABS
+TABS -> <ident> L | <ident> L , TABS
+
+L -> $ | as <identifer>
 
 WHERE -> $ | where A
 
@@ -47,6 +49,8 @@ static parse_rc_t
 WHERE (int *t, ast_node_t *select_kw) ;
 static parse_rc_t
 TABS (int *t, ast_node_t *select_kw) ;
+static parse_rc_t
+L (int *t, ast_node_t *select_kw);
 static parse_rc_t
 COLS (int *t, ast_node_t *select_kw);
 static parse_rc_t
@@ -146,6 +150,23 @@ GROUPBY (int *t, ast_node_t *select_kw) {
     RETURN_PARSE_SUCCESS;
 }
 
+parse_rc_t
+L (int *t, ast_node_t *select_kw) {
+
+    parse_init ();
+
+    token_code = cyylex();
+
+    if (token_code != SQL_AS) {
+        yyrewind(1);
+        RETURN_PARSE_SUCCESS;
+    }
+
+    token_code = cyylex();
+    if (token_code != SQL_IDENTIFIER) RETURN_PARSE_ERROR;
+
+    RETURN_PARSE_SUCCESS;
+}
 
 parse_rc_t
 B (int *t, ast_node_t *select_kw) {
@@ -242,6 +263,10 @@ TABS (int *t, ast_node_t *select_kw) {
         RETURN_PARSE_ERROR;
     }
 
+    err = L(&lexc, select_kw);
+
+    if (err == PARSE_ERR) RETURN_PARSE_ERROR;
+
     token_code = cyylex();
 
     if (token_code != COMMA) {
@@ -262,6 +287,10 @@ COLS (int *t, ast_node_t *select_kw) {
 
     err = E(&lexc);
     
+    if (err == PARSE_ERR) RETURN_PARSE_ERROR;
+
+    err = L(&lexc, select_kw);
+
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
     token_code = cyylex ();
@@ -331,7 +360,7 @@ SEL_Q (int *t, ast_node_t **select_root) {
     /* Query Must be completely consumed*/
     token_code = cyylex();
     if (token_code != SEMI_COLON) RETURN_PARSE_ERROR;
-    
+
     RETURN_PARSE_SUCCESS;
 }
 
