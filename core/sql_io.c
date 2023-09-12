@@ -57,6 +57,7 @@ void sql_emit_select_output(int n_col,
 
     int i;
     qp_col_t *qp_col;
+    sql_dtype_t dtype;
     schema_rec_t *schema_rec;
     unsigned char column_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
 
@@ -74,7 +75,17 @@ void sql_emit_select_output(int n_col,
         schema_rec = qp_col->schema_rec;
         assert(schema_rec);
         void *val = qp_col->computed_value;
-        switch (schema_rec->dtype) {
+        if (qp_col->agg_fn == SQL_COUNT) {
+            printf("%-*d|", column_width, *(int *)val);
+            continue;
+        }
+        dtype = schema_rec->dtype;
+        #if 0
+        if (qp_col->agg_fn == SQL_AVG) {
+            dtype = SQL_FLOAT;
+        }
+        #endif
+        switch (dtype) {
             case SQL_STRING:
                 printf("%-*s|", column_width, (char *)val);
                 break;

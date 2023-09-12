@@ -199,6 +199,38 @@ sql_compute_aggregate (sql_agg_fn_t agg_fn,
             break;
 
 
+        case SQL_AVG:
+        {
+            switch (dtype) {
+                case SQL_INT:
+                {
+                    int *src = (int *)src;
+                    int *dst = (int *)dst;                    
+                    if (row_no == 1) {
+                        *dst  = *src;
+                        break;
+                    }
+                    *dst = ((*dst) * (row_no -1));
+                    *dst += *src;
+                    *dst = *dst / row_no;
+                }
+                break;
+                case SQL_FLOAT:
+                {
+                    float *src = (float *)src;
+                    float *dst = (float *)dst;                    
+                    if (row_no == 1) {
+                        *dst  = *src;
+                        break;
+                    }
+                    *dst = ((*dst) * (row_no -1));
+                    *dst += *src;
+                    *dst = *dst / row_no;
+                }                
+            }
+        }
+        break;
+
         case SQL_MAX:
         {
                 switch (dtype)
@@ -247,13 +279,12 @@ sql_compute_aggregate (sql_agg_fn_t agg_fn,
         {
                 switch (dtype)
                 {
-                case SQL_INT:
+                default:
                 {
                         int *dst_int = (int *)dst;
                          (*dst_int)++;
                 }
                 break;
-                default:;
                 }
         }
         break;       

@@ -234,6 +234,7 @@ sql_compute_group_by_key_size (qep_struct_t *qep_struct) {
     } while (hashtable_iterator_advance(itr));
 
     free(itr);
+    printf ("(%d rows)\n", row_no);
  }
 
 bool 
