@@ -24,24 +24,34 @@ typedef enum parse_rc_ {
 static unsigned char lex_buffer[MAX_STRING_SIZE] = {0};
 static unsigned char *curr_ptr = lex_buffer;
 
+typedef uint8_t * (*parser_alloc_token_value_fn_ptr_t) (uint16_t );
+parser_alloc_token_value_fn_ptr_t parser_alloc_token_value_fn_ptr = NULL;
+
+typedef struct lex_data_ {
+
+    int token_code;
+    int token_len;
+    uint8_t *token_val;
+} lex_data_t;
+
 typedef struct stack {
 
     int top;
-    int data[MAX_STACK_SIZE];
+    lex_data_t data[MAX_STACK_SIZE];
 } stack_t;
 
-static stack_t undo_stack = {-1, {0}};
+static stack_t undo_stack = {-1, {0, 0, 0}};
 
 static void 
-push(int data) {
+push(lex_data_t lex_data) {
     assert (undo_stack.top < MAX_STACK_SIZE -1);
-    undo_stack.data[++undo_stack.top] = data;
+    undo_stack.data[++undo_stack.top] = lex_data;
 }
 
-static int 
+static lex_data_t
 pop() {
     assert (undo_stack.top > -1);
-    int res = undo_stack.data[undo_stack.top] ;
+    lex_data_t res = undo_stack.data[undo_stack.top] ;
     undo_stack.top--;
     return res;
 }
@@ -54,10 +64,18 @@ yyrewind (int n) {
     if (n <= 0) return;
     if (curr_ptr == lex_buffer) return;
     int data_len = 0;
+    lex_data_t lex_data;
     while (n)  {
-        data_len += pop(); 
+        lex_data = pop();
+        data_len += lex_data.token_len;
         n--;
         (*glex_cnt)--;
+        lex_data.token_code = 0;
+        lex_data.token_len = 0;
+        if (lex_data.token_val) {
+            free (lex_data.token_val);
+            lex_data.token_val = NULL;
+        }
     }
     curr_ptr -= data_len;
     yy_scan_string(curr_ptr);
@@ -74,7 +92,11 @@ cyylex () {
 
     int token_code =  yylex();
     curr_ptr += yyleng;
-    push(yyleng);
+    lex_data_t lex_data;
+    lex_data.token_code = token_code;
+    lex_data.token_len = yyleng;
+    lex_data.token_val = parser_alloc_token_value_fn_ptr (token_code);
+    push(lex_data);
    (*glex_cnt)++;
     return token_code;
 }
@@ -82,9 +104,13 @@ cyylex () {
 static void 
 process_white_space(int n) {
 
+    lex_data_t lex_data;
      if (!glex_cnt) return;
     curr_ptr += n;
-    push(n);
+    lex_data.token_code = 0;
+    lex_data.token_len = n;
+    lex_data.token_val = NULL;
+    push(lex_data);
     (*glex_cnt) += n;
 }
 
@@ -140,6 +166,36 @@ cyylexlb() {
     printf ("%s(%d) : Token Obtained = %d (%s) , expected token = %d\n",    \
         __FUNCTION__, __LINE__, token_obtained, yytext, expected_token);
 
+void 
+Parser_init (parser_alloc_token_value_fn_ptr_t fn_ptr) {
+
+    parser_alloc_token_value_fn_ptr = fn_ptr;
+}
+
+void 
+Parser_stack_reset () {
+
+    int i;
+    lex_data_t *lex_data;
+
+    for (i = 0; i < undo_stack.top; i++) {
+        lex_data = &undo_stack.data[i];
+        lex_data->token_code = 0;
+        lex_data->token_len = 0;
+        if (lex_data->token_val) {
+            free (lex_data->token_val);
+            lex_data->token_val = NULL;
+        }
+    }
+    undo_stack.top = -1;
+}
+
+int 
+Parser_get_current_stack_index () {
+    return undo_stack.top;
+}
+
+
 /* ========================================
             Warning : Do  Not Modify this file above this line 
     ======================================= */
@@ -155,6 +211,45 @@ cyylexlb() {
 #include "../core/sql_where.h"
 #include "../core/Catalog.h"
 #include "../core/sql_utils.h"
+
+static uint8_t *
+parser_alloc_token_value (u_int16_t token_code) {
+
+    uint8_t *token_buffer = NULL;
+    
+    switch (token_code) {
+
+        case SQL_IDENTIFIER:
+            token_buffer = (uint8_t *)calloc (1, SQL_COLUMN_NAME_MAX_SIZE);
+            strncpy (token_buffer , yytext, yyleng);
+            break;
+        case SQL_IDENTIFIER_IDENTIFIER:
+            token_buffer = (uint8_t *)calloc (1, SQL_COMPOSITE_COLUMN_NAME_SIZE);
+            strncpy (token_buffer , yytext, yyleng);
+            break;
+        case SQL_INTEGER_VALUE:
+            token_buffer = (uint8_t *)calloc (1, sizeof (uint32_t));
+            *(int *)(token_buffer) = atoi(yytext);
+            break;
+        case SQL_STRING_VALUE:
+            token_buffer = (uint8_t *)calloc (1,  SQL_OPERAND_MAX_VALUE);
+            assert (yyleng < SQL_OPERAND_MAX_VALUE);
+            strncpy (token_buffer , yytext, yyleng);
+            break;
+        case SQL_IPV4_ADDR_VALUE:
+            token_buffer = (uint8_t *)calloc (1, sizeof (uint32_t));
+            inet_pton (AF_INET,  yytext, token_buffer);
+            break;
+        case SQL_FLOAT_VALUE:
+            token_buffer = (uint8_t *)calloc (1, sizeof (float));
+            *(float *)token_buffer = atof(yytext);
+            break;
+        default:
+            break;
+    }
+    return token_buffer;
+}
+
 
 %}
 
@@ -1093,8 +1188,6 @@ parse_sql_query (int *t) {
     RETURN_PARSE_SUCCESS;
 }
 
-#if 1
-
 /* Tested with :
 
 select name1 as N1, name2 as N2, sqrt(age + salary) as N3 from rt1 as RT1, rt2 as RT2 where age > N3 and sqrt
@@ -1107,7 +1200,33 @@ limit 4;
 
 */
 
+int 
+main (int argc, char **argv) {
 
+    Parser_init (parser_alloc_token_value);
+
+    parse_init ();
+
+    strcpy (lex_buffer, "a + 2 where\n" );
+    yy_scan_string (lex_buffer);
+
+    err = E(&lexc);
+
+    if (err == PARSE_ERR) {
+        printf ("Invalid MExpr\n");
+    }
+    else {
+        printf ("Valid MExpr, curr_ptr = %s\n", curr_ptr);
+        token_code = cyylexlh();
+        if (token_code == EOL) {
+            printf ("Parsed Complete\n");
+        }
+    }
+    Parser_stack_reset ();
+    return 0;
+}
+
+#if 0
 int 
 main (int argc, char **argv) {
 
@@ -1129,8 +1248,9 @@ main (int argc, char **argv) {
     }
     return 0;
 }
+#endif 
 
-#else 
+#if 0
 
 int 
 main (int argc, char **argv) {
