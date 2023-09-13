@@ -2,12 +2,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <memory.h>
-#include <string.h>
 #include <stdint.h>
 #include <time.h>
 #include <assert.h>
+#include <arpa/inet.h>
 
 int yylex();
 
@@ -20,45 +19,60 @@ typedef enum parse_rc_ {
 
 
 #define MAX_STRING_SIZE 512
-#define MAX_STACK_SIZE  200
+#define MAX_STACK_SIZE  512
 
-static unsigned char current_buffer[MAX_STRING_SIZE] = {0};
-static unsigned char *curr_ptr = current_buffer;
+static unsigned char lex_buffer[MAX_STRING_SIZE] = {0};
+static unsigned char *curr_ptr = lex_buffer;
+
+typedef uint8_t * (*parser_alloc_token_value_fn_ptr_t) (uint16_t );
+parser_alloc_token_value_fn_ptr_t parser_alloc_token_value_fn_ptr = NULL;
+
+typedef struct lex_data_ {
+
+    int token_code;
+    int token_len;
+    uint8_t *token_val;
+} lex_data_t;
 
 typedef struct stack {
 
     int top;
-    int data[MAX_STACK_SIZE];
+    lex_data_t data[MAX_STACK_SIZE];
 } stack_t;
 
-stack_t undo_stack = {-1, {0}};
+static stack_t undo_stack = {-1, {0, 0, 0}};
 
 static void 
-push(int data) {
+push(lex_data_t lex_data) {
     assert (undo_stack.top < MAX_STACK_SIZE -1);
-    undo_stack.data[++undo_stack.top] = data;
+    undo_stack.data[++undo_stack.top] = lex_data;
 }
 
-static int 
+static lex_data_t
 pop() {
     assert (undo_stack.top > -1);
-    int res = undo_stack.data[undo_stack.top] ;
+    lex_data_t res = undo_stack.data[undo_stack.top] ;
     undo_stack.top--;
     return res;
 }
-
-static int *glex_cnt = NULL;
 
 static void 
 yyrewind (int n) {
 
     if (n <= 0) return;
-    if (curr_ptr == current_buffer) return;
+    if (curr_ptr == lex_buffer) return;
     int data_len = 0;
+    lex_data_t lex_data;
     while (n)  {
-        data_len += pop(); 
+        lex_data = pop();
+        data_len += lex_data.token_len;
         n--;
-        (*glex_cnt)--;
+        lex_data.token_code = 0;
+        lex_data.token_len = 0;
+        if (lex_data.token_val) {
+            free (lex_data.token_val);
+            lex_data.token_val = NULL;
+        }
     }
     curr_ptr -= data_len;
     yy_scan_string(curr_ptr);
@@ -69,44 +83,50 @@ cyylex () {
 
     int token_code =  yylex();
     curr_ptr += yyleng;
-    push(yyleng);
-    (*glex_cnt)++;
+    lex_data_t lex_data;
+    lex_data.token_code = token_code;
+    lex_data.token_len = yyleng;
+    if (parser_alloc_token_value_fn_ptr ) {
+        lex_data.token_val = parser_alloc_token_value_fn_ptr (token_code);
+    }
+    else {
+        lex_data.token_val = NULL;
+    }
+    push(lex_data);
     return token_code;
 }
 
 static void 
 process_white_space(int n) {
 
-    if (!glex_cnt) return;
+    lex_data_t lex_data;
     curr_ptr += n;
-    push(n);
-    (*glex_cnt) += n;
+    lex_data.token_code = 0;
+    lex_data.token_len = n;
+    lex_data.token_val = NULL;
+    push(lex_data);
 }
 
 #define parse_init()             \
     int token_code = 0;          \
-    int lexc = 0;    \
-    parse_rc_t err = PARSE_SUCCESS; \
-    glex_cnt = &lexc
+    int _lchkp = undo_stack.top;    \
+    parse_rc_t err = PARSE_SUCCESS
 
-#define RETURN_PARSE_ERROR  \
-    {yyrewind(*glex_cnt); \
-    glex_cnt = t;   \
+#define RETURN_PARSE_ERROR      \
+    {yyrewind(undo_stack.top - _lchkp);     \
     return PARSE_ERR;}
 
 #define RETURN_PARSE_SUCCESS    \
-    {(*t) += lexc;                      \
-     glex_cnt = t;  \
-    return PARSE_SUCCESS;}
+    return PARSE_SUCCESS
 
 #define PARSER_CALL(fn) \
-    fn(&lexc)
+    fn()
 
 #define CHECKPOINT(a)    \
-    a = lexc
+    a = undo_stack.top
 
 #define RESTORE_CHKP(a) \
-    yyrewind(lexc - a)
+    yyrewind(undo_stack.top - a)
     
 #define CHECK_FOR_EOL                \
     {token_code = cyylex();                   \
@@ -114,10 +134,74 @@ process_white_space(int n) {
         RETURN_PARSE_SUCCESS;   \
     }}
 
+static inline int
+cyylexlh() {
+
+    int token_code = cyylex();
+    yyrewind(1);
+    return token_code;
+}
+
+static inline int
+cyylexlb() {
+
+    yyrewind(1);
+    int token_code = cyylex();
+    yyrewind(1);
+    return token_code;
+}
+
+#define PARSER_LOG_ERR(token_obtained, expected_token)  \
+    printf ("%s(%d) : Token Obtained = %d (%s) , expected token = %d\n",    \
+        __FUNCTION__, __LINE__, token_obtained, yytext, expected_token);
+
+void 
+Parser_init (parser_alloc_token_value_fn_ptr_t fn_ptr) {
+
+    parser_alloc_token_value_fn_ptr = fn_ptr;
+}
+
+void 
+Parser_stack_reset () {
+
+    int i;
+    lex_data_t *lex_data;
+
+    for (i = 0; i < undo_stack.top; i++) {
+        lex_data = &undo_stack.data[i];
+        lex_data->token_code = 0;
+        lex_data->token_len = 0;
+        if (lex_data->token_val) {
+            free (lex_data->token_val);
+            lex_data->token_val = NULL;
+        }
+    }
+    undo_stack.top = -1;
+}
+
+int 
+Parser_get_current_stack_index () {
+    return undo_stack.top;
+}
+
+#define ITERATE_LEX_STACK_BEGIN(i , j , token_code_, len_, value_)    \
+{   int _k;                                                                                                              \
+     for (_k = i; _k <= j && _k <= undo_stack.top; _k++) {                               \
+     lex_data_t *lex_data = &undo_stack.data[_k];  \
+     if (lex_data->token_code == 0 || lex_data->token_code == WHITE_SPACE) continue; \
+     token_code_ = lex_data->token_code;               \
+     len_ = lex_data->token_len;                               \
+     value_ = lex_data->token_val;
+
+#define ITERATE_LEX_STACK_END }}
+
+
 /* ========================================
             Warning : Do  Not Modify this file above this line 
     ======================================= */
             /* User specific parsing logic starts below */
+
+
 %}
 
 
@@ -325,16 +409,16 @@ switch(err) {
 }
 
 */
-parse_rc_t Ineq (int *t) ;
-parse_rc_t F (int *t);
-parse_rc_t T_dash (int *t) ;
-parse_rc_t T (int *t) ;
-parse_rc_t E_dash (int *t) ;
-parse_rc_t E (int *t) ;
-parse_rc_t Q (int *t) ;
+parse_rc_t Ineq () ;
+parse_rc_t F ();
+parse_rc_t T_dash () ;
+parse_rc_t T () ;
+parse_rc_t E_dash () ;
+parse_rc_t E () ;
+parse_rc_t Q () ;
 
 parse_rc_t
-Ineq (int *t) {
+Ineq () {
 
     parse_init();
 
@@ -355,7 +439,7 @@ Ineq (int *t) {
 
 
 parse_rc_t
-G (int *t) {
+G () {
 
      parse_init();
 
@@ -372,7 +456,7 @@ G (int *t) {
 }
 
 parse_rc_t
-P (int *t) {
+P () {
 
     parse_init();
 
@@ -388,9 +472,9 @@ P (int *t) {
 }
 
 parse_rc_t
-F (int *t) {
+F () {
 
-     parse_init();
+    parse_init();
 
     token_code = cyylex();
 
@@ -408,7 +492,7 @@ F (int *t) {
                     if (token_code != BRACK_END) {
                         RETURN_PARSE_ERROR;
                     }
-                    RETURN_PARSE_SUCCESS
+                    RETURN_PARSE_SUCCESS;
                 }
                 break;
             }
@@ -480,7 +564,7 @@ F (int *t) {
 }
 
 parse_rc_t
-T_dash (int *t) {
+T_dash () {
 
     parse_init();
 
@@ -513,7 +597,7 @@ T_dash (int *t) {
 
 
 parse_rc_t
-T (int *t) {
+T () {
 
     parse_init();
 
@@ -533,7 +617,7 @@ T (int *t) {
 }
 
 parse_rc_t
-E_dash (int *t) {
+E_dash () {
 
     parse_init();
 
@@ -565,7 +649,7 @@ E_dash (int *t) {
 }
 
 parse_rc_t
-E (int *t) {
+E () {
 
     parse_init();
 
@@ -585,7 +669,7 @@ E (int *t) {
 }
 
 parse_rc_t
-Q (int *t) {
+Q () {
 
     parse_init();
 
@@ -614,10 +698,11 @@ Q (int *t) {
 int 
 main (int argc, char **argv) {
 
+    Parser_init(0);
 #if 1
-    strcpy (current_buffer , 
+    strcpy (lex_buffer , 
         "a + b * c\n");
-    yy_scan_string (current_buffer);
+    yy_scan_string (lex_buffer);
     parse_init();
     err = PARSER_CALL(E);
     token_code = cyylex();
@@ -664,6 +749,6 @@ main (int argc, char **argv) {
             break;
     }
 #endif 
-
+    Parser_stack_reset();
     return 0;
 }

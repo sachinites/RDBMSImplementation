@@ -56,8 +56,6 @@ pop() {
     return res;
 }
 
-static int *glex_cnt = NULL;
-
 static void 
 yyrewind (int n) {
 
@@ -69,7 +67,6 @@ yyrewind (int n) {
         lex_data = pop();
         data_len += lex_data.token_len;
         n--;
-        (*glex_cnt)--;
         lex_data.token_code = 0;
         lex_data.token_len = 0;
         if (lex_data.token_val) {
@@ -81,12 +78,6 @@ yyrewind (int n) {
     yy_scan_string(curr_ptr);
 }
 
-static void 
-yyrewindall() {
-
-    yyrewind(*glex_cnt);
-}
-
 static int 
 cyylex () {
 
@@ -95,9 +86,13 @@ cyylex () {
     lex_data_t lex_data;
     lex_data.token_code = token_code;
     lex_data.token_len = yyleng;
-    lex_data.token_val = parser_alloc_token_value_fn_ptr (token_code);
+    if (parser_alloc_token_value_fn_ptr ) {
+        lex_data.token_val = parser_alloc_token_value_fn_ptr (token_code);
+    }
+    else {
+        lex_data.token_val = NULL;
+    }
     push(lex_data);
-   (*glex_cnt)++;
     return token_code;
 }
 
@@ -105,39 +100,33 @@ static void
 process_white_space(int n) {
 
     lex_data_t lex_data;
-     if (!glex_cnt) return;
     curr_ptr += n;
     lex_data.token_code = 0;
     lex_data.token_len = n;
     lex_data.token_val = NULL;
     push(lex_data);
-    (*glex_cnt) += n;
 }
 
 #define parse_init()             \
     int token_code = 0;          \
-    int lexc = 0;    \
-    parse_rc_t err = PARSE_SUCCESS; \
-    glex_cnt = &lexc
+    int _lchkp = undo_stack.top;    \
+    parse_rc_t err = PARSE_SUCCESS
 
-#define RETURN_PARSE_ERROR  \
-    {yyrewind(*glex_cnt); \
-    glex_cnt = t;   \
+#define RETURN_PARSE_ERROR      \
+    {yyrewind(undo_stack.top - _lchkp);     \
     return PARSE_ERR;}
 
 #define RETURN_PARSE_SUCCESS    \
-    {(*t) += lexc;                      \
-     glex_cnt = t;  \
-    return PARSE_SUCCESS;}
+    return PARSE_SUCCESS
 
 #define PARSER_CALL(fn) \
-    fn(&lexc)
+    fn(NULL)
 
 #define CHECKPOINT(a)    \
-    a = lexc
+    a = undo_stack.top
 
 #define RESTORE_CHKP(a) \
-    yyrewind(lexc - a)
+    yyrewind(undo_stack.top - a)
     
 #define CHECK_FOR_EOL                \
     {token_code = cyylex();                   \
@@ -194,6 +183,17 @@ int
 Parser_get_current_stack_index () {
     return undo_stack.top;
 }
+
+#define ITERATE_LEX_STACK_BEGIN(i , j , token_code_, len_, value_)    \
+{   int _k;                                                                                                              \
+     for (_k = i; _k <= j && _k <= undo_stack.top; _k++) {                               \
+     lex_data_t *lex_data = &undo_stack.data[_k];  \
+     if (lex_data->token_code == 0 || lex_data->token_code == WHITE_SPACE) continue; \
+     token_code_ = lex_data->token_code;               \
+     len_ = lex_data->token_len;                               \
+     value_ = lex_data->token_val;
+
+#define ITERATE_LEX_STACK_END }}
 
 
 /* ========================================
@@ -1098,7 +1098,7 @@ parse_update_query ()  {}
 #include "../core/sql_intf.h"
 
 static parse_rc_t
-parse_sql_query (int *t) {
+parse_sql_query () {
 
     parse_init();
     bool rc;
@@ -1139,7 +1139,7 @@ parse_sql_query (int *t) {
             astroot->entity_type = SQL_QUERY_TYPE;
             astroot->u.q_type = SQL_CREATE_Q;
             //err = parse_create_query(&lexc, astroot);
-            err = parse_create_query_cfg(&lexc, astroot);
+            err = parse_create_query_cfg(astroot);
             if (err == PARSE_ERR) {
                 printf ("Table Creation Failed\n");
                 break;
@@ -1200,6 +1200,7 @@ limit 4;
 
 */
 
+#if 0
 int 
 main (int argc, char **argv) {
 
@@ -1207,10 +1208,10 @@ main (int argc, char **argv) {
 
     parse_init ();
 
-    strcpy (lex_buffer, "a + 2 where\n" );
+    strcpy (lex_buffer, "a + 2\n" );
     yy_scan_string (lex_buffer);
 
-    err = E(&lexc);
+    err = E();
 
     if (err == PARSE_ERR) {
         printf ("Invalid MExpr\n");
@@ -1225,10 +1226,12 @@ main (int argc, char **argv) {
     Parser_stack_reset ();
     return 0;
 }
-
+#endif 
 #if 0
 int 
 main (int argc, char **argv) {
+
+    Parser_init (parser_alloc_token_value);
 
     parse_init ();
     memset (lex_buffer, 0 , sizeof (lex_buffer));
@@ -1241,23 +1244,27 @@ main (int argc, char **argv) {
             lex_buffer[0] = 0;
             continue;
         }
-        //parse_sql_query(&lexc);
+        //parse_sql_query();
         parse_select_query_cfg ();
         memset (lex_buffer, 0 , sizeof (lex_buffer));
         yyrewindall() ;
     }
+    Parser_stack_reset ();
     return 0;
 }
 #endif 
 
-#if 0
+#if 1
 
 int 
 main (int argc, char **argv) {
 
+    Parser_init (parser_alloc_token_value);
+    
+    parse_init();
+
     strcpy (lex_buffer , "a + b * c\n");
     yy_scan_string (lex_buffer);
-    parse_init();
    
    err = PARSER_CALL(E);
 
@@ -1265,12 +1272,23 @@ main (int argc, char **argv) {
     assert (token_code == EOL);
 
     yy_scan_string (lex_buffer);
+    Parser_stack_reset();
+
     token_code = cyylex();
     while (token_code != EOL) {
 
         printf ("token_len = %d, token_code = %d, token_text = %s\n", yyleng, token_code, yytext);
         token_code = cyylex();
     }
+    //Parser_stack_reset();
+    
+    int len; char *val;
+    ITERATE_LEX_STACK_BEGIN (0, INT32_MAX, token_code, len, val) {
+
+        printf ("token_len = %d, token_code = %d, token_text = %s\n", len, token_code, val);
+    } ITERATE_LEX_STACK_END;
+
+    Parser_stack_reset ();
     return 0;
 }
 

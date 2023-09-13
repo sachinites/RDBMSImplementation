@@ -34,32 +34,32 @@ LMT  -> $  |  limit <integer>
 */
 
 static parse_rc_t
-LMT (int *t, ast_node_t *select_kw) ;
+LMT (ast_node_t *select_kw) ;
 static parse_rc_t
-ORDER_BY (int *t, ast_node_t *select_kw) ;
+ORDER_BY (ast_node_t *select_kw) ;
 static parse_rc_t
-HAVING (int *t, ast_node_t *select_kw);
+HAVING (ast_node_t *select_kw);
 static parse_rc_t
-GROUPBY (int *t, ast_node_t *select_kw);
+GROUPBY (ast_node_t *select_kw);
 static parse_rc_t
-B (int *t, ast_node_t *select_kw);
+B (ast_node_t *select_kw);
 static parse_rc_t
-A (int *t, ast_node_t *select_kw);
+A (ast_node_t *select_kw);
 static parse_rc_t
-WHERE (int *t, ast_node_t *select_kw) ;
+WHERE (ast_node_t *select_kw) ;
 static parse_rc_t
-TABS (int *t, ast_node_t *select_kw) ;
+TABS (ast_node_t *select_kw) ;
 static parse_rc_t
-L (int *t, ast_node_t *select_kw);
+L (ast_node_t *select_kw);
 static parse_rc_t
-COLS (int *t, ast_node_t *select_kw);
+COLS (ast_node_t *select_kw);
 static parse_rc_t
-SEL_Q (int *t, ast_node_t **select_root);
+SEL_Q (ast_node_t **select_root);
 
 
 
 parse_rc_t
-LMT (int *t, ast_node_t *select_kw) {
+LMT (ast_node_t *select_kw) {
 
      parse_init ();
 
@@ -82,7 +82,7 @@ LMT (int *t, ast_node_t *select_kw) {
 
 
 parse_rc_t
-ORDER_BY (int *t, ast_node_t *select_kw) {
+ORDER_BY (ast_node_t *select_kw) {
 
     parse_init ();
 
@@ -93,7 +93,7 @@ ORDER_BY (int *t, ast_node_t *select_kw) {
         RETURN_PARSE_SUCCESS;
     }
 
-    err = E(&lexc);
+    err = E();
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -110,7 +110,7 @@ ORDER_BY (int *t, ast_node_t *select_kw) {
 }
 
 parse_rc_t
-HAVING (int *t, ast_node_t *select_kw) {
+HAVING (ast_node_t *select_kw) {
 
     parse_init ();
 
@@ -121,7 +121,7 @@ HAVING (int *t, ast_node_t *select_kw) {
         RETURN_PARSE_SUCCESS;
     }
 
-    err = A (&lexc, select_kw);
+    err = A (select_kw);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -129,7 +129,7 @@ HAVING (int *t, ast_node_t *select_kw) {
 }
 
 parse_rc_t
-GROUPBY (int *t, ast_node_t *select_kw) {
+GROUPBY (ast_node_t *select_kw) {
 
     parse_init();
 
@@ -140,11 +140,11 @@ GROUPBY (int *t, ast_node_t *select_kw) {
         RETURN_PARSE_SUCCESS;
     }
 
-    err = COLS (&lexc, select_kw);
+    err = COLS (select_kw);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
-    err = HAVING (&lexc, select_kw);
+    err = HAVING (select_kw);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -152,7 +152,7 @@ GROUPBY (int *t, ast_node_t *select_kw) {
 }
 
 parse_rc_t
-L (int *t, ast_node_t *select_kw) {
+L (ast_node_t *select_kw) {
 
     parse_init ();
 
@@ -173,11 +173,11 @@ L (int *t, ast_node_t *select_kw) {
 }
 
 parse_rc_t
-B (int *t, ast_node_t *select_kw) {
+B (ast_node_t *select_kw) {
 
     parse_init();
 
-    err = Q(&lexc);
+    err = Q();
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -185,19 +185,19 @@ B (int *t, ast_node_t *select_kw) {
 }
 
 parse_rc_t
-A (int *t, ast_node_t *select_kw) {
+A (ast_node_t *select_kw) {
 
     parse_init ();
     
     int chkp_pre_b;
     CHECKPOINT(chkp_pre_b);
     
-    err = B(&lexc, NULL);
+    err = B(NULL);
 
     switch (err) {
 
         case PARSE_ERR:
-            err = Q(&lexc);
+            err = Q();
             switch (err) {
                 case PARSE_ERR:
                     RETURN_PARSE_ERROR;
@@ -212,11 +212,11 @@ A (int *t, ast_node_t *select_kw) {
             switch (token_code) {
                 case SQL_AND:
                 case SQL_OR:
-                    err = A (&lexc, select_kw);
+                    err = A (select_kw);
                     switch (err) {
                         case PARSE_ERR:
                             RESTORE_CHKP(chkp_pre_b);
-                            err = Q(&lexc);
+                            err = Q();
                             if (err == PARSE_ERR) RETURN_PARSE_ERROR;
                             RETURN_PARSE_SUCCESS; 
                         break;
@@ -227,7 +227,7 @@ A (int *t, ast_node_t *select_kw) {
                 break;
                 default:
                     RESTORE_CHKP(chkp_pre_b);
-                    err = Q(&lexc);
+                    err = Q();
                     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
                     RETURN_PARSE_SUCCESS; 
             }
@@ -237,7 +237,7 @@ A (int *t, ast_node_t *select_kw) {
 }
 
 parse_rc_t
-WHERE (int *t, ast_node_t *select_kw) {
+WHERE (ast_node_t *select_kw) {
 
     parse_init ();
 
@@ -248,7 +248,7 @@ WHERE (int *t, ast_node_t *select_kw) {
         RETURN_PARSE_SUCCESS;    // WHERE -> $
     }
 
-    err = A(&lexc, select_kw);
+    err = A(select_kw);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -257,7 +257,7 @@ WHERE (int *t, ast_node_t *select_kw) {
 
 
 parse_rc_t
-TABS (int *t, ast_node_t *select_kw) {
+TABS (ast_node_t *select_kw) {
 
     parse_init ();
 
@@ -268,7 +268,7 @@ TABS (int *t, ast_node_t *select_kw) {
         RETURN_PARSE_ERROR;
     }
 
-    err = L(&lexc, select_kw);
+    err = L(select_kw);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -279,22 +279,22 @@ TABS (int *t, ast_node_t *select_kw) {
         RETURN_PARSE_SUCCESS;  // TABS -> <ident>
     }
 
-    err = TABS(&lexc, select_kw);
+    err = TABS(select_kw);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
     RETURN_PARSE_SUCCESS; // TABS -> <ident> , TABS
 }
 
 parse_rc_t
-COLS (int *t, ast_node_t *select_kw) {
+COLS (ast_node_t *select_kw) {
 
     parse_init();
 
-    err = E(&lexc);
+    err = E();
     
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
-    err = L(&lexc, select_kw);
+    err = L(select_kw);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -305,7 +305,7 @@ COLS (int *t, ast_node_t *select_kw) {
         RETURN_PARSE_SUCCESS;  // COLS -> ME 
     }
 
-    err = COLS (&lexc, select_kw);
+    err = COLS (select_kw);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -313,7 +313,7 @@ COLS (int *t, ast_node_t *select_kw) {
 }
 
 parse_rc_t
-SEL_Q (int *t, ast_node_t **select_root) {
+SEL_Q (ast_node_t **select_root) {
 
     parse_init();
 
@@ -334,7 +334,7 @@ SEL_Q (int *t, ast_node_t **select_root) {
 
     ast_add_child(*select_root, select_kw);
 
-    err = COLS (&lexc, select_kw);
+    err = COLS (select_kw);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -345,23 +345,23 @@ SEL_Q (int *t, ast_node_t **select_root) {
         RETURN_PARSE_ERROR;
     }
 
-    err = TABS(&lexc, select_kw);
+    err = TABS( select_kw);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
-    err = WHERE(&lexc, select_kw);
+    err = WHERE(select_kw);
 
      if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
-    err = GROUPBY(&lexc, select_kw);
+    err = GROUPBY(select_kw);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
-    err = ORDER_BY(&lexc, select_kw);
+    err = ORDER_BY( select_kw);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
-    err = LMT(&lexc, select_kw);
+    err = LMT(select_kw);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -383,7 +383,7 @@ parse_select_query_cfg () {
 
     ast_node_t *select_root = NULL;
 
-    err = SEL_Q (&lexc, &select_root);
+    err = SEL_Q (&select_root);
 
     if (err == PARSE_ERR) {
         ast_destroy_tree_from_root(select_root);

@@ -9,7 +9,7 @@
 < digit> ::= 0|1|2|3|4|5|6|7|8|9
 */
 static parse_rc_t
-create_q_parse_column (int *t, ast_node_t *table_name, int *last_token_code) {
+create_q_parse_column (ast_node_t *table_name, int *last_token_code) {
 
     parse_init();
 
@@ -121,7 +121,7 @@ create_q_parse_column (int *t, ast_node_t *table_name, int *last_token_code) {
 }
 
 static parse_rc_t
-create_q_parse_table_name ( int *t, ast_node_t *create_kw) {
+create_q_parse_table_name ( ast_node_t *create_kw) {
 
     parse_init ();
 
@@ -144,13 +144,13 @@ create_q_parse_table_name ( int *t, ast_node_t *create_kw) {
 }
 
 static parse_rc_t
-parse_create_query(int *t,  ast_node_t *create_kw) {
+parse_create_query(ast_node_t *create_kw) {
     
     parse_init();
 
     int last_token_code;
     
-    err  = create_q_parse_table_name (&lexc, create_kw);
+    err  = create_q_parse_table_name (create_kw);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -163,7 +163,7 @@ parse_create_query(int *t,  ast_node_t *create_kw) {
 
     while (1) {
 
-        err =  create_q_parse_column (&lexc, create_kw->child_list, &last_token_code);
+        err =  create_q_parse_column (create_kw->child_list, &last_token_code);
         if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
         if (last_token_code == BRACK_END) RETURN_PARSE_SUCCESS;

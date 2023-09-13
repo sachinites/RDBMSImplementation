@@ -18,7 +18,7 @@
 */
 
 static parse_rc_t
-CE (int *t, ast_node_t *table_name)  {
+CE (ast_node_t *table_name)  {
 
     parse_init ();
 
@@ -104,7 +104,7 @@ CE (int *t, ast_node_t *table_name)  {
                     RETURN_PARSE_SUCCESS;
                     break;
                 case BRACK_START:
-                    err = CE(&lexc, table_name);
+                    err = CE(table_name);
                     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
                      token_code = cyylex ();
                      if (token_code != BRACK_END) {
@@ -118,7 +118,7 @@ CE (int *t, ast_node_t *table_name)  {
             break;
 
         case BRACK_START:
-            err = CE(&lexc, table_name);
+            err = CE(table_name);
             if (err == PARSE_ERR) RETURN_PARSE_ERROR;
             token_code = cyylex ();
              if (token_code != BRACK_END) {
@@ -139,7 +139,7 @@ CE (int *t, ast_node_t *table_name)  {
 
 
 static parse_rc_t
-CD_dash (int *t, ast_node_t *table_name)  {
+CD_dash (ast_node_t *table_name)  {
 
     parse_init();
 
@@ -148,13 +148,13 @@ CD_dash (int *t, ast_node_t *table_name)  {
     switch (token_code) {
 
         case COMMA:
-            err = CE(&lexc, table_name);
+            err = CE(table_name);
             switch (err) {
                 case PARSE_ERR:
                     yyrewind(1);
                     RETURN_PARSE_SUCCESS;
                 case PARSE_SUCCESS:
-                    err = CD_dash (&lexc, table_name);
+                    err = CD_dash (table_name);
                     switch (err) {
                         case PARSE_ERR:
                              yyrewind(1);
@@ -173,15 +173,15 @@ CD_dash (int *t, ast_node_t *table_name)  {
 
 
 static parse_rc_t
-CD (int *t, ast_node_t *table_name) {
+CD (ast_node_t *table_name) {
 
     parse_init ();
 
-    err = CE(&lexc, table_name);
+    err = CE(table_name);
 
     if (err == PARSE_ERR)  RETURN_PARSE_ERROR;
 
-    err = CD_dash(&lexc, table_name);
+    err = CD_dash(table_name);
 
     if (err == PARSE_ERR)  RETURN_PARSE_ERROR;
 
@@ -190,7 +190,7 @@ CD (int *t, ast_node_t *table_name) {
 
 
 static parse_rc_t
-CC (int *t, ast_node_t *table_name) {
+CC (ast_node_t *table_name) {
 
     parse_init ();
 
@@ -201,7 +201,7 @@ CC (int *t, ast_node_t *table_name) {
         RETURN_PARSE_ERROR;
     }
 
-    err = CD (&lexc, table_name);
+    err = CD (table_name);
 
     if (err == PARSE_ERR)  RETURN_PARSE_ERROR;
 
@@ -216,7 +216,7 @@ CC (int *t, ast_node_t *table_name) {
 }
 
 static parse_rc_t
-CM (int *t, ast_node_t *create_kw) {
+CM (ast_node_t *create_kw) {
 
     parse_init ();
 
@@ -240,29 +240,29 @@ CM (int *t, ast_node_t *create_kw) {
 }
 
 static parse_rc_t
-CQ (int *t, ast_node_t *create_kw) {
+CQ (ast_node_t *create_kw) {
 
     parse_init();
 
-    err = CM(&lexc, create_kw);
+    err = CM(create_kw);
 
     if (err == PARSE_ERR)  RETURN_PARSE_ERROR;
 
-    err = CC(&lexc, create_kw->child_list);
+    err = CC(create_kw->child_list);
 
     if (err == PARSE_ERR)  RETURN_PARSE_ERROR;
     RETURN_PARSE_SUCCESS;
 }
 
 static parse_rc_t
-parse_create_query_cfg(int *t, ast_node_t *create_kw) {
+parse_create_query_cfg(ast_node_t *create_kw) {
 
     parse_init ();
 
     yy_scan_string (lex_buffer);
     token_code = cyylex(); // consume 'create table'
 
-    err = CQ(&lexc, create_kw);
+    err = CQ(create_kw);
 
     if (err == PARSE_ERR)  RETURN_PARSE_ERROR;
 

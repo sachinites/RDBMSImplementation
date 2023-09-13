@@ -45,17 +45,17 @@ Combining everything, final grammar is :
 8. G -> max | min | pow   // binary functions 
 */
 
-parse_rc_t Ineq (int *t) ;
-parse_rc_t F (int *t);
-parse_rc_t T_dash (int *t) ;
-parse_rc_t T (int *t) ;
-parse_rc_t E_dash (int *t) ;
-parse_rc_t E (int *t) ;
-parse_rc_t Q (int *t) ;
+parse_rc_t Ineq () ;
+parse_rc_t F ();
+parse_rc_t T_dash () ;
+parse_rc_t T () ;
+parse_rc_t E_dash () ;
+parse_rc_t E () ;
+parse_rc_t Q () ;
 
 
 parse_rc_t
-Ineq (int *t) {
+Ineq () {
 
     parse_init();
 
@@ -76,7 +76,7 @@ Ineq (int *t) {
 
 /* Parse the Binary Math functions */
 parse_rc_t
-G (int *t) {
+G () {
 
      parse_init();
 
@@ -96,7 +96,7 @@ G (int *t) {
 
 /* Parse the unary Math functions */
 parse_rc_t
-P (int *t) {
+P () {
 
     parse_init();
 
@@ -114,7 +114,7 @@ P (int *t) {
 }
 
 parse_rc_t
-F (int *t) {
+F () {
 
      parse_init();
 
@@ -134,7 +134,7 @@ F (int *t) {
                     if (token_code != BRACK_END) {
                         RETURN_PARSE_ERROR;
                     }
-                    RETURN_PARSE_SUCCESS
+                    RETURN_PARSE_SUCCESS;
                 }
                 break;
             }
@@ -206,7 +206,7 @@ F (int *t) {
 }
 
 parse_rc_t
-T_dash (int *t) {
+T_dash () {
 
     parse_init();
 
@@ -239,7 +239,7 @@ T_dash (int *t) {
 
 
 parse_rc_t
-T (int *t) {
+T () {
 
     parse_init();
 
@@ -259,7 +259,7 @@ T (int *t) {
 }
 
 parse_rc_t
-E_dash (int *t) {
+E_dash () {
 
     parse_init();
 
@@ -291,7 +291,7 @@ E_dash (int *t) {
 }
 
 parse_rc_t
-E (int *t) {
+E () {
 
     parse_init();
 
@@ -311,7 +311,7 @@ E (int *t) {
 }
 
 parse_rc_t
-Q (int *t) {
+Q () {
 
     parse_init();
     int chkp_initial;
