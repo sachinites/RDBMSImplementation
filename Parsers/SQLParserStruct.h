@@ -48,7 +48,7 @@ typedef enum sql_keywords_ {
     SQL_PRIMARY_KEY,
     SQL_NOT_NULL,
     SQL_SELECT,
-     SQL_AS,
+    SQL_AS,
     SQL_KEYWORD_MAX,
     
 } sql_keywords_t;

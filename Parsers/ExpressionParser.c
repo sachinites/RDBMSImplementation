@@ -46,6 +46,8 @@ Combining everything, final grammar is :
 */
 
 parse_rc_t Ineq () ;
+parse_rc_t G ();
+parse_rc_t P ();
 parse_rc_t F ();
 parse_rc_t T_dash () ;
 parse_rc_t T () ;
@@ -140,7 +142,7 @@ F () {
             }
         }
         break;
-        case SQL_INT:
+        case SQL_INTEGER_VALUE:
         case SQL_FLOAT:
         case SQL_IDENTIFIER:
         case SQL_IDENTIFIER_IDENTIFIER:

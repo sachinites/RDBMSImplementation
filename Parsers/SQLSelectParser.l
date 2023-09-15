@@ -19,32 +19,25 @@ typedef enum parse_rc_ {
 
 
 #define MAX_STRING_SIZE 512
-#define MAX_STACK_SIZE  512
 
 static unsigned char lex_buffer[MAX_STRING_SIZE] = {0};
 static unsigned char *curr_ptr = lex_buffer;
 
 typedef uint8_t * (*parser_alloc_token_value_fn_ptr_t) (uint16_t );
-parser_alloc_token_value_fn_ptr_t parser_alloc_token_value_fn_ptr = NULL;
 
-typedef struct lex_data_ {
-
-    int token_code;
-    int token_len;
-    uint8_t *token_val;
-} lex_data_t;
+#include "ParserExport.h"
 
 typedef struct stack {
 
     int top;
-    lex_data_t data[MAX_STACK_SIZE];
+    lex_data_t data[MAX_MEXPR_LEN];
 } stack_t;
 
 static stack_t undo_stack = {-1, {0, 0, 0}};
 
 static void 
 push(lex_data_t lex_data) {
-    assert (undo_stack.top < MAX_STACK_SIZE -1);
+    assert (undo_stack.top < MAX_MEXPR_LEN -1);
     undo_stack.data[++undo_stack.top] = lex_data;
 }
 
@@ -78,6 +71,18 @@ yyrewind (int n) {
     yy_scan_string(curr_ptr);
 }
 
+static unsigned char *
+parser_alloc_token_value_default (uint16_t token_id) {
+
+    unsigned char *ptr = (unsigned char *)(calloc (1, yyleng + 1));
+    strncpy (ptr, yytext, yyleng);
+    ptr [yyleng] = '\0';
+    return (void *)ptr;
+}
+
+parser_alloc_token_value_fn_ptr_t parser_alloc_token_value_fn_ptr =
+    parser_alloc_token_value_default ;
+
 static int 
 cyylex () {
 
@@ -86,12 +91,7 @@ cyylex () {
     lex_data_t lex_data;
     lex_data.token_code = token_code;
     lex_data.token_len = yyleng;
-    if (parser_alloc_token_value_fn_ptr ) {
-        lex_data.token_val = parser_alloc_token_value_fn_ptr (token_code);
-    }
-    else {
-        lex_data.token_val = NULL;
-    }
+    lex_data.token_val = parser_alloc_token_value_fn_ptr (token_code);
     push(lex_data);
     return token_code;
 }
@@ -211,6 +211,7 @@ Parser_get_current_stack_index () {
 #include "../core/sql_where.h"
 #include "../core/Catalog.h"
 #include "../core/sql_utils.h"
+#include "MExpr.h"
 
 static uint8_t *
 parser_alloc_token_value (u_int16_t token_code) {
@@ -469,7 +470,7 @@ parser_alloc_token_value (u_int16_t token_code) {
 }
 
 [1-9][0-9]* {
-    return SQL_INT;
+    return SQL_INTEGER_VALUE;
 }
 
 [0-9]*\.[0-9]+ {
@@ -714,7 +715,7 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
 
     switch (token_code) {
 
-        case SQL_INT:
+        case SQL_INTEGER_VALUE:
             value = atoi (yytext);
             wc->right_op.w_opd = WH_VALUE;
             wc->right_op.u.value.dtype = SQL_INT;
@@ -1263,31 +1264,30 @@ main (int argc, char **argv) {
     
     parse_init();
 
-    strcpy (lex_buffer , "a + b * c\n");
+    //strcpy (lex_buffer , "sqrt(a + b) +  mmax(b * c, 2)\n");
+    strcpy (lex_buffer , "sqrt(a + b)\n");
     yy_scan_string (lex_buffer);
    
    err = PARSER_CALL(E);
 
-    token_code = cyylex ();
+    assert (err = PARSE_SUCCESS);
+    token_code = cyylexlh ();
     assert (token_code == EOL);
 
-    yy_scan_string (lex_buffer);
-    Parser_stack_reset();
+    int size_out = 0;
+    lex_data_t **postfix = mexpr_convert_infix_to_postfix (&undo_stack.data[0], undo_stack.top + 1, &size_out);
 
-    token_code = cyylex();
-    while (token_code != EOL) {
+    int i;
+    lex_data_t *lex_data;
 
-        printf ("token_len = %d, token_code = %d, token_text = %s\n", yyleng, token_code, yytext);
-        token_code = cyylex();
+    printf ("Postfix expression : \n");
+
+    for (i = 0; i < size_out; i++) {
+
+        lex_data = postfix[i];
+        printf ("token_code = %d , token_val = %s\n", lex_data->token_code, (char *)lex_data->token_val);
     }
-    //Parser_stack_reset();
     
-    int len; char *val;
-    ITERATE_LEX_STACK_BEGIN (0, INT32_MAX, token_code, len, val) {
-
-        printf ("token_len = %d, token_code = %d, token_text = %s\n", len, token_code, val);
-    } ITERATE_LEX_STACK_END;
-
     Parser_stack_reset ();
     return 0;
 }
