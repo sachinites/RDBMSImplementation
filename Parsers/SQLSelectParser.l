@@ -177,6 +177,7 @@ Parser_stack_reset () {
         }
     }
     undo_stack.top = -1;
+    curr_ptr = lex_buffer;
 }
 
 int 
@@ -477,7 +478,7 @@ parser_alloc_token_value (u_int16_t token_code) {
 }
 
 [0-9]*\.[0-9]+ {
-    return DECIMAL_NUMBER;
+    return SQL_DOUBLE_VALUE;
 }
 
 [a-zA-Z0-9_]+ {
@@ -1231,15 +1232,12 @@ main (int argc, char **argv) {
     return 0;
 }
 #endif 
-#if 0
+#if 1
+
 int 
 main (int argc, char **argv) {
 
-    Parser_init (parser_alloc_token_value);
-
-    parse_init ();
     memset (lex_buffer, 0 , sizeof (lex_buffer));
-    yy_scan_string (lex_buffer);
 
     while(1) {
         printf ("postgres=# ");
@@ -1248,16 +1246,17 @@ main (int argc, char **argv) {
             lex_buffer[0] = 0;
             continue;
         }
-        //parse_sql_query();
-        parse_select_query_cfg ();
+        yy_scan_string (lex_buffer);
+        parse_sql_query();
         memset (lex_buffer, 0 , sizeof (lex_buffer));
-        yyrewindall() ;
+        Parser_stack_reset();
     }
-    Parser_stack_reset ();
     return 0;
 }
+
 #endif 
 
+#if 0
 int 
 main (int argc, char **argv) {
 
@@ -1325,3 +1324,4 @@ main (int argc, char **argv) {
     Parser_stack_reset ();
     return 0;
 }
+#endif 

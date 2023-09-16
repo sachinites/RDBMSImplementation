@@ -55,7 +55,7 @@ CE (ast_node_t *table_name)  {
                     RETURN_PARSE_ERROR;
                 }
                 token_code = cyylex();
-                if (token_code != SQL_INT)
+                if (token_code != SQL_INTEGER_VALUE)
                 {
                     PARSER_LOG_ERR(token_code, SQL_INT);
                     RETURN_PARSE_ERROR;

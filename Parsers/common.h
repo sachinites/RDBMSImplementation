@@ -11,7 +11,6 @@
 #define COMMA 1003
 #define SHOW_DB_TABLES  1004
 #define QUOTATION_MARK 1005
-#define  DECIMAL_NUMBER    1006
 #define QUIT    1007
 #define SQL_PARSE_ERROR   1008
 #define SQL_PARSE_OK   1009
