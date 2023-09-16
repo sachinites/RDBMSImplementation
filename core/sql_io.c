@@ -92,8 +92,8 @@ void sql_emit_select_output(int n_col,
             case SQL_INT:
                 printf("%-*d|", column_width, *(int *)val);
                 break;
-            case SQL_FLOAT:
-                printf("%-*f|", column_width, *(float *)val);
+            case SQL_DOUBLE:
+                printf("%-*f|", column_width, *(double *)val);
                 break;
             case SQL_IPV4_ADDR: {
                 unsigned char ipv4_addr_str[16];

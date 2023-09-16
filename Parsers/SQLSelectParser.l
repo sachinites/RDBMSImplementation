@@ -1,39 +1,3 @@
-/* This file implements the SQL Parser which accespts all SQL queries satisfying the below Grammar 
-
-    <sql_query>         ::= <select_query> | <update_query> | <delete_query>
-
-    <select_query>     ::=  SELECT <columns> FROM <tables> WHERE <conditions>
-
-    <columns>            ::= <plain_columns> | <aggregate_colmns> | *
-
-    <plain_columns>  ::= <column> | <column> , <plain_columns>
-
-    <aggregate_columns>     ::= <agg_column> | <agg_column> , <aggregate_columns>
-
-    <agg_column> ::= <function>(<column>)
-
-    <tables> ::= <table> | <table> , <tables>
-
-    <conditions> ::= <condition> | <condition> <lop> <conditions>
-
-    <condition>  ::= <column> <mop> <digits> |  <column> <mop> <column> | <column> <mop> 'identifer'
-
-    <function>     ::= COUNT | SUM | AVG | MIN | MAX
-
-     <column>      ::= identifier
-
-     <table>          ::= identifier
-
-     <lop>  ::= AND | OR | NOT | IN | BETWEEN | LIKE | EXISTS
-
-     <digits> := <digit> | <digit><digits>
-
-     <digit> ::= 0|1|2|3|4|5|6|7|8|9
-
-     <mop>  ::= <   |   >   |   =   |   != 
-*/
-
-
 %{
 
 #include <stdio.h>
@@ -55,98 +19,182 @@ typedef enum parse_rc_ {
 
 
 #define MAX_STRING_SIZE 512
-#define MAX_STACK_SIZE  200
 
-static unsigned char current_buffer[MAX_STRING_SIZE] = {0};
-static unsigned char *curr_ptr = current_buffer;
+static unsigned char lex_buffer[MAX_STRING_SIZE] = {0};
+static unsigned char *curr_ptr = lex_buffer;
+
+typedef uint8_t * (*parser_alloc_token_value_fn_ptr_t) (uint16_t );
+
+#include "ParserExport.h"
 
 typedef struct stack {
 
     int top;
-    int data[MAX_STACK_SIZE];
+    lex_data_t data[MAX_MEXPR_LEN];
 } stack_t;
 
-stack_t undo_stack = {-1, {0}};
+static stack_t undo_stack = {-1, {0, 0, 0}};
 
 static void 
-push(int data) {
-    assert (undo_stack.top < MAX_STACK_SIZE -1);
-    undo_stack.data[++undo_stack.top] = data;
+push(lex_data_t lex_data) {
+    assert (undo_stack.top < MAX_MEXPR_LEN -1);
+    undo_stack.data[++undo_stack.top] = lex_data;
 }
 
-static int 
+static lex_data_t
 pop() {
     assert (undo_stack.top > -1);
-    int res = undo_stack.data[undo_stack.top] ;
+    lex_data_t res = undo_stack.data[undo_stack.top] ;
     undo_stack.top--;
     return res;
 }
-
-static int *glex_cnt = NULL;
 
 static void 
 yyrewind (int n) {
 
     if (n <= 0) return;
-    if (curr_ptr == current_buffer) return;
+    if (curr_ptr == lex_buffer) return;
     int data_len = 0;
+    lex_data_t lex_data;
     while (n)  {
-        data_len += pop(); 
+        lex_data = pop();
+        data_len += lex_data.token_len;
         n--;
-        (*glex_cnt)--;
+        lex_data.token_code = 0;
+        lex_data.token_len = 0;
+        if (lex_data.token_val) {
+            free (lex_data.token_val);
+            lex_data.token_val = NULL;
+        }
     }
     curr_ptr -= data_len;
     yy_scan_string(curr_ptr);
 }
+
+static unsigned char *
+parser_alloc_token_value_default (uint16_t token_id) {
+
+    unsigned char *ptr = (unsigned char *)(calloc (1, yyleng + 1));
+    strncpy (ptr, yytext, yyleng);
+    ptr [yyleng] = '\0';
+    return (void *)ptr;
+}
+
+parser_alloc_token_value_fn_ptr_t parser_alloc_token_value_fn_ptr =
+    parser_alloc_token_value_default ;
 
 static int 
 cyylex () {
 
     int token_code =  yylex();
     curr_ptr += yyleng;
-    push(yyleng);
-    (*glex_cnt)++;
+    lex_data_t lex_data;
+    lex_data.token_code = token_code;
+    lex_data.token_len = yyleng;
+    lex_data.token_val = parser_alloc_token_value_fn_ptr (token_code);
+    push(lex_data);
     return token_code;
 }
 
 static void 
 process_white_space(int n) {
 
+    lex_data_t lex_data;
     curr_ptr += n;
-    push(n);
-    (*glex_cnt) += n;
+    lex_data.token_code = 0;
+    lex_data.token_len = n;
+    lex_data.token_val = NULL;
+    push(lex_data);
 }
 
 #define parse_init()             \
     int token_code = 0;          \
-    int lex_lcl_counter = 0;    \
-    parse_rc_t err = PARSE_SUCCESS; \
-    glex_cnt = &lex_lcl_counter
+    int _lchkp = undo_stack.top;    \
+    parse_rc_t err = PARSE_SUCCESS
 
-#define RETURN_PARSE_ERROR  \
-    {yyrewind(*glex_cnt); \
-    glex_cnt = t;   \
+#define RETURN_PARSE_ERROR      \
+    {yyrewind(undo_stack.top - _lchkp);     \
     return PARSE_ERR;}
 
 #define RETURN_PARSE_SUCCESS    \
-    {(*t) += lex_lcl_counter;                      \
-     glex_cnt = t;  \
-    return PARSE_SUCCESS;}
+    return PARSE_SUCCESS
 
 #define PARSER_CALL(fn) \
-    fn(&lex_lcl_counter)
+    fn(NULL)
 
 #define CHECKPOINT(a)    \
-    a = lex_lcl_counter
+    a = undo_stack.top
 
 #define RESTORE_CHKP(a) \
-    yyrewind(lex_lcl_counter - a)
+    yyrewind(undo_stack.top - a)
     
 #define CHECK_FOR_EOL                \
     {token_code = cyylex();                   \
     if (token_code == EOL) {                \
         RETURN_PARSE_SUCCESS;   \
     }}
+
+static inline int
+cyylexlh() {
+
+    int token_code = cyylex();
+    yyrewind(1);
+    return token_code;
+}
+
+static inline int
+cyylexlb() {
+
+    yyrewind(1);
+    int token_code = cyylex();
+    yyrewind(1);
+    return token_code;
+}
+
+#define PARSER_LOG_ERR(token_obtained, expected_token)  \
+    printf ("%s(%d) : Token Obtained = %d (%s) , expected token = %d\n",    \
+        __FUNCTION__, __LINE__, token_obtained, yytext, expected_token);
+
+void 
+Parser_init (parser_alloc_token_value_fn_ptr_t fn_ptr) {
+
+    parser_alloc_token_value_fn_ptr = fn_ptr;
+}
+
+void 
+Parser_stack_reset () {
+
+    int i;
+    lex_data_t *lex_data;
+
+    for (i = 0; i < undo_stack.top; i++) {
+        lex_data = &undo_stack.data[i];
+        lex_data->token_code = 0;
+        lex_data->token_len = 0;
+        if (lex_data->token_val) {
+            free (lex_data->token_val);
+            lex_data->token_val = NULL;
+        }
+    }
+    undo_stack.top = -1;
+    curr_ptr = lex_buffer;
+}
+
+int 
+Parser_get_current_stack_index () {
+    return undo_stack.top;
+}
+
+#define ITERATE_LEX_STACK_BEGIN(i , j , token_code_, len_, value_)    \
+{   int _k;                                                                                                              \
+     for (_k = i; _k <= j && _k <= undo_stack.top; _k++) {                               \
+     lex_data_t *lex_data = &undo_stack.data[_k];  \
+     if (lex_data->token_code == 0 || lex_data->token_code == WHITE_SPACE) continue; \
+     token_code_ = lex_data->token_code;               \
+     len_ = lex_data->token_len;                               \
+     value_ = lex_data->token_val;
+
+#define ITERATE_LEX_STACK_END }}
 
 
 /* ========================================
@@ -157,12 +205,56 @@ process_white_space(int n) {
 
 
 /* User specific header files */
+#include "SQLParserStruct.h"
 #include "common.h"
 #include "Ast.h"
 #include "../core/sql_const.h"
 #include "../core/sql_where.h"
 #include "../core/Catalog.h"
 #include "../core/sql_utils.h"
+#include "MExpr.h"
+
+static uint8_t *
+parser_alloc_token_value (u_int16_t token_code) {
+
+    uint8_t *token_buffer = NULL;
+    
+    switch (token_code) {
+
+        case SQL_IDENTIFIER:
+            token_buffer = (uint8_t *)calloc (1, SQL_COLUMN_NAME_MAX_SIZE);
+            strncpy (token_buffer , yytext, yyleng);
+            break;
+        case SQL_IDENTIFIER_IDENTIFIER:
+            token_buffer = (uint8_t *)calloc (1, SQL_COMPOSITE_COLUMN_NAME_SIZE);
+            strncpy (token_buffer , yytext, yyleng);
+            break;
+        case SQL_INTEGER_VALUE:
+            token_buffer = (uint8_t *)calloc (1, sizeof (uint32_t));
+            *(int *)(token_buffer) = atoi(yytext);
+            break;
+        case SQL_STRING_VALUE:
+            token_buffer = (uint8_t *)calloc (1,  SQL_OPERAND_MAX_VALUE);
+            assert (yyleng < SQL_OPERAND_MAX_VALUE);
+            strncpy (token_buffer , yytext, yyleng);
+            break;
+        case SQL_IPV4_ADDR_VALUE:
+            token_buffer = (uint8_t *)calloc (1, sizeof (uint32_t));
+            inet_pton (AF_INET,  yytext, token_buffer);
+            break;
+        case SQL_DOUBLE_VALUE:
+        {
+            char *endp;
+            token_buffer = (uint8_t *)calloc (1, sizeof (double));
+            *(double *)token_buffer = strtod(yytext, &endp);
+        }
+            break;
+        default:
+            break;
+    }
+    return token_buffer;
+}
+
 
 %}
 
@@ -171,12 +263,15 @@ process_white_space(int n) {
 "select" {
     return SQL_SELECT_Q;
 }
+
 "create table" {
     return SQL_CREATE_Q;
 }
+
 "insert into" {
     return SQL_INSERT_Q;
 }
+
 "delete" {
     return SQL_DELETE_Q;
 }
@@ -184,33 +279,43 @@ process_white_space(int n) {
 "varchar" {
     return SQL_STRING;
 }
+
 "int" {
     return SQL_INT;
 }
-"float" {
-    return SQL_FLOAT;
+
+"double" {
+    return SQL_DOUBLE;
 }
+
 "ipv4" {
     return SQL_IPV4_ADDR;
 }
+
 "primary key" {
     return SQL_PRIMARY_KEY;
 }
+
 "not null" {
     return SQL_NOT_NULL;
 }
+
 "max" {
     return SQL_MAX;
 }
+
 "sum" {
     return SQL_SUM;
 }
+
 "min" {
     return SQL_MIN;
 }
+
 "count" {
     return SQL_COUNT;
 }
+
 "avg" {
     return SQL_AVG;
 }
@@ -227,9 +332,27 @@ process_white_space(int n) {
     return SQL_GROUP_BY;
 }
 
+"order by" {
+    return SQL_ORDER_BY;
+}
+
+"limit" {
+    return SQL_LIMIT;
+}
+
+
 "having" {
     return SQL_HAVING;
 }
+
+"asc" {
+    return SQL_ORDERBY_ASC;
+}
+
+"desc" {
+    return SQL_ORDERBY_DSC;
+}
+
 
 "(" {
     return BRACK_START;
@@ -267,6 +390,54 @@ process_white_space(int n) {
     return SQL_OR;
 }
 
+"as" {
+    return SQL_AS;
+}
+
+"*" {
+    return SQL_MATH_MUL;
+}
+
+"+" {
+    return SQL_MATH_PLUS;
+}
+
+"-" {
+    return SQL_MATH_MINUS;
+}
+
+"/" {
+    return SQL_MATH_DIV;
+}
+
+";" {
+    return SEMI_COLON;
+}
+
+"sqrt" {
+    return SQL_MATH_SQRT;
+}
+
+"sqr" {
+    return SQL_MATH_SQR;
+}
+
+"mmax" {
+    return SQL_MATH_MAX;
+}
+
+"mmin" {
+    return SQL_MATH_MIN;
+}
+
+"sin" {
+    return SQL_MATH_SIN;
+}
+
+"pow" {
+    return SQL_MATH_POW;
+}
+
 \n {
     return EOL;
 }
@@ -280,16 +451,17 @@ process_white_space(int n) {
 }
 
 "," {
-
     return COMMA;
 }
 
 [ ] {
     /* Ignore */
+    process_white_space(1);
 }
 
 [\t] {
     /*ignore*/
+    process_white_space(4);
 }
 
 "\\q" {
@@ -302,33 +474,34 @@ process_white_space(int n) {
 }
 
 [1-9][0-9]* {
-    return INTEGER;
+    return SQL_INTEGER_VALUE;
 }
 
-%{
-/*
-[0-9]*.[0-9]+ {
-    return DECIMAL_NUMBER;
+[0-9]*\.[0-9]+ {
+    return SQL_DOUBLE_VALUE;
 }
-*/
-%}
 
-[a-zA-Z0-9]+ {
+[a-zA-Z0-9_]+ {
     return SQL_IDENTIFIER;
 }
 
-[a-zA-Z0-9]+\.[a-zA-Z0-9]+ {
-
-    return SQL_TABLE_COLMN_NAME;
+[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+ {
+    return SQL_IDENTIFIER_IDENTIFIER;
 }
 
-^[a-zA-Z]+(?:[\s.]+[a-zA-Z]+)*$ {
+
+%{
+
+#if 0
+^[a-zA-Z0-9][a-zA-Z0-9_.,-_'"!()\[\]{} ]* {
+    
     return SQL_STRING_VALUE;
 }
+#endif
 
-"*" {
-    return WILDCARD;
-}
+%}
+
+
 
 . {
     printf ("Non parsable character : %c\n", *yytext);
@@ -336,6 +509,12 @@ process_white_space(int n) {
 }
 
 %%
+
+/* #include other parser .c src files here */
+#include "ExpressionParser.c"
+
+
+
 
 static int paranthesis_cnt = 0;
 
@@ -361,7 +540,7 @@ parse_columns (ast_node_t *parent) {
                 PARSER_ERROR_EXIT(token_code, BRACK_START);
                 token_code = yylex();
                 if (token_code != SQL_IDENTIFIER &&
-                    token_code != SQL_TABLE_COLMN_NAME) {
+                    token_code != SQL_IDENTIFIER_IDENTIFIER) {
                     PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
                 }
                 col_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
@@ -384,7 +563,7 @@ parse_columns (ast_node_t *parent) {
                 }
                 break;
             case SQL_IDENTIFIER:
-            case SQL_TABLE_COLMN_NAME:
+            case SQL_IDENTIFIER_IDENTIFIER:
 
                 col_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
                 col_node->entity_type = SQL_IDENTIFIER;
@@ -399,7 +578,7 @@ parse_columns (ast_node_t *parent) {
                     continue;
                 }
                 break;
-            case WILDCARD:
+            case SQL_MATH_MUL:
             {
                 ast_node_t *astnode = (ast_node_t *)calloc (1,sizeof (ast_node_t));
                 astnode->entity_type = SQL_IDENTIFIER;
@@ -467,7 +646,7 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
     }
 
     if (token_code != SQL_IDENTIFIER &&
-        token_code != SQL_TABLE_COLMN_NAME) {
+        token_code != SQL_IDENTIFIER_IDENTIFIER) {
         
         PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
     }
@@ -540,7 +719,7 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
 
     switch (token_code) {
 
-        case INTEGER:
+        case SQL_INTEGER_VALUE:
             value = atoi (yytext);
             wc->right_op.w_opd = WH_VALUE;
             wc->right_op.u.value.dtype = SQL_INT;
@@ -562,7 +741,7 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
             switch (token_code) {
                 case SQL_IDENTIFIER:
                 case SQL_STRING_VALUE:
-                case SQL_TABLE_COLMN_NAME:
+                case SQL_IDENTIFIER_IDENTIFIER:
                     memset(in_col_name , 0, sizeof (in_col_name));
                     memset (operand_col_name, 0 , sizeof (operand_col_name));
                     strcpy (operand_col_name, yytext);
@@ -612,7 +791,7 @@ parse_where_condition(ast_node_t *where_kw, where_literal_t **wlit) {
 
         case SQL_IDENTIFIER:
         case SQL_STRING_VALUE:
-        case SQL_TABLE_COLMN_NAME:
+        case SQL_IDENTIFIER_IDENTIFIER:
             strcpy (operand_col_name, yytext);
             memset ( table_name, 0, sizeof (table_name));
             table_name_ptr = table_name;
@@ -766,6 +945,28 @@ parse_tables(ast_node_t *select_kw) {
 
 #include "SQLGroupByParser.c"
 
+
+
+/* This file implements the SQL Parser which accespts all SQL queries satisfying the below Grammar 
+
+    <sql_query>         ::= <select_query> | <update_query> | <delete_query>
+    <select_query>     ::=  SELECT <columns> FROM <tables> WHERE <conditions>
+    <columns>            ::= <plain_columns> | <aggregate_colmns> | *
+    <plain_columns>  ::= <column> | <column> , <plain_columns>
+    <aggregate_columns>     ::= <agg_column> | <agg_column> , <aggregate_columns>
+    <agg_column> ::= <function>(<column>)
+    <tables> ::= <table> | <table> , <tables>
+    <conditions> ::= <condition> | <condition> <lop> <conditions>
+    <condition>  ::= <column> <mop> <digits> |  <column> <mop> <column> | <column> <mop> 'identifer'
+    <function>     ::= COUNT | SUM | AVG | MIN | MAX
+     <column>      ::= identifier
+     <table>          ::= identifier
+     <lop>  ::= AND | OR | NOT | IN | BETWEEN | LIKE | EXISTS
+     <digits> := <digit> | <digit><digits>
+     <digit> ::= 0|1|2|3|4|5|6|7|8|9
+     <mop>  ::= <   |   >   |   =   |   != 
+*/
+
 static int
 parse_select_query (ast_node_t *root) {
 
@@ -895,22 +1096,24 @@ static  void
 parse_update_query ()  {}
 
 #include "SQLCreateParser.c"
+#include "SQLCreateParserCFG.c"
+#include "SQLSelectParserCFG.c"
 #include "SQLInsertIntoParser.c"
 #include "SQLDeleteParser.c"
 #include "../core/sql_intf.h"
 
-static void 
+static parse_rc_t
 parse_sql_query () {
 
+    parse_init();
     bool rc;
     int err_code;
     ast_node_t *astroot = NULL;
     paranthesis_cnt = 0;
 
-    printf ("postgres=# ");
-    clock_t t = clock();
+    clock_t tclk = clock();
 
-    int token_code = yylex();
+    token_code = yylex();
 
     switch (token_code) {
 
@@ -924,11 +1127,11 @@ parse_sql_query () {
             if (paranthesis_cnt) {
                 printf ("Error : Unbalanced Paranthesis\n");
                  ast_destroy_tree_from_root (astroot);
-                return;
+                 RETURN_PARSE_ERROR;
             }
             if (err_code == SQL_PARSE_ERROR) {
                 ast_destroy_tree_from_root (astroot);
-                return;
+                RETURN_PARSE_SUCCESS;
             }
             sql_process_select_query (NULL, astroot);
             break;
@@ -940,9 +1143,16 @@ parse_sql_query () {
             astroot = (ast_node_t *)calloc (1, sizeof (ast_node_t));
             astroot->entity_type = SQL_QUERY_TYPE;
             astroot->u.q_type = SQL_CREATE_Q;
-            parse_create_query(astroot);
+            //err = parse_create_query(&lexc, astroot);
+            err = parse_create_query_cfg(astroot);
+            if (err == PARSE_ERR) {
+                printf ("Table Creation Failed\n");
+                break;
+            }
             //ast_print (astroot, 0);
             sql_process_create_query(NULL, astroot);
+            token_code = cyylex();
+            assert(token_code == EOL);
             break;
         case SHOW_DB_TABLES:
             sql_show_table_catalog (NULL);
@@ -966,7 +1176,7 @@ parse_sql_query () {
         case SQL_PARSE_OK:
         case EOL:
             ast_destroy_tree_from_root (astroot);
-            return;
+            RETURN_PARSE_SUCCESS;
         case QUIT:
             exit(0);
         default:
@@ -975,17 +1185,143 @@ parse_sql_query () {
             break;
     }
 
-    t = clock() - t;
-    double time_taken = ((double)t * 1000)/CLOCKS_PER_SEC; 
+    tclk= clock() - tclk;
+    double time_taken = ((double)tclk * 1000)/CLOCKS_PER_SEC; 
     printf("%f msec\n", time_taken);
     ast_destroy_tree_from_root (astroot);
+    if (err == PARSE_ERR) RETURN_PARSE_ERROR;
+    RETURN_PARSE_SUCCESS;
 }
+
+/* Tested with :
+
+select name1 as N1, name2 as N2, sqrt(age + salary) as N3 from rt1 as RT1, rt2 as RT2 where age > N3 and sqrt
+(age) = sqr(salary) group by mmax(age, salary), salary having (sqrt(age + salary) > 1000) and (bal > 1000) order 
+by RT1 asc limit 2;
+
+select sqr(name) * 3 + 4, sqrt(age * salary) - age * 4 from tab1, tabe where mmax(salary, amount) * 3 < 10000 and 
+salary > sqr(10) group by name, sqr(name) * 3 + 4 having  (sqrt(age * salary)) = (age * 4) order by name asc 
+limit 4;
+
+*/
+
+#if 0
+int 
+main (int argc, char **argv) {
+
+    Parser_init (parser_alloc_token_value);
+
+    parse_init ();
+
+    strcpy (lex_buffer, "a + 2\n" );
+    yy_scan_string (lex_buffer);
+
+    err = E();
+
+    if (err == PARSE_ERR) {
+        printf ("Invalid MExpr\n");
+    }
+    else {
+        printf ("Valid MExpr, curr_ptr = %s\n", curr_ptr);
+        token_code = cyylexlh();
+        if (token_code == EOL) {
+            printf ("Parsed Complete\n");
+        }
+    }
+    Parser_stack_reset ();
+    return 0;
+}
+#endif 
+#if 1
 
 int 
 main (int argc, char **argv) {
 
+    memset (lex_buffer, 0 , sizeof (lex_buffer));
+
     while(1) {
+        printf ("postgres=# ");
+        fgets (lex_buffer, sizeof (lex_buffer), stdin);
+        if (lex_buffer[0] == '\n') {
+            lex_buffer[0] = 0;
+            continue;
+        }
+        yy_scan_string (lex_buffer);
         parse_sql_query();
+        memset (lex_buffer, 0 , sizeof (lex_buffer));
+        Parser_stack_reset();
     }
     return 0;
 }
+
+#endif 
+
+#if 0
+int 
+main (int argc, char **argv) {
+
+    //Parser_init (parser_alloc_token_value);
+    
+    parse_init();
+
+    //strcpy (lex_buffer , "mmin (sin (sqr (sqrt (a + b) +  mmax (b * c, 2))), mmax(d, e))\n");
+    //strcpy (lex_buffer , "sqrt(10 + 6)\n");
+    //strcpy (lex_buffer , "mmax(3 * 5, 2)\n");
+    strcpy (lex_buffer , "mmax (sqr (4), sqrt (25)) + 5\n");
+    //strcpy (lex_buffer, "mmax(6, mmax(8, mmax (3, mmax (5, 7))))\n");
+
+    yy_scan_string (lex_buffer);
+   
+   err = PARSER_CALL(E);
+
+    assert (err = PARSE_SUCCESS);
+    token_code = cyylexlh ();
+    assert (token_code == EOL);
+
+    int size_out = 0;
+    lex_data_t **postfix = mexpr_convert_infix_to_postfix (
+                                            &undo_stack.data[0], undo_stack.top + 1, &size_out);
+
+    int i;
+    lex_data_t *lex_data;
+
+    printf ("Postfix expression : \n");
+
+    for (i = 0; i < size_out; i++) {
+
+        lex_data = postfix[i];
+        printf ("%s ", (char *)lex_data->token_val);
+    }
+
+    printf("\n");
+    
+    mexpt_node_t *root = 
+        mexpr_convert_postfix_to_expression_tree (postfix, size_out);
+
+    mexpr_debug_print_expression_tree (root);
+
+    printf ("Evaluation Expression Tree : \n");
+
+    res_t res = mexpt_evaluate (root);
+
+    if (res.rc) {
+
+        if (double_is_integer (res.ovalue)) {
+
+            int temp = (int)res.ovalue;
+            printf ("Result = %d\n", temp);
+        }
+        else {
+            printf ("Result = %lf\n", res.ovalue);
+        }
+    }
+    else {
+        
+        printf ("Evaluation Failed\n");
+    }
+
+    mexpt_destroy (root);
+    Parser_stack_reset ();
+    return 0;
+}
+#endif 

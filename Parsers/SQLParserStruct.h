@@ -43,16 +43,19 @@ typedef enum sql_keywords_ {
     SQL_WHERE,
     SQL_GROUP_BY,
     SQL_HAVING,
+    SQL_ORDER_BY,
+    SQL_LIMIT,
     SQL_PRIMARY_KEY,
     SQL_NOT_NULL,
     SQL_SELECT,
+    SQL_AS,
     SQL_KEYWORD_MAX,
     
 } sql_keywords_t;
 
 typedef enum sql_op_ {
 
-    SQL_LESS_THAN = 41,
+    SQL_LESS_THAN = 51,
     SQL_LESS_THAN_EQ ,
     SQL_GREATER_THAN ,
     SQL_GREATER_THAN_EQ,
@@ -63,7 +66,7 @@ typedef enum sql_op_ {
     SQL_NOT,
     SQL_IN,
     SQL_BETWEEN, 
-    SQL_OP_MAX =  52
+    SQL_OP_MAX =  62
 
 } sql_op_t;
 
@@ -74,9 +77,10 @@ typedef struct ident_ {
 
 typedef enum sql_dtype_{
 
-    SQL_STRING  = 61,
+    SQL_DTYPE_FIRST = 71,
+    SQL_STRING,
     SQL_INT ,
-    SQL_FLOAT,
+    SQL_DOUBLE,
     SQL_IPV4_ADDR,
     SQL_DTYPE_MAX
 
@@ -84,7 +88,7 @@ typedef enum sql_dtype_{
 
 typedef enum sql_dtype_attr_ {
 
-    SQL_DTYPE_LEN = 71,
+    SQL_DTYPE_LEN = 81,
     SQL_DTYPE_PRIMARY_KEY,
     SQL_DTYPE_NOT_NULL
 
@@ -92,17 +96,43 @@ typedef enum sql_dtype_attr_ {
 
 typedef enum sql_ident_type_ {
 
-    SQL_TABLE_NAME = 81,
+    SQL_TABLE_NAME = 91,
     SQL_COLUMN_NAME ,
-    SQL_TABLE_COLMN_NAME,
+    SQL_IDENTIFIER_IDENTIFIER,
     SQL_INTEGER_VALUE,
     SQL_STRING_VALUE ,
     SQL_IPV4_ADDR_VALUE ,
-    SQL_FLOAT_VALUE,
+    SQL_DOUBLE_VALUE,
     SQL_PTR,
     SQL_IDNT_TYPE_MAX
 
 } sql_identifier_type_t;
+
+
+/* Math Functions */
+typedef enum math_fns_ {
+
+    SQL_MATH_MAX = 101,      // max(a,b)
+    SQL_MATH_MIN,                // min(a,b)
+    SQL_MATH_PLUS,              //  a + b
+    SQL_MATH_MINUS,           //  a - b
+    SQL_MATH_MUL,               //  a * b
+    SQL_MATH_DIV,                 // a / b
+    SQL_MATH_SQRT,              // sqrt (a)
+    SQL_MATH_SQR,                // sqr(a)
+    SQL_MATH_SIN,                 // sin(a)
+    SQL_MATH_POW,               // pow(a,b) : a power b
+    /* Reserved enums*/
+    SQL_MATH_FNS_MAX = 120 
+
+} math_fns_t;
+
+typedef enum sql_order_ {
+
+    SQL_ORDERBY_ASC = 131,
+    SQL_ORDERBY_DSC
+
+} sql_order_t;
 
 static inline int
 sql_valid_dtype (int dtype) {
@@ -110,7 +140,7 @@ sql_valid_dtype (int dtype) {
     switch (dtype) {
         case SQL_STRING:
         case SQL_INT:
-        case SQL_FLOAT:
+        case SQL_DOUBLE:
         case SQL_IPV4_ADDR:
         return 1;
     }
@@ -126,8 +156,8 @@ sql_dtype_size (sql_dtype_t dtype) {
         return 1;
     case SQL_INT:
         return 4;
-    case SQL_FLOAT:
-        return sizeof(float);
+    case SQL_DOUBLE:
+        return sizeof(double);
     case SQL_IPV4_ADDR:
         return 4;
     }

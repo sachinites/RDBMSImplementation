@@ -4,22 +4,24 @@
 < table-name > ::=  identifier
 < columns > ::= <column> | <column> , <columns>
 < column> ::= identifer <dtype> |   identifer <dtype> <primary key | not null >
-< dtype> ::= varchar(<digits>) | int | float
+< dtype> ::= varchar(<digits>) | int | double
 < digits> := <digit> | <digit><digits>
 < digit> ::= 0|1|2|3|4|5|6|7|8|9
 */
-static int 
-create_q_parse_columns (ast_node_t *table_name) {
+static parse_rc_t
+create_q_parse_column (ast_node_t *table_name, int *last_token_code) {
 
-    int token_code ;
+    parse_init();
+
     ast_node_t *dtype_attr_pr_key;
     ast_node_t *dtype_attr_not_null;
 
-    token_code = yylex ();
+    token_code = cyylex ();
+
     if (token_code != SQL_IDENTIFIER) {
-        PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
+        PARSER_LOG_ERR(token_code, SQL_IDENTIFIER);
+        RETURN_PARSE_ERROR;
     }
-    //printf ("col name = %s ", yytext);
 
     ast_node_t *col_name_node = (ast_node_t *)calloc (1, sizeof (ast_node_t ));
     col_name_node->entity_type = SQL_IDENTIFIER;
@@ -28,11 +30,16 @@ create_q_parse_columns (ast_node_t *table_name) {
 
     ast_add_child (table_name, col_name_node );
 
-    token_code = yylex ();
+    token_code = cyylex ();
+
     if (!sql_valid_dtype (token_code)) {
-        PARSER_ERROR_EXIT(token_code, 0);
+
+        int i;
+        for (i = SQL_DTYPE_FIRST + 1; i < SQL_DTYPE_MAX; i++) {
+            PARSER_LOG_ERR(token_code, i);
+        }
+        RETURN_PARSE_ERROR; 
     }
-    //printf ("whose dtype name = %s (%d) ", yytext, token_code);
 
     ast_node_t *dtype =  (ast_node_t *)calloc (1, sizeof (ast_node_t ));
     dtype->entity_type = SQL_DTYPE;
@@ -41,20 +48,21 @@ create_q_parse_columns (ast_node_t *table_name) {
     ast_add_child (col_name_node , dtype);
 
     if (token_code == SQL_STRING) {
-        token_code = yylex ();
+        token_code = cyylex ();
         if (token_code != BRACK_START) {
-            PARSER_ERROR_EXIT(token_code, BRACK_START);
+            PARSER_LOG_ERR(token_code, BRACK_START);
+            RETURN_PARSE_ERROR; 
         }
-        token_code = yylex();
-        if (token_code != INTEGER) {
-            PARSER_ERROR_EXIT(token_code, INTEGER);
+        token_code = cyylex();
+        if (token_code != SQL_INT) {
+            PARSER_LOG_ERR(token_code, SQL_INT);
+            RETURN_PARSE_ERROR; 
         }        
         int a = atoi (yytext);
         if (a >= 256) {
-          //  printf ("\nError : VARCHAR max size supported is 255\n");
-            exit(0);
+            printf ("\nError : VARCHAR max size supported is 255\n");
+            RETURN_PARSE_ERROR; 
         }
-        //printf (" and varchar len is %d ", a);
 
         ast_node_t *dtype_attr_len =  (ast_node_t *)calloc (1, sizeof (ast_node_t ));
         dtype_attr_len->entity_type = SQL_DTYPE_ATTR;
@@ -69,93 +77,112 @@ create_q_parse_columns (ast_node_t *table_name) {
 
          ast_add_child (dtype_attr_len, dtype_attr_len_value);
 
-        token_code = yylex ();
+        token_code = cyylex ();
         if (token_code != BRACK_END) {
-            PARSER_ERROR_EXIT(token_code, BRACK_END);
+            PARSER_LOG_ERR(token_code, BRACK_END);
+            RETURN_PARSE_ERROR; 
         }
     }
 
-    token_code = yylex ();
+    token_code = cyylex ();
+    *last_token_code = token_code;
 
     switch (token_code) {
 
         case SQL_PRIMARY_KEY:
-          //  printf ("which is primary key ");
             dtype_attr_pr_key =  (ast_node_t *)calloc (1, sizeof (ast_node_t ));
             dtype_attr_pr_key->entity_type = SQL_DTYPE_ATTR;
             dtype_attr_pr_key->u.dtype_attr = SQL_DTYPE_PRIMARY_KEY;
             ast_add_child (dtype, dtype_attr_pr_key);
-            break;
+            RETURN_PARSE_SUCCESS; 
+            
         case SQL_NOT_NULL:
-           //  printf ("which is not null ");
             dtype_attr_not_null =  (ast_node_t *)calloc (1, sizeof (ast_node_t ));
             dtype_attr_pr_key->entity_type = SQL_DTYPE_ATTR;
             dtype_attr_pr_key->u.dtype_attr = SQL_DTYPE_NOT_NULL ;
             ast_add_child (dtype, dtype_attr_not_null);
-            break;
+            RETURN_PARSE_SUCCESS; 
+
         case BRACK_END:
+            RETURN_PARSE_SUCCESS; 
         case COMMA:
+            RETURN_PARSE_SUCCESS; 
             break;
         default :
-            PARSER_ERROR_EXIT(token_code, 0);
-            break;
+            PARSER_LOG_ERR(token_code, SQL_PRIMARY_KEY);
+            PARSER_LOG_ERR(token_code, SQL_NOT_NULL);
+            PARSER_LOG_ERR(token_code, BRACK_END);
+            PARSER_LOG_ERR(token_code, COMMA);
+            *last_token_code = 0;
+            RETURN_PARSE_ERROR; 
     }
 
-    return token_code;
+    RETURN_PARSE_SUCCESS; 
 }
 
-static int
+static parse_rc_t
 create_q_parse_table_name ( ast_node_t *create_kw) {
 
-    int token_code = yylex();
-    if (token_code != SQL_IDENTIFIER) {
-        PARSER_ERROR_EXIT(token_code, SQL_IDENTIFIER);
+    parse_init ();
+
+    token_code = cyylex();
+
+    switch (token_code) {
+        case SQL_IDENTIFIER:
+        break;
+        default:
+            RETURN_PARSE_ERROR;
     }
-   // printf ("Table Name = %s\n", yytext);
 
     ast_node_t *tble_name_node = (ast_node_t *)calloc (1, sizeof (ast_node_t));
     tble_name_node->entity_type = SQL_IDENTIFIER;
     tble_name_node->u.identifier.ident_type = SQL_TABLE_NAME;
     strncpy(tble_name_node->u.identifier.identifier.name, yytext, sizeof (tble_name_node->u.identifier.identifier.name));
     ast_add_child (create_kw, tble_name_node);
-
-    token_code = yylex ();
-    if (token_code != BRACK_START) {
-        PARSER_ERROR_EXIT(token_code, BRACK_START);
-    }
-
-    return token_code;
+    
+    RETURN_PARSE_SUCCESS;
 }
 
-static int
-parse_create_query( ast_node_t *create_kw) {
+static parse_rc_t
+parse_create_query(ast_node_t *create_kw) {
     
-    int token_code = create_q_parse_table_name (create_kw);
-    token_code =  create_q_parse_columns (create_kw->child_list);
+    parse_init();
+
+    int last_token_code;
+    
+    err  = create_q_parse_table_name (create_kw);
+
+    if (err == PARSE_ERR) RETURN_PARSE_ERROR;
+
+    token_code = cyylex();
+
+    if (token_code != BRACK_START) {
+        PARSER_LOG_ERR(token_code, BRACK_START);
+        RETURN_PARSE_ERROR;
+    }
 
     while (1) {
 
-        switch (token_code) {
+        err =  create_q_parse_column (create_kw->child_list, &last_token_code);
+        if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
-            case SQL_PRIMARY_KEY:
-            case SQL_NOT_NULL:
-                token_code = yylex();
-                continue;
-            case COMMA:
-                token_code = create_q_parse_columns(create_kw->child_list);
-                break;
-            case BRACK_END:
-                    token_code = yylex();
-                    if (token_code != EOL) {
-                        PARSER_ERROR_EXIT(token_code, EOL);
-                    }
-                break;
-            case EOL:
-                return SQL_PARSE_OK;
-            default:
-                PARSER_ERROR_EXIT(token_code, 0);
+        if (last_token_code == BRACK_END) RETURN_PARSE_SUCCESS;
+        if (last_token_code == COMMA) continue;
+        if (last_token_code == SQL_PRIMARY_KEY || last_token_code == SQL_NOT_NULL) {
+            token_code = cyylex();
+            switch (token_code) {
+                case COMMA:
+                    continue;
+                case BRACK_END:
+                    RETURN_PARSE_SUCCESS;
+                default:
+                    PARSER_LOG_ERR(token_code, COMMA);
+                    PARSER_LOG_ERR(token_code, BRACK_END);
+                    RETURN_PARSE_ERROR;
+            }
         }
     }
-    return SQL_PARSE_OK;
+    
+    RETURN_PARSE_SUCCESS;
 }
 

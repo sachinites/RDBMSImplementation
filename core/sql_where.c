@@ -91,15 +91,15 @@ sql_where_compare (void *lval , int lval_size,
 
 
 
-        case SQL_FLOAT:
+        case SQL_DOUBLE:
 
             switch (mop) {
 
                 case SQL_LESS_THAN:
                 {
-                    float lval_float = *(float *)lval;
-                    int rval_float = *(int *)rval;
-                    if (lval_float < rval_float) return true;
+                    double lval_double = *(double *)lval;
+                    double rval_double = *(double *)rval;
+                    if (lval_double < rval_double) return true;
                     return false;
                 }
                 break;
@@ -107,9 +107,9 @@ sql_where_compare (void *lval , int lval_size,
 
                 case SQL_LESS_THAN_EQ:
                 {
-                    float lval_float = *(float *)lval;
-                    int rval_float = *(int *)rval;
-                    if (lval_float <= rval_float) return true;
+                    double lval_double = *(double *)lval;
+                    double rval_double = *(double *)rval;
+                    if (lval_double <= rval_double) return true;
                     return false;
                 }
                 break;
@@ -117,9 +117,9 @@ sql_where_compare (void *lval , int lval_size,
 
                 case SQL_GREATER_THAN:
                 {
-                    float lval_float = *(float *)lval;
-                    int rval_float = *(int *)rval;
-                    if (lval_float > rval_float) return true;
+                    double lval_double = *(double *)lval;
+                    double rval_double = *(double *)rval;
+                    if (lval_double > rval_double) return true;
                     return false;
                 }
                 break;                
@@ -127,9 +127,9 @@ sql_where_compare (void *lval , int lval_size,
 
                 case SQL_GREATER_THAN_EQ:
                 {
-                    float lval_float = *(float *)lval;
-                    int rval_float = *(int *)rval;
-                    if (lval_float >= rval_float) return true;
+                    double lval_double = *(double *)lval;
+                    double rval_double = *(double *)rval;
+                    if (lval_double >= rval_double) return true;
                     return false;
                 }
                 break;
@@ -137,9 +137,9 @@ sql_where_compare (void *lval , int lval_size,
 
                 case SQL_EQ:
                 {
-                    float lval_float = *(float *)lval;
-                    int rval_float = *(int *)rval;
-                    if (lval_float == rval_float) return true;
+                    double lval_double = *(double *)lval;
+                    double rval_double = *(double *)rval;
+                    if (lval_double == rval_double) return true;
                     return false;
                 }
                 break;
@@ -147,9 +147,9 @@ sql_where_compare (void *lval , int lval_size,
 
                 case SQL_NOT_EQ:
                 {
-                    float lval_float = *(float *)lval;
-                    int rval_float = *(int *)rval;
-                    if (lval_float != rval_float) return true;
+                    double lval_double = *(double *)lval;
+                    double rval_double = *(double *)rval;
+                    if (lval_double != rval_double) return true;
                     return false;
                 }
                 break;
@@ -372,9 +372,9 @@ sql_debug_print_where_cond (where_cond_t *wc) {
             case SQL_INT:
                     printf("Where Cond  : [%s   op=%d   %d]\n", wc->col.schema_rec->column_name, wc->op, *(int *)wc->right_op.u.value.val);
                     break;
-            case SQL_FLOAT:
+            case SQL_DOUBLE:
                     printf("Where Cond  : [%s   op=%d   %f]\n", wc->col.schema_rec->column_name, wc->op,
-                           *(float *)wc->right_op.u.value.val);
+                           *(double *)wc->right_op.u.value.val);
                     break;
             case SQL_IPV4_ADDR:
             {
@@ -491,6 +491,7 @@ sql_where_clause_infix_to_postfix (where_literal_t *wlit_arr_in, int *size_out)
                            (!is_where_literal_match((where_literal_t *)stack->slot[stack->top], BRACK_START)))
                         wlit_arr_out[out_index++] = (where_literal_t *)pop(stack);
                     pop(stack);
+                    
             }
             else
             {

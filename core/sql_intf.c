@@ -117,7 +117,7 @@ sql_process_insert_query (BPlusTree_t *TableCatalog, ast_node_t *root) {
                     key_offset += rec->dtype_size;
                     break;
                 case SQL_INT:
-                case SQL_FLOAT:
+                case SQL_DOUBLE:
                     memcpy((char *)new_bpkey.key + key_offset,
                            column_node->u.identifier.identifier.name,
                            rec->dtype_size);
@@ -143,7 +143,7 @@ sql_process_insert_query (BPlusTree_t *TableCatalog, ast_node_t *root) {
                         rec->dtype_size);
                 break;
             case SQL_INT:
-            case SQL_FLOAT:
+            case SQL_DOUBLE:
                 memcpy((char *)record + rec->offset,
                        column_node->u.identifier.identifier.name,
                        rec->dtype_size);
