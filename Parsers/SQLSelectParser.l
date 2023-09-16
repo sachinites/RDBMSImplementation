@@ -1255,17 +1255,18 @@ main (int argc, char **argv) {
 }
 #endif 
 
-#if 1
-
 int 
 main (int argc, char **argv) {
 
-    Parser_init (parser_alloc_token_value);
+    //Parser_init (parser_alloc_token_value);
     
     parse_init();
 
-    //strcpy (lex_buffer , "sqrt(a + b) +  mmax(b * c, 2)\n");
-    strcpy (lex_buffer , "sqrt(a + b)\n");
+    //strcpy (lex_buffer , "mmin (sin (sqr (sqrt (a + b) +  mmax (b * c, 2))), mmax(d, e))\n");
+    strcpy (lex_buffer , "sqrt(10 + 6)\n");
+    //strcpy (lex_buffer , "mmax(3 * 5, 2)\n");
+    //strcpy (lex_buffer, "mmax(6, mmax(8, mmax (3, mmax (5, 7))))\n");
+
     yy_scan_string (lex_buffer);
    
    err = PARSER_CALL(E);
@@ -1275,7 +1276,8 @@ main (int argc, char **argv) {
     assert (token_code == EOL);
 
     int size_out = 0;
-    lex_data_t **postfix = mexpr_convert_infix_to_postfix (&undo_stack.data[0], undo_stack.top + 1, &size_out);
+    lex_data_t **postfix = mexpr_convert_infix_to_postfix (
+                                            &undo_stack.data[0], undo_stack.top + 1, &size_out);
 
     int i;
     lex_data_t *lex_data;
@@ -1285,11 +1287,38 @@ main (int argc, char **argv) {
     for (i = 0; i < size_out; i++) {
 
         lex_data = postfix[i];
-        printf ("token_code = %d , token_val = %s\n", lex_data->token_code, (char *)lex_data->token_val);
+        printf ("%s ", (char *)lex_data->token_val);
     }
+
+    printf("\n");
     
+    mexpt_node_t *root = 
+        mexpr_convert_postfix_to_expression_tree (postfix, size_out);
+
+    mexpr_debug_print_expression_tree (root);
+
+    printf ("Evaluation Expression Tree : \n");
+
+    res_t res = mexpt_evaluate (root);
+
+    if (res.rc) {
+
+        switch (res.dtype) {
+            
+            case SQL_INT:
+                printf ("Result = %d\n", *(int *)res.value);
+                break;
+            case SQL_FLOAT:
+                printf ("Result = %.4f\n", *(float *)res.value);
+                break;
+        }
+    }
+    else {
+        
+        printf ("Evaluation Failed\n");
+    }
+
+    mexpt_destroy (root);
     Parser_stack_reset ();
     return 0;
 }
-
-#endif 

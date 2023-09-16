@@ -1,15 +1,31 @@
 #ifndef __MEXPR__
 #define __MEXPR__
 
+#include <stdint.h>
 #include "ParserExport.h"
+#include "../core/sql_const.h"
 
 typedef struct mexpt_node_ {
 
-    lex_data_t lex_data;
+    int token_code;
+    /* Below fields are relevant only when this node is operand nodes*/
+    bool is_resolved;   /* Have we obtained the math value of this operand*/
+    sql_dtype_t dtype;
+    uint8_t math_val[8];    /* Actual Math Value */
+    uint8_t variable_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
+
     struct mexpt_node_ *left;
     struct mexpt_node_ *right;
 
 } mexpt_node_t;
+
+typedef struct res_{
+
+    bool rc;
+    sql_dtype_t dtype;
+    uint8_t *value;
+
+} res_t; 
 
 lex_data_t **
 mexpr_convert_infix_to_postfix (lex_data_t *infix, int sizein, int*size_out);
@@ -26,5 +42,8 @@ mexpr_debug_print_expression_tree (mexpt_node_t *root) ;
 
 void 
 mexpt_destroy(mexpt_node_t *root);
+
+res_t
+mexpt_evaluate (mexpt_node_t *root);
 
 #endif 

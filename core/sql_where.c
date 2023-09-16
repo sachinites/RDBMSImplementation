@@ -491,6 +491,7 @@ sql_where_clause_infix_to_postfix (where_literal_t *wlit_arr_in, int *size_out)
                            (!is_where_literal_match((where_literal_t *)stack->slot[stack->top], BRACK_START)))
                         wlit_arr_out[out_index++] = (where_literal_t *)pop(stack);
                     pop(stack);
+                    
             }
             else
             {
