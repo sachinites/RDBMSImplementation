@@ -473,11 +473,11 @@ parser_alloc_token_value (u_int16_t token_code) {
     return SQL_IPV4_ADDR_VALUE;
 }
 
-[1-9][0-9]* {
+-?[1-9][0-9]* {
     return SQL_INTEGER_VALUE;
 }
 
-[0-9]*\.[0-9]+ {
+-?[0-9]*\.[0-9]+ {
     return SQL_DOUBLE_VALUE;
 }
 

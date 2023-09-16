@@ -143,7 +143,7 @@ F () {
         }
         break;
         case SQL_INTEGER_VALUE:
-        case SQL_DOUBLE:
+        case SQL_DOUBLE_VALUE:
         case SQL_IDENTIFIER:
         case SQL_IDENTIFIER_IDENTIFIER:
             RETURN_PARSE_SUCCESS;
