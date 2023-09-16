@@ -185,8 +185,8 @@ ast_node_print (ast_node_t *root, int depth) {
                 case SQL_INTEGER_VALUE:
                     printf ("Integer Value = %d\n", *(int *)(root->u.identifier.identifier.name));
                     break;
-                case SQL_FLOAT_VALUE:
-                    printf ("Float Value =  ?\n");
+                case SQL_DOUBLE_VALUE:
+                    printf ("Double Value =  ?\n");
                     break;
                 default: ;
             }
@@ -199,8 +199,8 @@ ast_node_print (ast_node_t *root, int depth) {
                 case SQL_INT:
                     printf ("Dtype : int\n");
                     break;
-                case SQL_FLOAT:
-                printf ("Dtype : float\n");
+                case SQL_DOUBLE:
+                printf ("Dtype : double\n");
                 break;
                 default: ;
             }

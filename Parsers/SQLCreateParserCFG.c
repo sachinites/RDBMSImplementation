@@ -21,13 +21,14 @@ static parse_rc_t
 CE (ast_node_t *table_name)  {
 
     parse_init ();
+    ast_node_t *col_name_node;
 
     token_code = cyylex();
 
     switch (token_code) {
 
         case SQL_IDENTIFIER:
-            ast_node_t *col_name_node = (ast_node_t *)calloc(1, sizeof(ast_node_t));
+            col_name_node = (ast_node_t *)calloc(1, sizeof(ast_node_t));
             col_name_node->entity_type = SQL_IDENTIFIER;
             col_name_node->u.identifier.ident_type = SQL_COLUMN_NAME;
             strncpy(col_name_node->u.identifier.identifier.name, yytext, sizeof(col_name_node->u.identifier.identifier.name));
@@ -88,16 +89,19 @@ CE (ast_node_t *table_name)  {
             }
 
             token_code = cyylex ();
+            ast_node_t *dtype_attr_pr_key;
+            ast_node_t *dtype_attr_not_null;
+
             switch (token_code) {
                 case SQL_PRIMARY_KEY:
-                    ast_node_t *dtype_attr_pr_key = (ast_node_t *)calloc(1, sizeof(ast_node_t));
+                    dtype_attr_pr_key = (ast_node_t *)calloc(1, sizeof(ast_node_t));
                     dtype_attr_pr_key->entity_type = SQL_DTYPE_ATTR;
                     dtype_attr_pr_key->u.dtype_attr = SQL_DTYPE_PRIMARY_KEY;
                     ast_add_child(dtype, dtype_attr_pr_key);
                     RETURN_PARSE_SUCCESS;
                     break;
                 case SQL_NOT_NULL:
-                    ast_node_t *dtype_attr_not_null = (ast_node_t *)calloc(1, sizeof(ast_node_t));
+                    dtype_attr_not_null = (ast_node_t *)calloc(1, sizeof(ast_node_t));
                     dtype_attr_pr_key->entity_type = SQL_DTYPE_ATTR;
                     dtype_attr_pr_key->u.dtype_attr = SQL_DTYPE_NOT_NULL;
                     ast_add_child(dtype, dtype_attr_not_null);

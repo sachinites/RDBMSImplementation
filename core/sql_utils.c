@@ -67,7 +67,7 @@ rdbms_key_comp_fn (BPluskey_t *key_1, BPluskey_t *key_2, key_mdata_t *key_mdata,
                     offset += dsize;
                 }
                 break;
-            case SQL_FLOAT:
+            case SQL_DOUBLE:
             break;
         }
     }

@@ -241,9 +241,12 @@ parser_alloc_token_value (u_int16_t token_code) {
             token_buffer = (uint8_t *)calloc (1, sizeof (uint32_t));
             inet_pton (AF_INET,  yytext, token_buffer);
             break;
-        case SQL_FLOAT_VALUE:
-            token_buffer = (uint8_t *)calloc (1, sizeof (float));
-            *(float *)token_buffer = atof(yytext);
+        case SQL_DOUBLE_VALUE:
+        {
+            char *endp;
+            token_buffer = (uint8_t *)calloc (1, sizeof (double));
+            *(double *)token_buffer = strtod(yytext, &endp);
+        }
             break;
         default:
             break;
@@ -280,8 +283,8 @@ parser_alloc_token_value (u_int16_t token_code) {
     return SQL_INT;
 }
 
-"float" {
-    return SQL_FLOAT;
+"double" {
+    return SQL_DOUBLE;
 }
 
 "ipv4" {
@@ -1263,8 +1266,9 @@ main (int argc, char **argv) {
     parse_init();
 
     //strcpy (lex_buffer , "mmin (sin (sqr (sqrt (a + b) +  mmax (b * c, 2))), mmax(d, e))\n");
-    strcpy (lex_buffer , "sqrt(10 + 6)\n");
+    //strcpy (lex_buffer , "sqrt(10 + 6)\n");
     //strcpy (lex_buffer , "mmax(3 * 5, 2)\n");
+    strcpy (lex_buffer , "mmax (sqr (4), sqrt (25)) + 5\n");
     //strcpy (lex_buffer, "mmax(6, mmax(8, mmax (3, mmax (5, 7))))\n");
 
     yy_scan_string (lex_buffer);
@@ -1303,14 +1307,13 @@ main (int argc, char **argv) {
 
     if (res.rc) {
 
-        switch (res.dtype) {
-            
-            case SQL_INT:
-                printf ("Result = %d\n", *(int *)res.value);
-                break;
-            case SQL_FLOAT:
-                printf ("Result = %.4f\n", *(float *)res.value);
-                break;
+        if (double_is_integer (res.ovalue)) {
+
+            int temp = (int)res.ovalue;
+            printf ("Result = %d\n", temp);
+        }
+        else {
+            printf ("Result = %lf\n", res.ovalue);
         }
     }
     else {

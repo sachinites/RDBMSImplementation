@@ -190,6 +190,7 @@ mexpr_create_mexpt_node (
                 int len,
                 void *operand) {
 
+    char *endptr;
     mexpt_node_t *mexpt_node;
 
     mexpt_node = (mexpt_node_t *)calloc (1, sizeof (mexpt_node_t));
@@ -207,14 +208,12 @@ mexpr_create_mexpt_node (
         mexpt_node->is_resolved = false;
         break;
     case SQL_INTEGER_VALUE:
-        *(int *)mexpt_node->math_val = atoi(operand);
+        mexpt_node->math_val = (double)atoi(operand);
         mexpt_node->is_resolved = true;
-        mexpt_node->dtype = SQL_INT;
         break;
-    case SQL_FLOAT_VALUE:
-        *(float *)mexpt_node->math_val = atof(operand);
+    case SQL_DOUBLE_VALUE:
+        mexpt_node->math_val = strtod(operand, &endptr);
         mexpt_node->is_resolved = true;
-        mexpt_node->dtype = SQL_FLOAT;
         break;
     default:
         assert(0);
@@ -302,12 +301,19 @@ mexpt_destroy(mexpt_node_t *root) {
     }
 }
 
+bool 
+double_is_integer (double d) {
+
+    double int_part = floor (d);
+    return int_part == d;
+}
+
 res_t
 mexpt_evaluate (mexpt_node_t *root) {
 
     res_t res;
     res.rc = false;
-    res.value = NULL;
+    res.ovalue = 0;
 
     if (!root) return res;
 
@@ -321,21 +327,7 @@ mexpt_evaluate (mexpt_node_t *root) {
 
         if (!root->is_resolved) return res;
 
-        /* Operand has been resolved*/
-        res.dtype = root->dtype;
-
-        switch (root->dtype) {
-
-            case SQL_INT:
-                res.value = root->math_val;
-                break;
-            case SQL_FLOAT:
-                res.value = root->math_val;
-                break;
-            default:
-                assert(0);
-        }
-
+        res.ovalue = root->math_val;
         res.rc = true;
         return res;
     }
@@ -343,7 +335,7 @@ mexpt_evaluate (mexpt_node_t *root) {
     /* If I am half node*/
     if (root->left && !root->right)
     {
-        assert(Math_is_unary_operator(root->token_code));
+        assert (Math_is_unary_operator (root->token_code));
 
         if (!lrc.rc) return res;
 
@@ -351,43 +343,22 @@ mexpt_evaluate (mexpt_node_t *root) {
         {
             case SQL_MATH_SIN:
             {
-                double temp = sin(*(double *)lrc.value);
-                *(double *)lrc.value = temp;
-                res.dtype = SQL_FLOAT;
+                res.ovalue = sin(lrc.ovalue);
             }
             break;
 
             case SQL_MATH_SQRT:
             {
-                double temp = sqrt (((*(double *)lrc.value)));
-                *(double *)lrc.value = temp;
-                res.dtype = SQL_FLOAT;
+                res.ovalue = sqrt(lrc.ovalue);
             }
             break;
 
             case SQL_MATH_SQR:
             {
-                    switch (lrc.dtype)
-                    {
-                    case SQL_INT:
-                    {
-                        int temp = *(int *)lrc.value;
-                        temp = temp * temp;
-                        *(int *)lrc.value = temp;
-                    }
-                    break;
-                    case SQL_FLOAT:
-                    {
-                        float temp = *(float *)lrc.value;
-                        temp = temp * temp;
-                        *(float *)lrc.value = temp;
-                    }
-                    break;
-                    }
+                res.ovalue = lrc.ovalue * lrc.ovalue;
             }
             break;
         }
-        res.value = lrc.value;
         res.rc = true;
         return res;
     }
@@ -401,274 +372,46 @@ mexpt_evaluate (mexpt_node_t *root) {
 
         case SQL_MATH_MAX:
         {
-            switch (lrc.dtype) {
-
-                case SQL_INT:
-                    switch (rrc.dtype) {
-                        case SQL_INT:
-                            {
-                                res.value = *(int *)lrc.value < *(int *)rrc.value ? rrc.value : lrc.value;
-                                res.dtype = SQL_INT;
-                            }
-                        break;
-                        case SQL_FLOAT:
-                            {
-                                res.value = *(float *)lrc.value < *(float *)rrc.value ? rrc.value : lrc.value;
-                                res.dtype = SQL_FLOAT;
-                            }                        
-                        break;
-                    }
-                break;
-                case SQL_FLOAT:
-                    switch (rrc.dtype) {
-                        case SQL_INT:
-                            {
-                                res.value = *(float *)lrc.value < *(float *)rrc.value ? rrc.value : lrc.value;
-                                res.dtype = SQL_FLOAT;
-                            }                            
-                        break;
-                        case SQL_FLOAT:
-                            {
-                                res.value = *(float *)lrc.value < *(float *)rrc.value ? rrc.value : lrc.value;
-                                res.dtype = SQL_FLOAT;
-                            }                        
-                        break;
-                    }                    
-                break;
-            }
+            res.ovalue = lrc.ovalue < rrc.ovalue ? rrc.ovalue : lrc.ovalue;
         }
         break;
         case SQL_MATH_MIN:
         {
-            switch (lrc.dtype) {
-
-                case SQL_INT:
-                    switch (rrc.dtype) {
-                        case SQL_INT:
-                            {
-                                res.value = *(int *)lrc.value < *(int *)rrc.value ? lrc.value : rrc.value;
-                                res.dtype = SQL_INT;
-                            }
-                        break;
-                        case SQL_FLOAT:
-                            {
-                                res.value = *(float *)lrc.value < *(float *)rrc.value ? lrc.value : rrc.value;
-                                res.dtype = SQL_FLOAT;
-                            }                        
-                        break;
-                    }
-                break;
-                case SQL_FLOAT:
-                    switch (rrc.dtype) {
-                        case SQL_INT:
-                            {
-                                res.value = *(float *)lrc.value < *(float *)rrc.value ? lrc.value : rrc.value;
-                                res.dtype = SQL_FLOAT;
-                            }                            
-                        break;
-                        case SQL_FLOAT:
-                            {
-                                res.value = *(float *)lrc.value < *(float *)rrc.value ? lrc.value : rrc.value;
-                                res.dtype = SQL_FLOAT;
-                            }                        
-                        break;
-                    }                    
-                break;
-            }
+            res.ovalue = lrc.ovalue < rrc.ovalue ? lrc.ovalue : rrc.ovalue;
         }
         break;
 
         case SQL_MATH_PLUS:
         {
-            switch (lrc.dtype) {
-
-                case SQL_INT:
-                    switch (rrc.dtype) {
-                        case SQL_INT:
-                            {
-                                int temp = *(int *)lrc.value;
-                                temp += *(int *)rrc.value;
-                                *(int *)lrc.value = temp;
-                                res.value = lrc.value;
-                                res.dtype = SQL_INT;
-                            }
-                        break;
-                        case SQL_FLOAT:
-                            {
-                                float temp = *(float *)lrc.value + *(float *)rrc.value ;
-                                *(float *)lrc.value = temp;
-                                 res.value = lrc.value;
-                                res.dtype = SQL_FLOAT;
-                            }                        
-                        break;
-                    }
-                break;
-                case SQL_FLOAT:
-                    switch (rrc.dtype) {
-                        case SQL_INT:
-                            {
-                                float temp = *(float *)lrc.value + *(float *)rrc.value ;
-                                *(float *)lrc.value = temp;
-                                 res.value = lrc.value;
-                                 res.dtype = SQL_FLOAT;
-                            }                            
-                        break;
-                        case SQL_FLOAT:
-                            {
-                                float temp = *(float *)lrc.value + *(float *)rrc.value ;
-                                *(float *)lrc.value = temp;
-                                 res.value = lrc.value;
-                                res.dtype = SQL_FLOAT;
-                            }                        
-                        break;
-                    }                    
-                break;
-            }            
+             res.ovalue = lrc.ovalue + rrc.ovalue;         
         }
         break;
-
 
         case SQL_MATH_MINUS:
         {
-            switch (lrc.dtype) {
-
-                case SQL_INT:
-                    switch (rrc.dtype) {
-                        case SQL_INT:
-                            {
-                                *(int *)lrc.value = *(int *)rrc.value - *(int *)lrc.value;
-                                res.value = lrc.value;
-                                res.dtype = SQL_INT;
-                            }
-                        break;
-                        case SQL_FLOAT:
-                            {
-                                 *(float *)lrc.value = *(float *)rrc.value - *(float *)lrc.value;
-                                 res.value = lrc.value;
-                                 res.dtype = SQL_FLOAT;
-                            }                        
-                        break;
-                    }
-                break;
-                case SQL_FLOAT:
-                    switch (rrc.dtype) {
-                        case SQL_INT:
-                            {
-                                 *(float *)lrc.value = *(float *)rrc.value - *(float *)lrc.value;
-                                 res.value = lrc.value;
-                                 res.dtype = SQL_FLOAT;
-                            }                            
-                        break;
-                        case SQL_FLOAT:
-                            {
-                                 *(float *)lrc.value = *(float *)rrc.value - *(float *)lrc.value;
-                                 res.value = lrc.value;
-                                 res.dtype = SQL_FLOAT;
-                            }                        
-                        break;
-                    }                    
-                break;
-            }            
+            res.ovalue = rrc.ovalue - lrc.ovalue;                    
         }
         break;
-
 
         case SQL_MATH_MUL:
         {
-            switch (lrc.dtype) {
-
-                case SQL_INT:
-                    switch (rrc.dtype) {
-                        case SQL_INT:
-                            {
-                                int temp =  *(int *)lrc.value * *(int *)rrc.value;
-                                *(int *)lrc.value = temp;
-                                res.value = lrc.value;
-                                res.dtype = SQL_INT;
-                            }
-                        break;
-                        case SQL_FLOAT:
-                            {
-                                *(float *)lrc.value = *(float *)lrc.value * *(float *)rrc.value ;
-                                res.value = lrc.value;
-                                res.dtype = SQL_INT;
-                            }                        
-                        break;
-                    }
-                break;
-                case SQL_FLOAT:
-                    switch (rrc.dtype) {
-                        case SQL_INT:
-                            {
-                                *(float *)lrc.value = *(float *)lrc.value * *(float *)rrc.value ;
-                                res.value = lrc.value;
-                                res.dtype = SQL_INT;
-                            }                            
-                        break;
-                        case SQL_FLOAT:
-                            {
-                                *(float *)lrc.value = *(float *)lrc.value * *(float *)rrc.value ;
-                                res.value = lrc.value;
-                                res.dtype = SQL_INT;
-                            }                        
-                        break;
-                    }                    
-                break;
-            }            
+            res.ovalue = rrc.ovalue * lrc.ovalue;                            
         }
         break;
-
 
         case SQL_MATH_DIV:
         {
-            switch (lrc.dtype) {
-
-                case SQL_INT:
-                    switch (rrc.dtype) {
-                        case SQL_INT:
-                            {
-                                *(int *)lrc.value = *(int *)rrc.value  / *(int *)lrc.value ;
-                                res.value = lrc.value;
-                                res.dtype = SQL_INT;
-                            }
-                        break;
-                        case SQL_FLOAT:
-                            {
-                                *(float *)lrc.value = *(float *)rrc.value / *(float *)lrc.value ;
-                                res.value = lrc.value;
-                                res.dtype = SQL_INT;
-                            }                        
-                        break;
-                    }
-                break;
-                case SQL_FLOAT:
-                    switch (rrc.dtype) {
-                        case SQL_INT:
-                            {
-                                *(float *)lrc.value = *(float *)rrc.value / *(float *)lrc.value ;
-                                res.value = lrc.value;
-                                res.dtype = SQL_INT;
-                            }                            
-                        break;
-                        case SQL_FLOAT:
-                            {
-                                *(float *)lrc.value = *(float *)rrc.value / *(float *)lrc.value ;
-                                res.value = lrc.value;
-                                res.dtype = SQL_INT;
-                            }                        
-                        break;
-                    }                    
-                break;
-            }            
+            if (lrc.ovalue == 0) {
+                res.rc = false;
+                return res;
+            }
+            res.ovalue = rrc.ovalue / lrc.ovalue;           
         }
         break;
 
-
         case SQL_MATH_POW:
         {
-            *(float *)lrc.value = pow (*(double *)rrc.value , *(double *)lrc.value);
-            res.value = lrc.value;
-            res.dtype = SQL_FLOAT;
+            res.ovalue = pow(rrc.ovalue , lrc.ovalue);           
         }
         break;
 

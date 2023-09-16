@@ -10,8 +10,7 @@ typedef struct mexpt_node_ {
     int token_code;
     /* Below fields are relevant only when this node is operand nodes*/
     bool is_resolved;   /* Have we obtained the math value of this operand*/
-    sql_dtype_t dtype;
-    uint8_t math_val[8];    /* Actual Math Value */
+    double math_val;   /* Actual Math Value */
     uint8_t variable_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
 
     struct mexpt_node_ *left;
@@ -22,9 +21,8 @@ typedef struct mexpt_node_ {
 typedef struct res_{
 
     bool rc;
-    sql_dtype_t dtype;
-    uint8_t *value;
-
+    double ovalue;
+    
 } res_t; 
 
 lex_data_t **
@@ -45,5 +43,8 @@ mexpt_destroy(mexpt_node_t *root);
 
 res_t
 mexpt_evaluate (mexpt_node_t *root);
+
+bool 
+double_is_integer (double d);
 
 #endif 

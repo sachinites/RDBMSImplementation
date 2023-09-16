@@ -80,7 +80,7 @@ typedef enum sql_dtype_{
     SQL_DTYPE_FIRST = 71,
     SQL_STRING,
     SQL_INT ,
-    SQL_FLOAT,
+    SQL_DOUBLE,
     SQL_IPV4_ADDR,
     SQL_DTYPE_MAX
 
@@ -102,7 +102,7 @@ typedef enum sql_ident_type_ {
     SQL_INTEGER_VALUE,
     SQL_STRING_VALUE ,
     SQL_IPV4_ADDR_VALUE ,
-    SQL_FLOAT_VALUE,
+    SQL_DOUBLE_VALUE,
     SQL_PTR,
     SQL_IDNT_TYPE_MAX
 
@@ -140,7 +140,7 @@ sql_valid_dtype (int dtype) {
     switch (dtype) {
         case SQL_STRING:
         case SQL_INT:
-        case SQL_FLOAT:
+        case SQL_DOUBLE:
         case SQL_IPV4_ADDR:
         return 1;
     }
@@ -156,8 +156,8 @@ sql_dtype_size (sql_dtype_t dtype) {
         return 1;
     case SQL_INT:
         return 4;
-    case SQL_FLOAT:
-        return sizeof(float);
+    case SQL_DOUBLE:
+        return sizeof(double);
     case SQL_IPV4_ADDR:
         return 4;
     }
