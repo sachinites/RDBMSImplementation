@@ -381,6 +381,8 @@ parse_select_query_cfg () {
 
     parse_init ();
 
+    yy_scan_string (lex_buffer);
+
     ast_node_t *select_root = NULL;
 
     err = SEL_Q (&select_root);

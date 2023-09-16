@@ -215,10 +215,10 @@ sql_compute_aggregate (sql_agg_fn_t agg_fn,
                     *dst = *dst / row_no;
                 }
                 break;
-                case SQL_FLOAT:
+                case SQL_DOUBLE:
                 {
-                    float *src = (float *)src;
-                    float *dst = (float *)dst;                    
+                    double *src = (double *)src;
+                    double *dst = (double *)dst;                    
                     if (row_no == 1) {
                         *dst  = *src;
                         break;

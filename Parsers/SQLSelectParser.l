@@ -1117,6 +1117,7 @@ parse_sql_query () {
 
     switch (token_code) {
 
+#if 1
         case SQL_SELECT_Q:
             //yyless(yyleng);
             astroot = (ast_node_t *)calloc (1, sizeof (ast_node_t));
@@ -1135,6 +1136,14 @@ parse_sql_query () {
             }
             sql_process_select_query (NULL, astroot);
             break;
+#else
+        case SQL_SELECT_Q:
+            astroot = parse_select_query_cfg();
+            if (astroot) {
+                sql_process_select_query (NULL, astroot);
+            }
+        break;
+#endif
         case SQL_UPDATE_Q:
            // yyless(yyleng);
             //parse_update_query ();
