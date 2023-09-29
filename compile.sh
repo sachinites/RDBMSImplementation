@@ -28,5 +28,6 @@ gcc -g -c core/sql_groupby.c -o core/sql_groupby.o
 gcc -g -c stack/stack.c -o stack/stack.o
 gcc -g -c gluethread/glthread.c -o gluethread/glthread.o
 gcc -g -c Tree/avl.c -o Tree/avl.o
+gcc -g -c core/sql_mexpr_intf.c -o core/sql_mexpr_intf.o
 gcc -g -c   BPlusTreeLib/BPlusTree.c -o BPlusTreeLib/BPlusTree.o
-gcc -g Parsers/Ast.o stack/stack.o Parsers/lex.yy.o core/Catalog.o core/sql_intf.o core/sql_utils.o core/sql_io.o c-hashtable/hashtable.o c-hashtable/hashtable_itr.o BPlusTreeLib/BPlusTree.o core/select.o gluethread/glthread.o Tracer/tracer.o core/qplanner.o core/sql_where.o Parsers/MExpr.o core/sql_groupby.o core/sql_delete.o Tree/avl.o -o exe -lfl -lm -lpthread
+gcc -g Parsers/Ast.o stack/stack.o Parsers/lex.yy.o core/Catalog.o core/sql_intf.o core/sql_utils.o core/sql_io.o c-hashtable/hashtable.o c-hashtable/hashtable_itr.o BPlusTreeLib/BPlusTree.o core/select.o gluethread/glthread.o Tracer/tracer.o core/qplanner.o core/sql_where.o Parsers/MExpr.o core/sql_groupby.o core/sql_delete.o Tree/avl.o  core/sql_mexpr_intf.o ../MathExpressionParser/ExpressionParser.o ../MathExpressionParser/MExpr.o ../MathExpressionParser/ParserMexpr.o -o exe -lfl -lm -lpthread

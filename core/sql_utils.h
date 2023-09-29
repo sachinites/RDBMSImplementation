@@ -1,12 +1,12 @@
 #ifndef __SQL_UTILS__
 #define __SQL_UTILS__
 
-typedef struct ast_node_ ast_node_t;
-
 #include <string.h>
 #include "../Parsers/SQLParserStruct.h"
 #include "rdbms_struct.h"
 #include "../BPlusTreeLib/BPlusTree.h"
+
+typedef struct sql_create_data_ sql_create_data_t;
 
 /* HashTable Setup */
 #define HASH_PRIME_CONST    5381
@@ -45,7 +45,7 @@ int
 BPlusTree_value_format_fn_default (void *value, unsigned char *obuff, int buff_size);
 
 key_mdata_t *
-sql_construct_table_key_mdata (ast_node_t *root, int *key_mdata_size);
+sql_construct_table_key_mdata (sql_create_data_t *cdata, int *key_mdata_size);
 
 void 
 sql_compute_aggregate (sql_agg_fn_t agg_fn, 

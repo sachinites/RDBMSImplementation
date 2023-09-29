@@ -5,10 +5,10 @@
 #include <assert.h>
 #include "../gluethread/glthread.h"
 #include "../BPlusTreeLib/BPlusTree.h"
-#include "../core/rdbms_struct.h"
-#include "../core/sql_const.h"
-#include "../Parsers/Ast.h"
-#include "../core/sql_utils.h"
+#include "rdbms_struct.h"
+#include "sql_const.h"
+#include "sql_utils.h"
+#include "sql_create.h"
 #include "Catalog.h"
 
 /* Global Default Catalog Table, one per Database */
@@ -33,7 +33,7 @@ schema_table_record_free (void *ptr) {
 }
 
 bool 
-Catalog_insert_new_table (BPlusTree_t *catalog_table, ast_node_t *root) {
+Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) {
 
     int n, i;
     list_node_t *lnode;
@@ -41,7 +41,6 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, ast_node_t *root) {
     ast_node_t *ast_node;
     BPluskey_t **bkeys;
     schema_rec_t **crecords;
-    ast_node_t astnode_tmplate;
 
     if (!catalog_table) {
         catalog_table = &TableCatalogDef;
@@ -64,16 +63,11 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, ast_node_t *root) {
 
     /* Prepare the key to be inserted in the catalog table*/
     char *tble_name = (char *)calloc (1, SQL_TABLE_NAME_MAX_SIZE);
-    memset (&astnode_tmplate, 0, sizeof (astnode_tmplate));
-    astnode_tmplate.entity_type = SQL_IDENTIFIER;
-    astnode_tmplate.u.identifier.ident_type = SQL_TABLE_NAME;
-    ast_node = ast_find (root, &astnode_tmplate);
-    assert (ast_node);
-    strncpy (tble_name, ast_node->u.identifier.identifier.name, SQL_TABLE_NAME_MAX_SIZE);
+    strncpy (tble_name, cdata->table_name, SQL_TABLE_NAME_MAX_SIZE);
     bkey.key = (void *)tble_name;
     bkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
 
-    /* Let us create a VAUE for catalog table, so that we can attempt to do insertion of this record as early as possible in catalog table before creating other data structures. This would help us to rewind back if there is any error*/
+    /* Let us create a VALUE for catalog table, so that we can attempt to do insertion of this record as early as possible in catalog table before creating other data structures. This would help us to rewind back if there is any error*/
     ctable_val_t *ctable_val = (ctable_val_t *)calloc (1, sizeof (ctable_val_t));
     strncpy(ctable_val->table_name, tble_name, SQL_TABLE_NAME_MAX_SIZE);
     ctable_val->schema_table = NULL;
@@ -112,7 +106,7 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, ast_node_t *root) {
     /* Schema table has been created, now insert records in it. Each record is of the type : 
        key::  <column name>   value :: <catalog_rec_t >  */
 
-     n = Catalog_create_schema_table_records (root, &bkeys,  &crecords);
+     n = Catalog_create_schema_table_records (cdata, &bkeys,  &crecords);
 
      if (n == 0) {
 
@@ -146,7 +140,7 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, ast_node_t *root) {
 
     /* Construct key meta data for this Table Schema*/
     int key_mdata_size2;
-    key_mdata_t *key_mdata2 = sql_construct_table_key_mdata (root, &key_mdata_size2);
+    key_mdata_t *key_mdata2 = sql_construct_table_key_mdata (cdata, &key_mdata_size2);
 
     if (!key_mdata2) {
         BPlusTree_Destroy (table);
@@ -161,106 +155,37 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, ast_node_t *root) {
     ctable_val->schema_table = schema_table;
     ctable_val->rdbms_table = table;
 
+    printf ("CREATE TABLE\n");
     return true;
 }
 
 int
-Catalog_create_schema_table_records (ast_node_t *root,  
+Catalog_create_schema_table_records (sql_create_data_t *cdata,
                                                                 BPluskey_t ***bkeys,
                                                                 schema_rec_t ***crecords) {
 
     int i;
-    int col_count = 0;
     int offset = 0;
-    bool offset_upd = false;
-    ast_node_t *attr_node;
-    ast_node_t *col_node;
-    ast_node_t *identifier_node;
-    ast_node_t *col_dtype_node;
-    ast_node_t astnode_tmplate;
-    ast_node_t *table_name_node;
+    
+    *bkeys = (BPluskey_t **)calloc (cdata->n_cols , sizeof (BPluskey_t *));
+    *crecords = (schema_rec_t **)calloc (cdata->n_cols , sizeof ( schema_rec_t *));
 
-     switch (root->entity_type) {
+    for (i = 0; i < cdata->n_cols; i++) {
 
-        case SQL_QUERY_TYPE:
+        (*bkeys)[i] = (BPluskey_t *)calloc(1, sizeof(BPluskey_t));
+        (*bkeys)[i]->key = (void *)calloc(1, SQL_COLUMN_NAME_MAX_SIZE);
+        strncpy((*bkeys)[i]->key, cdata->column_data[i].col_name, SQL_COLUMN_NAME_MAX_SIZE);
+        (*bkeys)[i]->key_size = SQL_COLUMN_NAME_MAX_SIZE;
 
-            switch (root->u.q_type) {
-
-                case SQL_CREATE_Q:
-
-                    memset (&astnode_tmplate, 0, sizeof (ast_node_t ));
-                    astnode_tmplate.entity_type = SQL_IDENTIFIER;
-                    astnode_tmplate.u.identifier.ident_type = SQL_TABLE_NAME;
-                    table_name_node = ast_find (root, &astnode_tmplate);
-                    assert (table_name_node);
-                    col_count = 0;
-
-                    FOR_ALL_AST_CHILD(table_name_node, col_node) { 
-                        col_count++; 
-                    } FOR_ALL_AST_CHILD_END;
-
-                    if (!col_count) return 0;
-
-                    *bkeys = (BPluskey_t **)calloc (col_count , sizeof (BPluskey_t *));
-                    *crecords = (schema_rec_t **)calloc (col_count , sizeof ( schema_rec_t *));
-
-                    i = 0;
-                    FOR_ALL_AST_CHILD(table_name_node, col_node) {
-                        
-                        offset_upd = false;
-
-                        (*bkeys)[i] = (BPluskey_t *)calloc (1, sizeof (BPluskey_t));
-                        (*bkeys)[i]->key = (void *)calloc (1, SQL_COLUMN_NAME_MAX_SIZE);
-                        strncpy ((*bkeys)[i]->key, col_node->u.identifier.identifier.name, SQL_COLUMN_NAME_MAX_SIZE);
-                        (*bkeys)[i]->key_size = SQL_COLUMN_NAME_MAX_SIZE;
-
-                        (*crecords)[i] =  (schema_rec_t *)calloc (1 , sizeof ( schema_rec_t ));
-                        strncpy ((*crecords)[i]->column_name,  col_node->u.identifier.identifier.name, SQL_COLUMN_NAME_MAX_SIZE);
-                        col_dtype_node = col_node->child_list;
-                        assert (col_dtype_node->entity_type == SQL_DTYPE);
-                        (*crecords)[i]->dtype = col_dtype_node->u.dtype;
-                        (*crecords)[i]->dtype_size = sql_dtype_size (col_dtype_node->u.dtype);
-                        (*crecords)[i]->offset = offset ;
-
-                         FOR_ALL_AST_CHILD(col_dtype_node, attr_node) {
-
-                            assert (attr_node->entity_type == SQL_DTYPE_ATTR);
-
-                            switch (attr_node->u.dtype_attr)
-                            {
-                            case SQL_DTYPE_LEN:
-                                identifier_node = attr_node->child_list;
-                                assert(identifier_node->entity_type == SQL_IDENTIFIER);
-                                assert(identifier_node->u.identifier.ident_type == SQL_INTEGER_VALUE);
-                                memcpy (&(*crecords)[i]->dtype_size,
-                                    identifier_node->u.identifier.identifier.name, sizeof (int));
-                                offset += (*(int *)identifier_node->u.identifier.identifier.name ) * 
-                                                sql_dtype_size(col_dtype_node->u.dtype);
-                                offset_upd = true;
-                                break;
-                            case SQL_DTYPE_PRIMARY_KEY:
-                                (*crecords)[i]->is_primary_key = true;
-                                break;
-                            case SQL_DTYPE_NOT_NULL:
-                                (*crecords)[i]->is_non_null = true;
-                                break;
-                            }
-                         } FOR_ALL_AST_CHILD_END;
-                         if (offset_upd == false) {
-                            offset += (*crecords)[i]->dtype_size;
-                            offset_upd = true;
-                         }
-                         i++;
-                    } FOR_ALL_AST_CHILD_END;
-                break;
-                default:
-                    assert(0);
-            }
-        break;
-        default:
-            assert(0);
+        (*crecords)[i] = (schema_rec_t *)calloc(1, sizeof(schema_rec_t));
+        strncpy((*crecords)[i]->column_name,  cdata->column_data[i].col_name, SQL_COLUMN_NAME_MAX_SIZE);
+        (*crecords)[i]->dtype = cdata->column_data[i].dtype;
+        (*crecords)[i]->dtype_size = cdata->column_data[i].dtype_len;
+        (*crecords)[i]->offset = offset;
+        offset += cdata->column_data[i].dtype_len;
+        (*crecords)[i]->is_primary_key = cdata->column_data[i].is_primary_key;
     }
-     return col_count;
+    return i;
 }
 
 bool
@@ -284,7 +209,7 @@ Catalog_get_column (BPlusTree_t *tcatalog,
 
     BPlusTree_t *schema_table = ctable_val->schema_table;
 
-    qp_col->ctable_val = ctable_val;
+    //qp_col->ctable_val = ctable_val;
 
     bpkey.key = col_name;
     bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
@@ -296,6 +221,34 @@ Catalog_get_column (BPlusTree_t *tcatalog,
     return true;
 }
 
+void 
+sql_show_table_catalog (BPlusTree_t *TableCatalog) {
+
+    int i;
+    int rows = 0;
+    void *rec_ptr;
+    BPluskey_t *key_ptr;
+    unsigned char table_name[SQL_TABLE_NAME_MAX_SIZE];
+    
+    BPlusTree_t *tcatalog = TableCatalog ? TableCatalog : &TableCatalogDef;
+
+    printf ("           List of relations\n");
+    printf (" Schema    |           Name           | Type  | Owner  \n");
+    printf ("-----------+--------------------------+-------+--------------\n");
+
+    BPTREE_ITERATE_ALL_RECORDS_BEGIN(tcatalog, key_ptr, rec_ptr) {
+
+        tcatalog->key_fmt_fn (key_ptr, table_name, SQL_TABLE_NAME_MAX_SIZE);
+        printf (" public    | %-23s  | table | postgres  \n", table_name);
+        rows++;
+
+    } BPTREE_ITERATE_ALL_RECORDS_END(tcatalog, key_ptr, rec_ptr)
+
+    printf ("(%d rows)\n", rows);
+}
+
+
+#if 0
 bool
 sql_process_select_wildcard (BPlusTree_t *tcatalog, ast_node_t *select_kw, ast_node_t *table_name_node) {
 
@@ -342,3 +295,4 @@ sql_process_select_wildcard (BPlusTree_t *tcatalog, ast_node_t *select_kw, ast_n
 
     return true;
 }
+#endif

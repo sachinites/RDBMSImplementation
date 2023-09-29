@@ -4,12 +4,13 @@
 #include <stdbool.h>
 #include "sql_const.h"
 #include "rdbms_struct.h"
-#include "../Parsers/SQLParserStruct.h"
+#include "../SqlParser/SQLParserStruct.h"
 
 typedef struct BPlusTree BPlusTree_t ;
 typedef struct BPluskey BPluskey_t;
-typedef struct ast_node_ ast_node_t;
 typedef struct BPlusTreeNode BPlusTreeNode ;
+typedef struct sql_create_data_ sql_create_data_t ;
+
 
 typedef struct schema_rec_ {
 
@@ -32,10 +33,10 @@ typedef struct catalog_table_value {
 } ctable_val_t;
 
 bool 
-Catalog_insert_new_table (BPlusTree_t *catalog, ast_node_t *root) ;
+Catalog_insert_new_table (BPlusTree_t *catalog, sql_create_data_t *cdata) ;
 
 int
-Catalog_create_schema_table_records (ast_node_t *root,  
+Catalog_create_schema_table_records ( sql_create_data_t *cdata,
                                                         BPluskey_t ***bkeys,
                                                         schema_rec_t ***crecords) ;
 
@@ -47,5 +48,8 @@ Catalog_get_column (BPlusTree_t *tcatalog,
 
 bool
 sql_process_select_wildcard (BPlusTree_t *tcatalog, ast_node_t *select_kw, ast_node_t *table_name_node) ;
+
+void 
+sql_show_table_catalog (BPlusTree_t *TableCatalog) ;
 
 #endif 

@@ -1,7 +1,7 @@
 #ifndef __RDBMS_STRUCT__
 #define __RDBMS_STRUCT__
 
-#include "../Parsers/SQLParserStruct.h"
+#include "../SqlParser/SQLParserStruct.h"
 #include "../gluethread/glthread.h"
 #include "sql_const.h"
 #include "../BPlusTreeLib/BPlusTree.h"
@@ -9,6 +9,7 @@
 typedef struct catalog_table_value ctable_val_t ;
 typedef struct schema_rec_ schema_rec_t ;
 typedef struct ast_node_ ast_node_t;
+typedef struct sql_exptree_ sql_exptree_t;
 
 typedef struct  key_mdata_ {
 
@@ -27,11 +28,13 @@ GLTHREAD_TO_STRUCT (glue_to_list_node, list_node_t, glue);
 
 typedef struct qp_col_ {
 
-    ctable_val_t *ctable_val; 
+    //ctable_val_t *ctable_val; 
     schema_rec_t *schema_rec;
+    sql_exptree_t *sql_tree;
     sql_agg_fn_t agg_fn;
     void *computed_value;
     int owner_table_id;
+    unsigned char alias_name[SQL_ALIAS_NAME_LEN];
     /* below is the ptr to the same column mentioned in select list
         when this column is one of column in having clause conditions*/
     struct qp_col_ *grpby_col_to_select_col_linkage;

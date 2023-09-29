@@ -2,7 +2,7 @@
 #define __QPLANNER__
 
 #include "../Tree/libtree.h"
-#include "../Parsers/SQLParserStruct.h"
+#include "../SqlParser/SQLParserStruct.h"
 #include "sql_const.h"
 #include "sql_where.h"
 
@@ -45,47 +45,36 @@ typedef struct table_iterators_ {
 
 } table_iterators_t;
 
-
-typedef struct having_ {
-
-    qp_col_t col;
-    sql_op_t op;
-    where_operand_t right_op;
-
-} having_t;
-
-typedef struct join_predicate_ {
-
-    qp_col_t col1; /* some column from table1*/
-    sql_op_t op;    /* Join Operator*/
-    qp_col_t col2; /* some column from table2*/
-
-} join_predicate_t;
-
 typedef struct qep_struct_ {
 
     qp_stage_id_t stage_id;
-    ctable_val_t **ctable_val;
-   
+    
     struct {
 
         int table_cnt;
+
+        struct {
+
+            ctable_val_t *ctable_val;
+            unsigned char alias_name[SQL_ALIAS_NAME_LEN];
+
+        } tables [SQL_MAX_TABLES_IN_JOIN_LIST];
+
     } join;
 
     struct {
             
             sql_exptree_t *gexptree;
-            sql_exptree_t **exptree_per_table;
+            sql_exptree_t *exptree_per_table[SQL_MAX_TABLES_IN_JOIN_LIST];
 
     } where;
 
     struct {
 
         int n;
-        qp_col_t **col_list;
-       
-        /* Collection of records based on group by fields*/
+        qp_col_t *col_list[SQL_MAX_COLS_IN_GROUPBY_LIST];
         hashtable_t *ht;
+
     } groupby;
 
     struct {
@@ -105,7 +94,7 @@ typedef struct qep_struct_ {
     struct {
 
         bool distinct;
-        qp_col_t col;
+        qp_col_t *col;
 
     } distinct;
 
@@ -127,6 +116,7 @@ typedef struct qep_struct_ {
     joined_row_t joined_row_tmplate;
 } qep_struct_t;
 
+
 void
 qep_execute_select (qep_struct_t *qep_struct) ;
 
@@ -134,9 +124,15 @@ void
 qep_execute_delete (qep_struct_t *qep_struct) ;
 
 bool
-qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog, ast_node_t *root);
+qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog) ;
 
 void 
 qep_deinit (qep_struct_t *qep_struct);
+
+bool 
+qep_struct_record_table (qep_struct_t *qep_struct, unsigned char *table_name);
+
+void 
+sql_process_select_query (qep_struct_t *qep) ;
 
 #endif 

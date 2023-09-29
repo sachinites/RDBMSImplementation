@@ -182,32 +182,6 @@ sql_process_insert_query (BPlusTree_t *TableCatalog, ast_node_t *root) {
     return true;
 }
 
-void 
-sql_show_table_catalog (BPlusTree_t *TableCatalog) {
-
-    int i;
-    int rows = 0;
-    void *rec_ptr;
-    BPluskey_t *key_ptr;
-    unsigned char table_name[SQL_TABLE_NAME_MAX_SIZE];
-    
-    BPlusTree_t *tcatalog = TableCatalog ? TableCatalog : &TableCatalogDef;
-
-    printf ("           List of relations\n");
-    printf (" Schema    |           Name           | Type  | Owner  \n");
-    printf ("-----------+--------------------------+-------+--------------\n");
-
-    BPTREE_ITERATE_ALL_RECORDS_BEGIN(tcatalog, key_ptr, rec_ptr) {
-
-        tcatalog->key_fmt_fn (key_ptr, table_name, SQL_TABLE_NAME_MAX_SIZE);
-        printf (" public    | %-23s  | table | postgres  \n", table_name);
-        rows++;
-
-    } BPTREE_ITERATE_ALL_RECORDS_END(tcatalog, key_ptr, rec_ptr)
-
-    printf ("(%d rows)\n", rows);
-}
-
 bool
 sql_process_delete_query (BPlusTree_t *TableCatalog, ast_node_t *delete_root)  {
 

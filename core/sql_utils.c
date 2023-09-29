@@ -5,13 +5,11 @@
 #include <memory.h>
 #include <stdio.h>
 #include <assert.h>
+#include "sql_const.h"
 #include "Catalog.h"
 #include "sql_utils.h"
-#include "sql_const.h"
-#include "qplanner.h"
-#include "../Parsers/Ast.h"
+#include "sql_create.h"
 
-/* ToDo : see if sql_where_compare () can be used here */
 int 
 rdbms_key_comp_fn (BPluskey_t *key_1, BPluskey_t *key_2, key_mdata_t *key_mdata, int size) {
 
@@ -68,7 +66,16 @@ rdbms_key_comp_fn (BPluskey_t *key_1, BPluskey_t *key_2, key_mdata_t *key_mdata,
                 }
                 break;
             case SQL_DOUBLE:
-            break;
+              {
+                    double *n1 = (double *)(key1 + offset);
+                    double*n2 = (double *)(key2 + offset);
+                    if (*n1 < *n2) return 1;
+                    if (*n1 > *n2) return -1;
+                    offset += dsize;
+                }
+                break;
+            default:
+                break;
         }
     }
     return 0;
@@ -92,85 +99,30 @@ BPlusTree_value_format_fn_default (void *value, unsigned char *obuff, int buff_s
 }
 
 key_mdata_t *
-sql_construct_table_key_mdata (ast_node_t *root, int *key_mdata_size) {
+sql_construct_table_key_mdata (sql_create_data_t *cdata, int *key_mdata_size) {
 
-    int i;
-    int attr_len;
-    bool is_key;
-    bool is_non_null;
-    ast_node_t *ast_node;
-    ast_node_t *attr_node;
-    ast_node_t *col_node;
-    ast_node_t astnode_tmplate;
-    ast_node_t *col_dtype_node;
-    ast_node_t *attr_node_len;
-    ast_node_t *identifier_node;
-    ast_node_t *attr_node_pr_key;
-    ast_node_t *attr_node_non_null;
+    int i, j;
+    bool primary_key_set = false;
 
     key_mdata_t *key_mdata = (key_mdata_t *)calloc
          (SQL_MAX_PRIMARY_KEYS_SUPPORTED, sizeof (key_mdata_t));
-        
-    switch (root->entity_type) {
 
-        case SQL_QUERY_TYPE:
+    for (i = 0, j = 0; i < cdata->n_cols; i++) {
 
-            switch (root->u.q_type) {
-
-                case SQL_CREATE_Q:
-                    memset (&astnode_tmplate, 0, sizeof (ast_node_t ));
-                    astnode_tmplate.entity_type = SQL_IDENTIFIER;
-                    astnode_tmplate.u.identifier.ident_type = SQL_TABLE_NAME;
-                    ast_node = ast_find (root, &astnode_tmplate);
-                    assert (ast_node);
-                    i = 0;
-
-                    FOR_ALL_AST_CHILD(ast_node, col_node) {
-                        col_dtype_node = col_node->child_list;
-                        assert (col_dtype_node->entity_type == SQL_DTYPE);
-
-                        is_key = false;
-                        is_non_null = false;
-                        attr_len = sql_dtype_size (col_dtype_node->u.dtype);
-                         FOR_ALL_AST_CHILD(col_dtype_node, attr_node) {
-                            
-                            assert (attr_node->entity_type == SQL_DTYPE_ATTR);
-                            switch (attr_node->u.dtype_attr) {
-                                case SQL_DTYPE_LEN:
-                                    identifier_node = attr_node->child_list;
-                                    assert (identifier_node->entity_type == SQL_IDENTIFIER);
-                                    assert (identifier_node->u.identifier.ident_type ==  SQL_INTEGER_VALUE);
-                                    memcpy (&attr_len, identifier_node->u.identifier.identifier.name, sizeof (int));
-                                    break;
-                                case SQL_DTYPE_PRIMARY_KEY :
-                                    is_key = true;
-                                    break;
-                                case SQL_DTYPE_NOT_NULL:
-                                    is_non_null = true;
-                                    break;
-                            }
-                         } FOR_ALL_AST_CHILD_END;
-                         if (is_key) {
-                            key_mdata[i].dtype = col_dtype_node->u.dtype;
-                            key_mdata[i].size = attr_len;
-                            i++;
-                         }
-                    } FOR_ALL_AST_CHILD_END;
-                break;
-                default:
-                    assert(0);
-            }
-        break;
-        default:
-            assert(0);
+        if (cdata->column_data[i].is_primary_key) {
+            key_mdata[j].dtype = cdata->column_data[i].dtype;
+            key_mdata[j].size = cdata->column_data[i].dtype_len;
+            primary_key_set = true;
+            j++;
+        }
     }
 
-    if (!i) {
-        free (key_mdata);
+    if (!primary_key_set ) {
+        free(key_mdata);
         key_mdata = NULL;
     }
 
-    *key_mdata_size = i;
+    *key_mdata_size = j;
     return key_mdata;
 }
 
@@ -355,10 +307,11 @@ parser_split_table_column_name ( unsigned char *composite_col_name,
     strncpy (col_name_out, str2, SQL_COLUMN_NAME_MAX_SIZE);
 }
 
+#if 0
 bool 
 qp_col_is_equal (qp_col_t *col1, qp_col_t *col2) {
 
-    if (col1->ctable_val != col2->ctable_val) return false;
+    //if (col1->ctable_val != col2->ctable_val) return false;
     if (col1->owner_table_id != col2->owner_table_id) return false;
     if (col1->schema_rec != col2->schema_rec) return false;
     if (col1->agg_fn != col2->agg_fn) return false;
@@ -375,3 +328,4 @@ qp_col_lookup_identical (qp_col_t **col_list, int size, qp_col_t *key_col) {
     }
     return NULL;
 }
+#endif 

@@ -322,6 +322,7 @@ void Delete(BPlusTree_t *tree,
  */
 BPlusTreeNode* Find(BPlusTree_t *tree, BPluskey_t *key, int modify) {
 	BPlusTreeNode* Cur = tree->Root;
+	if (!Cur) return NULL;
 	while (1) {
 		if (Cur->isLeaf == true)
 			break;
@@ -388,6 +389,7 @@ void* BPlusTree_Query_Key(BPlusTree_t *tree,
 	unsigned char value_output_buffer [128];
 
 	BPlusTreeNode* Leaf = Find(tree, key, false);
+	if (!Leaf) return NULL;
 	QueryAnsNum = 0;
 	int i;
 	for (i = 0; i < Leaf->key_num; i++) {
