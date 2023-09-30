@@ -63,10 +63,7 @@ sql_process_insert_query (BPlusTree_t *TableCatalog, ast_node_t *root) {
         return false;
     }
 
-    bpkey.key =  table_name;
-    bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
-
-    ctable_val = (ctable_val_t *)BPlusTree_Query_Key (tcatalog, &bpkey);
+    ctable_val = sql_catalog_table_lookup_by_table_name (tcatalog, table_name);
     assert (ctable_val);
 
     BPlusTree_t *schema_table = ctable_val->schema_table;
@@ -199,10 +196,7 @@ sql_process_delete_query (BPlusTree_t *TableCatalog, ast_node_t *delete_root)  {
 
     unsigned char *table_name = table_name_node->u.identifier.identifier.name;
 
-    bpkey.key =  table_name;
-    bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
-
-    ctable_val = (ctable_val_t *)BPlusTree_Query_Key (tcatalog, &bpkey);
+    ctable_val = sql_catalog_table_lookup_by_table_name (tcatalog, table_name);
     
     if (!ctable_val || !ctable_val->schema_table) {
         printf ("ERROR : relation does not exist\n");

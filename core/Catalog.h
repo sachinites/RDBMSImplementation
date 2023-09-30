@@ -23,6 +23,30 @@ typedef struct schema_rec_ {
 
 } schema_rec_t;
 
+typedef enum schema_scope {
+
+    PUBLIC
+
+} schema_scope;
+
+typedef enum catalog_entry_type_ {
+
+    TABLE
+
+} catalog_entry_type_t;
+
+#pragma pack (push,1)
+typedef struct catalog_table_key {
+
+    schema_scope scope;
+    unsigned char entity_name [SQL_MAX_ENTITY_NAME_LEN];
+    catalog_entry_type_t type;
+    unsigned char owner[32];
+
+} catalog_table_key_t;
+#pragma pack(pop)
+
+
 typedef struct catalog_table_value {
 
     unsigned char table_name [SQL_TABLE_NAME_MAX_SIZE];
@@ -51,5 +75,8 @@ sql_process_select_wildcard (BPlusTree_t *tcatalog, ast_node_t *select_kw, ast_n
 
 void 
 sql_show_table_catalog (BPlusTree_t *TableCatalog) ;
+
+ctable_val_t *
+sql_catalog_table_lookup_by_table_name (BPlusTree_t *TableCatalog, unsigned char *entity_name);
 
 #endif 

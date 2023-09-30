@@ -346,7 +346,7 @@ lex_set_scan_buffer (const char *buffer) {
     return SQL_COMMA;
 }
 
-[ ] {
+[ ] { 
     /* Ignore */
     process_white_space(1);
 }
@@ -381,17 +381,15 @@ lex_set_scan_buffer (const char *buffer) {
     return SQL_IDENTIFIER_IDENTIFIER;
 }
 
-
-%{
-
-#if 0
-^[a-zA-Z0-9][a-zA-Z0-9_.,-_'"!()\[\]{} ]* {
-    
+'[^']*' {
+    // string enclosed within single quotes
     return SQL_STRING_VALUE;
 }
-#endif
 
-%}
+\"[^"]*\" {
+    // string enclosed within double quotes
+    return SQL_STRING_VALUE;
+}
 
 . {
     

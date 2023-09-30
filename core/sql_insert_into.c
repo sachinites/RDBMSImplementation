@@ -32,10 +32,7 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
         return false;
     }
 
-    bpkey.key =  table_name;
-    bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
-
-    ctable_val = (ctable_val_t *)BPlusTree_Query_Key (tcatalog, &bpkey);
+    ctable_val = (ctable_val_t *)sql_catalog_table_lookup_by_table_name (tcatalog, table_name);
 
     if (!ctable_val) {
         printf ("Error : Table not found\n");

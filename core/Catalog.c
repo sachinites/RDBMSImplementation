@@ -55,21 +55,30 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) 
                        SQL_BTREE_MAX_CHILDREN_CATALOG_TABLE, 
                        catalog_table_free_fn);
 
-        static key_mdata_t key_mdata[] = {  {SQL_STRING, SQL_TABLE_NAME_MAX_SIZE} };
+        static key_mdata_t key_mdata[] = {  
+                {SQL_INT,  4},
+                {SQL_STRING, SQL_TABLE_NAME_MAX_SIZE} ,
+                {SQL_INT, 4},
+                {SQL_STRING, 32} ,
+            };
+
         catalog_table->key_mdata = key_mdata;
-        catalog_table->key_mdata_size = 1;
+        catalog_table->key_mdata_size = sizeof(key_mdata) / sizeof (key_mdata[0]);
         initialized = true;
     }
 
     /* Prepare the key to be inserted in the catalog table*/
-    char *tble_name = (char *)calloc (1, SQL_TABLE_NAME_MAX_SIZE);
-    strncpy (tble_name, cdata->table_name, SQL_TABLE_NAME_MAX_SIZE);
-    bkey.key = (void *)tble_name;
-    bkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
+    catalog_table_key_t *catalog_table_key = (catalog_table_key_t *)calloc (1, sizeof (catalog_table_key_t));
+    catalog_table_key->scope = PUBLIC;
+    strncpy (catalog_table_key->entity_name, cdata->table_name, sizeof (catalog_table_key->entity_name));
+    catalog_table_key->type = TABLE;
+    strncpy (catalog_table_key->owner, "postgres", sizeof (catalog_table_key->owner));
+    bkey.key = (void *)catalog_table_key;
+    bkey.key_size = sizeof (catalog_table_key_t);
 
     /* Let us create a VALUE for catalog table, so that we can attempt to do insertion of this record as early as possible in catalog table before creating other data structures. This would help us to rewind back if there is any error*/
     ctable_val_t *ctable_val = (ctable_val_t *)calloc (1, sizeof (ctable_val_t));
-    strncpy(ctable_val->table_name, tble_name, SQL_TABLE_NAME_MAX_SIZE);
+    strncpy(ctable_val->table_name, cdata->table_name, SQL_TABLE_NAME_MAX_SIZE);
     ctable_val->schema_table = NULL;
     ctable_val->rdbms_table = NULL;
     init_glthread (&ctable_val->col_list_head);
@@ -82,13 +91,6 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) 
         return false;
      }
 
-    {
-        bkey.key = (char *)calloc (1, SQL_TABLE_NAME_MAX_SIZE);
-        snprintf (bkey.key, SQL_TABLE_NAME_MAX_SIZE, "%s2", tble_name);
-        bkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
-        BPlusTree_Insert (catalog_table, &bkey, (void *)ctable_val);
-    }
-
     /* Now create a Schema table for this new table. Schema table stores all the attributes and details of a RDBMS table. Every RDBMS table has a schema table*/
 
     BPlusTree_t *schema_table = (BPlusTree_t *)calloc (1, sizeof (BPlusTree_t));
@@ -100,8 +102,8 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) 
                                schema_table_record_free);
 
     static key_mdata_t key_mdata[] = {{SQL_STRING, SQL_COLUMN_NAME_MAX_SIZE}};
-    catalog_table->key_mdata = key_mdata;
-    catalog_table->key_mdata_size = 1;
+    schema_table->key_mdata = key_mdata;
+    schema_table->key_mdata_size = 1;
 
     /* Schema table has been created, now insert records in it. Each record is of the type : 
        key::  <column name>   value :: <catalog_rec_t >  */
@@ -199,11 +201,8 @@ Catalog_get_column (BPlusTree_t *tcatalog,
 
     memset (qp_col, 0, sizeof (*qp_col));
 
-    bpkey.key =  table_name;
-    bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
-
-    ctable_val = (ctable_val_t *)BPlusTree_Query_Key (
-                                tcatalog ? tcatalog : &TableCatalogDef, &bpkey);
+    ctable_val = (ctable_val_t *)sql_catalog_table_lookup_by_table_name (
+                                tcatalog ? tcatalog : &TableCatalogDef, table_name);
 
     if (!ctable_val) return false;
 
@@ -295,4 +294,23 @@ sql_process_select_wildcard (BPlusTree_t *tcatalog, ast_node_t *select_kw, ast_n
 
     return true;
 }
+
 #endif
+
+ctable_val_t *
+sql_catalog_table_lookup_by_table_name (BPlusTree_t *TableCatalog, 
+                                                                      unsigned char *entity_name) {
+
+    BPluskey_t bkey;
+    catalog_table_key_t ckey;
+
+    ckey.scope = PUBLIC;
+    strncpy (ckey.entity_name, entity_name, sizeof (ckey.entity_name));
+    ckey.type = TABLE;
+    strncpy (ckey.owner, "postgres", sizeof (ckey.owner));
+
+    bkey.key = (void *)&ckey;
+    bkey.key_size = sizeof (ckey);
+
+    return (ctable_val_t *)BPlusTree_Query_Key (TableCatalog, &bkey);
+}

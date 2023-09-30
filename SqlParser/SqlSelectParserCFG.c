@@ -145,6 +145,7 @@ COL() {
     parse_init();
 
     qp_col_t *qp_col = (qp_col_t *)calloc (1, sizeof (qp_col_t));
+    qp_col->agg_fn = SQL_AGG_FN_NONE;
 
     do {
 
@@ -206,11 +207,20 @@ COL() {
 }
 
 
-/* COLLIST -> COL | COL , COLLIST */
+/* COLLIST -> * | COL | COL , COLLIST */
 parse_rc_t
 COLLIST() {
 
     parse_init ();
+
+    token_code = cyylex();
+
+    if (token_code == SQL_MATH_MUL) {
+        qep.select.n = 0;
+        RETURN_PARSE_SUCCESS;
+    }
+
+    yyrewind(1);
 
     err = COL();
 
@@ -246,7 +256,7 @@ select_query_parser () {
 
     if (err == PARSE_ERR) {
 
-        //qep_deinit (&qep);
+        qep_deinit (&qep);
         printf ("Failed\n");
         RETURN_PARSE_ERROR;
     }
@@ -256,17 +266,25 @@ select_query_parser () {
     if (token_code != SQL_FROM) {
 
         PARSER_LOG_ERR(token_code, SQL_FROM);
-        //qep_deinit (&qep);
-        printf ("Failed\n");
+        qep_deinit (&qep);
         RETURN_PARSE_ERROR;
     }
 
     err = TABS();
 
-    if (err = PARSE_ERR) {
+    if (err == PARSE_ERR) {
 
-        //qep_deinit (&qep);
-        printf ("Failed\n");
+        qep_deinit (&qep);
+        printf ("Error : Parsing Error on Tables\n");
+        RETURN_PARSE_ERROR;        
+    }
+
+    err = WHERE();
+
+    if (err == PARSE_ERR) {
+
+        qep_deinit (&qep);
+        printf ("Error : Parsing Error on Where Clause\n");
         RETURN_PARSE_ERROR;        
     }
 
@@ -274,12 +292,12 @@ select_query_parser () {
 
     if (token_code !=  PARSER_EOL) {
          PARSER_LOG_ERR (token_code, PARSER_EOL);
-        //qep_deinit (&qep);
+        qep_deinit (&qep);
         printf ("Failed\n");
         RETURN_PARSE_ERROR;
     }
 
-    //qep_deinit (&qep);
+    qep_deinit (&qep);
     printf ("Success\n");
     RETURN_PARSE_SUCCESS;
 }

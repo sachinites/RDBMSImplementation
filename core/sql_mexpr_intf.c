@@ -10,6 +10,7 @@
 #include "../SqlParser/SQLParserStruct.h"
 #include "../../MathExpressionParser/ParserMexpr.h"
 #include "sql_utils.h"
+#include "qep.h"
 
 typedef struct exp_tree_data_src_ {
 
@@ -71,10 +72,12 @@ sql_column_value_resolution_fn (void *_data_src) {
     return res;
 }
 
+/* Return true if all operands are resolved successfully,
+    return false if atleast one operand is unresolved*/
 bool 
 sql_resolve_exptree (BPlusTree_t *tcatalog,
                                   sql_exptree_t *sql_exptree,
-                                  ctable_val_t **table_arr, int n,
+                                  qep_struct_t *qep,
                                   joined_row_t *joined_row) {
     /* Algorithm : 
     1. Iterate over the operands opnd of the exptree
@@ -94,6 +97,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
     mexpt_remove_unresolved_operands ( ) followed by mexpt_optimize( )
     */
    
+    bool rc = true;
     int tindex = 0, i;
     BPluskey_t bpkey;
     mexpt_node_t *node;
@@ -110,17 +114,19 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
                 node->u.opd_node.opd_value.variable_name, table_name_out, lone_col_name);
         if (table_name_out[0] == '\0') {
             tindex = 0;
+            ctable_val = qep->join.tables[0].ctable_val;
             bpkey.key = lone_col_name;
             bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
             schema_rec =  (schema_rec_t *) BPlusTree_Query_Key (ctable_val->schema_table, &bpkey);
         }
         else {
-            bpkey.key = table_name_out;
-            bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
-            ctable_val =  (ctable_val_t *) BPlusTree_Query_Key (tcatalog, &bpkey);
-            if (!ctable_val) continue;
-            for (i = 0; i < n; i++) {
-                if (ctable_val != table_arr[i]) continue;
+            ctable_val =  sql_catalog_table_lookup_by_table_name (tcatalog, table_name_out);
+            if (!ctable_val) {
+                rc = false;
+                continue;
+            }
+            for (i = 0; i < qep->join.table_cnt; i++) {
+                if (ctable_val != qep->join.tables[i].ctable_val) continue;
                 tindex = i;
                 bpkey.key = lone_col_name;
                 bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
@@ -130,18 +136,20 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
             if (!schema_rec) {
                 printf("Info (%s) : Operand %s could not be resolved against table %s\n", __FUNCTION__,
                        node->u.opd_node.opd_value.variable_name, ctable_val->table_name);
+                rc = false;
                 continue;
             }
-            data_src = (exp_tree_data_src_t *) calloc (1, sizeof (exp_tree_data_src_t));
-            data_src->table_index = tindex;
-            data_src->schema_rec = schema_rec;
-            data_src->joined_row = joined_row;
-            mexpt_tree_install_operand_properties (node, true, data_src, sql_column_value_resolution_fn);
         }
-   } mexpt_iterate_operands_end (sql_exptree->tree, node);
+        data_src = (exp_tree_data_src_t *)calloc(1, sizeof(exp_tree_data_src_t));
+        data_src->table_index = tindex;
+        data_src->schema_rec = schema_rec;
+        data_src->joined_row = joined_row;
+        mexpt_tree_install_operand_properties(node, true, data_src, sql_column_value_resolution_fn);
+   } mexpt_iterate_operands_end(sql_exptree->tree, node);
+
    mexpt_remove_unresolved_operands (sql_exptree->tree, true);
    mexpt_optimize (sql_exptree->tree->root);
-   return true;
+   return rc;
 }
 
 bool 
@@ -195,8 +203,6 @@ sql_resolve_exptree_against_table (sql_exptree_t *sql_exptree,
    return true;
 }
 
-
-
 sql_exptree_t *
 sql_create_exp_tree_compute ()  {
 
@@ -213,6 +219,20 @@ sql_create_exp_tree_compute ()  {
          return NULL;
     }
     mexpt_optimize (sql_exptree->tree->root);
+    return sql_exptree;
+}
+
+sql_exptree_t *
+sql_create_exp_tree_for_one_operand (unsigned char *opnd_name) {
+
+    sql_exptree_t *sql_exptree = (sql_exptree_t *) calloc (1, sizeof (sql_exptree_t ));
+    sql_exptree->tree = (mexpt_tree_t *) calloc (1, sizeof (mexpt_tree_t));
+    sql_exptree->tree->root = mexpr_create_mexpt_node (
+            SQL_IDENTIFIER_IDENTIFIER,
+            SQL_COMPOSITE_COLUMN_NAME_SIZE,
+            opnd_name);
+    sql_exptree->tree->opd_list_head.lst_right = sql_exptree->tree->root;
+    sql_exptree->tree->root->lst_left = &sql_exptree->tree->opd_list_head;
     return sql_exptree;
 }
 
@@ -239,7 +259,40 @@ bool
 sql_evaluate_conditional_exp_tree (sql_exptree_t *sql_exptree) {
 
     mexpr_var_t res;
+    if (!sql_exptree) return true;
     res = mexpt_evaluate (sql_exptree->tree->root);
     assert (res.dtype == MEXPR_DTYPE_BOOL);
     return res.u.b_val;
+}
+
+mexpr_var_t 
+sql_evaluate_exp_tree (sql_exptree_t *sql_exptree) {
+
+    mexpr_var_t res;
+    res = mexpt_evaluate (sql_exptree->tree->root);
+    return res;
+}
+
+mexpt_node_t *
+sql_create_operand_node (unsigned char *opnd_name) {
+
+    mexpt_node_t *node = mexpr_create_mexpt_node (
+                    SQL_IDENTIFIER_IDENTIFIER,
+                    MEXPR_TREE_OPERAND_LEN_MAX,
+                    opnd_name);
+    return node;
+}
+
+bool 
+sql_is_expression_tree_only_operand (sql_exptree_t *sql_exptree) {
+
+    mexpt_node_t *node = sql_exptree->tree->root;
+
+    bool rc =  (node->token_code == SQL_IDENTIFIER ||
+                      node->token_code == SQL_IDENTIFIER_IDENTIFIER);
+
+    if (rc) {
+        assert (node->left == NULL && node->right == NULL);
+    }
+    return rc;
 }

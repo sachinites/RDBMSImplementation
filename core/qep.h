@@ -4,11 +4,10 @@
 #include "../Tree/libtree.h"
 #include "../SqlParser/SQLParserStruct.h"
 #include "sql_const.h"
-#include "sql_where.h"
+#include "rdbms_struct.h"
 
 typedef struct catalog_table_value ctable_val_t ;
 typedef struct schema_rec_ schema_rec_t ;
-typedef struct ast_node_ ast_node_t;
 typedef struct BPlusTree BPlusTree_t;
 typedef  struct hashtable hashtable_t;
 typedef struct stack Stack_t;
@@ -79,7 +78,7 @@ typedef struct qep_struct_ {
 
     struct {
 
-         expt_node_t *expt_root;
+         sql_exptree_t *gexptree;
          int8_t having_phase; // either 1 or 2
 
     } having;
@@ -118,19 +117,13 @@ typedef struct qep_struct_ {
 
 
 void
-qep_execute_select (qep_struct_t *qep_struct) ;
-
-void
-qep_execute_delete (qep_struct_t *qep_struct) ;
-
-bool
-qep_struct_init (qep_struct_t *qep_struct, BPlusTree_t *tcatalog) ;
+sql_execute_qep (qep_struct_t *qep);
 
 void 
-qep_deinit (qep_struct_t *qep_struct);
+qep_deinit (qep_struct_t *qep);
 
 bool 
-qep_struct_record_table (qep_struct_t *qep_struct, unsigned char *table_name);
+qep_struct_record_table (qep_struct_t *qep, unsigned char *table_name);
 
 void 
 sql_process_select_query (qep_struct_t *qep) ;

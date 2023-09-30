@@ -205,6 +205,7 @@ mexpr_create_mexpt_node (
     {
     case SQL_IDENTIFIER:
     case SQL_IDENTIFIER_IDENTIFIER:
+        assert (len <= sizeof (mexpt_node->variable_name));
         strncpy(mexpt_node->variable_name, operand, len);
         mexpt_node->is_resolved = false;
         break;

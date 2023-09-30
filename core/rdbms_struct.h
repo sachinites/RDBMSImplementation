@@ -5,6 +5,7 @@
 #include "../gluethread/glthread.h"
 #include "sql_const.h"
 #include "../BPlusTreeLib/BPlusTree.h"
+#include "../../MathExpressionParser/ParserMexpr.h"
 
 typedef struct catalog_table_value ctable_val_t ;
 typedef struct schema_rec_ schema_rec_t ;
@@ -32,7 +33,7 @@ typedef struct qp_col_ {
     schema_rec_t *schema_rec;
     sql_exptree_t *sql_tree;
     sql_agg_fn_t agg_fn;
-    void *computed_value;
+    mexpr_var_t computed_value;
     int owner_table_id;
     unsigned char alias_name[SQL_ALIAS_NAME_LEN];
     /* below is the ptr to the same column mentioned in select list

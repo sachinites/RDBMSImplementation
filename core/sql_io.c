@@ -8,8 +8,8 @@
 #include "Catalog.h"
 #include "sql_io.h"
 #include "../BPlusTreeLib/BPlusTree.h"
-#include "qplanner.h"
 #include "sql_utils.h"
+#include "sql_mexpr_intf.h"
 
 static void 
 print_line(int num_columns, int column_width) {
@@ -27,7 +27,6 @@ sql_print_hdr (qp_col_t **col_list, int n_cols ) {
 
     int i;
     qp_col_t *col;
-    unsigned char column_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
     int num_columns = n_cols;
 
     int column_width = 20; // Default column width
@@ -41,8 +40,7 @@ sql_print_hdr (qp_col_t **col_list, int n_cols ) {
     // Print the header row with column names
     for (i = 0; i < n_cols; i++) {
         col = col_list[i];
-        sql_compute_column_text_name  (col, column_name, sizeof (column_name));
-        printf("%-*s|", column_width, column_name);
+        printf("%-*s|", column_width, col->alias_name);
     }
 
     printf("\n");
@@ -58,9 +56,6 @@ void sql_emit_select_output(int n_col,
     int i;
     qp_col_t *qp_col;
     sql_dtype_t dtype;
-    schema_rec_t *schema_rec;
-    unsigned char column_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
-
     int num_columns = n_col;
 
     int column_width = 20; // Default column width
@@ -71,36 +66,42 @@ void sql_emit_select_output(int n_col,
     // Print each row of data
     for (i = 0; i < n_col; i++) {
         qp_col = col_list_head[i];
-        sql_compute_column_text_name  (qp_col, column_name, sizeof (column_name));
-        schema_rec = qp_col->schema_rec;
-        assert(schema_rec);
-        void *val = qp_col->computed_value;
+        mexpr_var_t *val = &qp_col->computed_value;
+
         if (qp_col->agg_fn == SQL_COUNT) {
             printf("%-*d|", column_width, *(int *)val);
             continue;
         }
-        dtype = schema_rec->dtype;
-        #if 0
-        if (qp_col->agg_fn == SQL_AVG) {
-            dtype = SQL_FLOAT;
-        }
-        #endif
+
+        dtype = val->dtype;
+
         switch (dtype) {
-            case SQL_STRING:
-                printf("%-*s|", column_width, (char *)val);
+            case MEXPR_DTYPE_STRING:
+                printf("%-*s|", column_width, val->u.str_val);
                 break;
-            case SQL_INT:
-                printf("%-*d|", column_width, *(int *)val);
+            case MEXPR_DTYPE_INT:
+                printf("%-*d|", column_width, val->u.int_val);
                 break;
-            case SQL_DOUBLE:
-                printf("%-*f|", column_width, *(double *)val);
+            case MEXPR_DTYPE_DOUBLE:
+                if (mexpr_double_is_integer (val->u.d_val)) {
+                    printf("%-*d|", column_width, val->u.int_val);
+                }
+                else {
+                    printf("%-*f|", column_width, val->u.d_val);
+                }
                 break;
+            case MEXPR_DTYPE_BOOL:
+                assert(0);
+                break;
+            #if 0
             case SQL_IPV4_ADDR: {
+                assert(0);
                 unsigned char ipv4_addr_str[16];
-                inet_ntop(AF_INET, val, ipv4_addr_str, 16);
+                inet_ntop(AF_INET, val->u., ipv4_addr_str, 16);
                 printf("%-*s|", column_width, ipv4_addr_str);
                 break;
             }
+            #endif
             default:
                 assert(0);
         }

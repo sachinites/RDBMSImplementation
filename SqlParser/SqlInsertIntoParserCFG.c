@@ -57,24 +57,15 @@ VALUE () {
             idata.sql_values[idata.i].dtype = SQL_IPV4_ADDR;
             strncpy (idata.sql_values[idata.i].u.ipv4_addr_str, lex_curr_token, 16);
             break;
-        case SQL_QUOTATION_MARK:
-            token_code = cyylex();
-            if (token_code != SQL_IDENTIFIER) {
-                PARSER_LOG_ERR(token_code, SQL_IDENTIFIER);
-                RETURN_PARSE_ERROR;
-            }
-
+        case SQL_STRING_VALUE:
             idata.sql_values[idata.i].dtype = SQL_STRING;
-            strncpy (idata.sql_values[idata.i].u.str_val, lex_curr_token, 
-                        sizeof (idata.sql_values[idata.i].u.str_val));
-
-             token_code = cyylex();
-            if (token_code != SQL_QUOTATION_MARK) {
-                PARSER_LOG_ERR(token_code, SQL_QUOTATION_MARK);
+            if ( (sizeof (idata.sql_values[idata.i].u.str_val) <= lex_curr_token_len -2)) {
+                printf ("Error : %s(%d) Buffer overflow\n", __FUNCTION__, __LINE__);
                 RETURN_PARSE_ERROR;
             }
-
-            RETURN_PARSE_SUCCESS;
+            strncpy (idata.sql_values[idata.i].u.str_val, lex_curr_token + 1,  // skip ' or "
+                        lex_curr_token_len - 2); 
+            break;
         default:
             RETURN_PARSE_ERROR;
     }

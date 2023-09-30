@@ -16,8 +16,6 @@ extern sql_create_data_t cdata;
 extern qep_struct_t qep;
 extern sql_insert_into_data_t idata; 
 
-
-
 int 
 main (int argc, char **argv) {
 
@@ -47,6 +45,7 @@ main (int argc, char **argv) {
                 if (err == PARSE_SUCCESS) {
                     sql_process_select_query (&qep);
                 }
+                qep_deinit (&qep);
             break;
 
             case SQL_CREATE_Q:
@@ -58,7 +57,6 @@ main (int argc, char **argv) {
                 }
                 break;
 
-
             case SQL_INSERT_Q:
 
                 yyrewind(1);
@@ -68,11 +66,9 @@ main (int argc, char **argv) {
                 }
                 break; 
 
-
             case SHOW_DB_TABLES:
                 sql_show_table_catalog (NULL);
                 break;
-
 
             default:
                 printf ("Error : Unrecognized Input\n");
