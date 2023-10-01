@@ -144,7 +144,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
         data_src->table_index = tindex;
         data_src->schema_rec = schema_rec;
         data_src->joined_row = joined_row;
-        mexpt_tree_install_operand_properties(node, true, data_src, sql_column_value_resolution_fn);
+        mexpt_tree_install_operand_properties(node, data_src, sql_column_value_resolution_fn);
    } mexpt_iterate_operands_end(sql_exptree->tree, node);
 
    mexpt_remove_unresolved_operands (sql_exptree->tree, true);
@@ -194,7 +194,7 @@ sql_resolve_exptree_against_table (sql_exptree_t *sql_exptree,
         data_src->table_index = table_id,
         data_src->schema_rec = schema_rec;
         data_src->joined_row = joined_row;
-        mexpt_tree_install_operand_properties(node, true, data_src, sql_column_value_resolution_fn);
+        mexpt_tree_install_operand_properties(node, data_src, sql_column_value_resolution_fn);
 
    } mexpt_iterate_operands_end (sql_exptree->tree, node);
 

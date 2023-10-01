@@ -55,7 +55,7 @@ void sql_emit_select_output(int n_col,
 
     int i;
     qp_col_t *qp_col;
-    sql_dtype_t dtype;
+    mexpr_dtypes_t dtype;
     int num_columns = n_col;
 
     int column_width = 20; // Default column width

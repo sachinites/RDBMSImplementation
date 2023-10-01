@@ -453,5 +453,4 @@ sql_process_select_query (qep_struct_t *qep) {
     }
 
     sql_execute_qep (qep);
-    qep_deinit(qep);
 }

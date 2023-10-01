@@ -5,7 +5,7 @@
 
 #define MAX_MEXPR_LEN  512
 
-extern int yylex();
+extern "C" int yylex();
 
 typedef enum parse_rc_ {
 
@@ -54,7 +54,7 @@ extern void process_white_space(int n) ;
     return PARSE_SUCCESS
 
 #define PARSER_CALL(fn) \
-    fn(NULL)
+    fn()
 
 #define CHECKPOINT(a)    \
     a = undo_stack.top
