@@ -7,7 +7,7 @@
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "Catalog.h"
 #include "../../MathExpressionParser/MexprEnums.h"
-#include "../SqlParser/SQLParserStruct.h"
+#include "../SqlParser/SqlParserStruct.h"
 #include "../../MathExpressionParser/ParserMexpr.h"
 #include "sql_utils.h"
 #include "qep.h"

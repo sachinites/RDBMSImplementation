@@ -1,7 +1,7 @@
 #ifndef __RDBMS_STRUCT__
 #define __RDBMS_STRUCT__
 
-#include "../SqlParser/SQLParserStruct.h"
+#include "../SqlParser/SqlParserStruct.h"
 #include "../gluethread/glthread.h"
 #include "sql_const.h"
 #include "../BPlusTreeLib/BPlusTree.h"

@@ -205,7 +205,7 @@ Parser_get_current_stack_index () {
 
 
 /* User specific header files */
-#include "SQLParserStruct.h"
+#include "SqlParserStruct.h"
 #include "common.h"
 #include "Ast.h"
 #include "../core/sql_const.h"

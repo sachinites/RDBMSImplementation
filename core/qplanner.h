@@ -2,7 +2,7 @@
 #define __QPLANNER__
 
 #include "../Tree/libtree.h"
-#include "../Parsers/SQLParserStruct.h"
+#include "../Parsers/SqlParserStruct.h"
 #include "sql_const.h"
 #include "sql_where.h"
 

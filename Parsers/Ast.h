@@ -1,7 +1,7 @@
 #ifndef __AST__
 #define __AST__
 
-#include "SQLParserStruct.h"
+#include "SqlParserStruct.h"
 
 typedef struct ast_node_ {
 

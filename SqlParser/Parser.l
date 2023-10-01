@@ -147,7 +147,7 @@ lex_set_scan_buffer (const char *buffer) {
 
 
 /* User specific header files */
-#include "SQLParserStruct.h"
+#include "SqlParserStruct.h"
 
 
 

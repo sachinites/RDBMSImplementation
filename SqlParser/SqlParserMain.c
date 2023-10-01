@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "ParserExport.h"
-#include "SQLParserStruct.h"
+#include "SqlParserStruct.h"
 #include "../core/sql_create.h"
 #include "../core/qep.h"
 #include "../core/sql_insert_into.h"

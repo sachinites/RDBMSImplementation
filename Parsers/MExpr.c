@@ -3,7 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <arpa/inet.h>
-#include "SQLParserStruct.h"
+#include "SqlParserStruct.h"
 #include "common.h"
 #include "../stack/stack.h"
 #include "MExpr.h"

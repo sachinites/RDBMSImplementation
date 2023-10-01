@@ -2,7 +2,7 @@
 #define __SQL_UTILS__
 
 #include <string.h>
-#include "../Parsers/SQLParserStruct.h"
+#include "../Parsers/SqlParserStruct.h"
 #include "rdbms_struct.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 

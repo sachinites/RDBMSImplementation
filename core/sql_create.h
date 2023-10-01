@@ -2,7 +2,7 @@
 #define __SQL_CREATE__
 
 #include <stdbool.h>
-#include "../SqlParser/SQLParserStruct.h"
+#include "../SqlParser/SqlParserStruct.h"
 
 typedef struct sql_create_data_ {
 
