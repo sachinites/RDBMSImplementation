@@ -247,23 +247,6 @@ sql_compute_aggregate (sql_agg_fn_t agg_fn,
     }
 }
 
-void 
-sql_compute_column_text_name (qp_col_t *col, unsigned char *column_name, int size) {
-
-    memset (column_name, 0, size);
-
-    if (col->agg_fn != SQL_AGG_FN_NONE) {
-        snprintf (column_name, size,
-                    "%s(%s)", sql_agg_fn_tostring(col->agg_fn), col->schema_rec->column_name);
-    }
-    else {
-        snprintf (column_name, size, 
-                    "%s", col->schema_rec->column_name);
-
-    }
-}
-
-
 static void *
 joined_row_search ( int table_id, joined_row_t *joined_row) {
 
@@ -277,14 +260,6 @@ joined_row_search ( int table_id, joined_row_t *joined_row) {
     }
 
    return joined_row->rec_array[table_id];
-}
-
-void *
-sql_get_column_value_from_joined_row (joined_row_t *joined_row, qp_col_t *col) {
-
-   void *rec = joined_row_search (col->owner_table_id, joined_row);
-    if (!rec) return NULL;
-    return (void *)((char *)rec + col->schema_rec->offset);
 }
 
 void 

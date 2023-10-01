@@ -65,12 +65,6 @@ Catalog_create_schema_table_records ( sql_create_data_t *cdata,
                                                         schema_rec_t ***crecords) ;
 
 bool
-Catalog_get_column (BPlusTree_t *tcatalog, 
-                                    char *table_name, 
-                                    char *col_name,
-                                    qp_col_t *qp_col);
-
-bool
 sql_process_select_wildcard (BPlusTree_t *tcatalog, ast_node_t *select_kw, ast_node_t *table_name_node) ;
 
 void 

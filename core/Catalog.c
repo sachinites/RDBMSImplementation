@@ -190,36 +190,6 @@ Catalog_create_schema_table_records (sql_create_data_t *cdata,
     return i;
 }
 
-bool
-Catalog_get_column (BPlusTree_t *tcatalog, 
-                                    char *table_name, 
-                                    char *col_name,
-                                    qp_col_t *qp_col) {
-
-    BPluskey_t bpkey;
-    ctable_val_t *ctable_val;
-
-    memset (qp_col, 0, sizeof (*qp_col));
-
-    ctable_val = (ctable_val_t *)sql_catalog_table_lookup_by_table_name (
-                                tcatalog ? tcatalog : &TableCatalogDef, table_name);
-
-    if (!ctable_val) return false;
-
-    BPlusTree_t *schema_table = ctable_val->schema_table;
-
-    //qp_col->ctable_val = ctable_val;
-
-    bpkey.key = col_name;
-    bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
-
-    qp_col->schema_rec = (schema_rec_t *) BPlusTree_Query_Key (schema_table, &bpkey);
-    if (!qp_col->schema_rec) return false;
-    qp_col->agg_fn = SQL_AGG_FN_NONE;
-
-    return true;
-}
-
 void 
 sql_show_table_catalog (BPlusTree_t *TableCatalog) {
 

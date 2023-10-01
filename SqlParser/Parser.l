@@ -334,8 +334,8 @@ lex_set_scan_buffer (const char *buffer) {
     return PARSER_EOL;
 }
 
-"\\\n" {
-
+\\\n {
+    return PARSER_CONTINUE_NEXTLINE;
 }
 
 "\\dt\n" {

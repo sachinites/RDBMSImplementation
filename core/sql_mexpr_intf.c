@@ -296,3 +296,4 @@ sql_is_expression_tree_only_operand (sql_exptree_t *sql_exptree) {
     }
     return rc;
 }
+

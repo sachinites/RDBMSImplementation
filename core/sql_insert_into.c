@@ -170,12 +170,14 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
 }
 
 void
- sql_process_insert_query (sql_insert_into_data_t *idata) {
-
-    sql_insert_new_record (&TableCatalogDef, idata);
- }
-
-void
  sql_insert_into_data_destroy(sql_insert_into_data_t *idata) {
 
  }
+
+void
+ sql_process_insert_query (sql_insert_into_data_t *idata) {
+
+     sql_insert_new_record (&TableCatalogDef, idata);
+     sql_insert_into_data_destroy(idata);
+ }
+

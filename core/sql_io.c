@@ -84,7 +84,7 @@ void sql_emit_select_output(int n_col,
                 break;
             case MEXPR_DTYPE_DOUBLE:
                 if (mexpr_double_is_integer (val->u.d_val)) {
-                    printf("%-*d|", column_width, val->u.int_val);
+                    printf("%-*d|", column_width, (int)val->u.d_val);
                 }
                 else {
                     printf("%-*f|", column_width, val->u.d_val);

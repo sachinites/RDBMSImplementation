@@ -48,4 +48,5 @@ sql_create_exp_tree_for_one_operand (unsigned char *opnd_name) ;
 bool 
 sql_is_expression_tree_only_operand (sql_exptree_t *sql_exptree);
 
+
 #endif 

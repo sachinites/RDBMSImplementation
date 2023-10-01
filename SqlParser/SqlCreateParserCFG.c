@@ -183,7 +183,6 @@ create_query_parser () {
     err = COLSLIST();
 
     if (err == PARSE_ERR) {
-        sql_create_data_destroy(&cdata);
         printf ("Failed\n");
         RETURN_PARSE_ERROR;
     }
@@ -193,7 +192,6 @@ create_query_parser () {
     if (token_code != SQL_BRACKET_END) {
 
         PARSER_LOG_ERR (token_code, SQL_BRACKET_END);
-        sql_create_data_destroy(&cdata);
         printf ("Failed\n");
         RETURN_PARSE_ERROR;        
     }
@@ -202,7 +200,6 @@ create_query_parser () {
 
     if (token_code !=  PARSER_EOL) {
         PARSER_LOG_ERR (token_code, PARSER_EOL);
-        sql_create_data_destroy(&cdata);
         printf ("Failed\n");
         RETURN_PARSE_ERROR;
     }

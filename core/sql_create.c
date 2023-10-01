@@ -13,4 +13,5 @@ sql_create_data_destroy (sql_create_data_t *cdata) {
  sql_process_create_query (sql_create_data_t *cdata) {
 
     Catalog_insert_new_table (&TableCatalogDef, cdata);
+    sql_create_data_destroy(cdata);
  }

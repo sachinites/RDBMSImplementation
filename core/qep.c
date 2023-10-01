@@ -93,65 +93,81 @@ qep_struct_record_table (qep_struct_t *qep_struct, unsigned char *table_name) {
     return true;
 }
 
+/* Query execution Plans Initialization fn */
+
 static bool
-sql_query_executiona_plan_init (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+sql_query_initialize_orderby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
-    int i;
-    qp_col_t *qp_col;
+    return true;
+}
 
-   qep->stage_id = QP_NODE_SEQ_SCAN;
-   
-    if (qep->where.gexptree) {
-
-         /* initializing Where Clause*/
-
-        for (i = 0; i < qep->join.table_cnt; i++) {
-
-            qep->where.exptree_per_table[i]  = (sql_exptree_t *) calloc (1, sizeof (sql_exptree_t ));
-            qep->where.exptree_per_table[i]->tree = mexpt_clone ( qep->where.gexptree->tree);
-            if (!qep->where.exptree_per_table[i]->tree ) {
-
-                printf ("Error : Failed to create Exp Tree Clones of Where Clause\n");
-                return false;
-            }
-
-            if (!sql_resolve_exptree_against_table (qep->where.exptree_per_table[i],
-                        qep->join.tables[i].ctable_val, i, &qep->joined_row_tmplate)) {
-
-                printf ("Error : Failed toresolve per table Where Expression Tree\n");
-                return false;
-            }
-        }
-
-         /* Important to resolve the Global Tree after per-Table Trees because we need to
-             make copies of this tree */
-        if (!sql_resolve_exptree (&TableCatalogDef, 
-                                                qep->where.gexptree , 
-                                                qep, &qep->joined_row_tmplate)) {
-            
-            printf ("Error : Failed to resolve Global Where Expression Tree\n");
-            return false;
-        }
-
-    }
-
-    /* Initializing Group by Clause */
-
-    if (qep->groupby.n) {
-
-
-    }
-
-    /* Initializing HAVING Clause */
+static bool
+sql_query_initialize_having_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
     qep->having.having_phase = 1;
+
     if (qep->having.gexptree) {
 
 
     }
+    return true;
+}
 
+static bool
+sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
-    /* Initializing Select Columns*/
+    if (qep->groupby.n == 0)  return true;
+}
+
+static bool
+sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+
+    int i;
+
+    if (!qep->where.gexptree) return true;
+
+    /* initializing Where Clause*/
+
+    for (i = 0; i < qep->join.table_cnt; i++) {
+
+        qep->where.exptree_per_table[i] = (sql_exptree_t *)calloc(1, sizeof(sql_exptree_t));
+        qep->where.exptree_per_table[i]->tree = mexpt_clone(qep->where.gexptree->tree);
+
+        if (!qep->where.exptree_per_table[i]->tree) {
+
+            printf("Error : Failed to create Exp Tree Clones of Where Clause\n");
+            return false;
+        }
+
+        if (!sql_resolve_exptree_against_table(
+                        qep->where.exptree_per_table[i],
+                        qep->join.tables[i].ctable_val, i, 
+                        &qep->joined_row_tmplate)) {
+
+            printf("Error : Failed toresolve per table Where Expression Tree\n");
+            return false;
+        }
+    }
+
+    /* Important to resolve the Global Tree after per-Table Trees because we need to
+        make copies of this tree */
+    if (!sql_resolve_exptree(&TableCatalogDef,
+                             qep->where.gexptree,
+                             qep, &qep->joined_row_tmplate)) {
+
+        printf("Error : Failed to resolve Global Where Expression Tree\n");
+        return false;
+    }
+
+    return true;
+}
+
+static bool
+sql_query_initialize_select_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+
+    int i;
+    qp_col_t *qp_col;
+
     if (qep->select.n == 0) {
 
         /* Expand * (asterisk) here */
@@ -187,20 +203,42 @@ sql_query_executiona_plan_init (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                     "against %d th columns\n", i);
             return false;
         }
-    }
+    }    
 
-    /* Initialize Order by Clause here */
+    return true;
+}
 
+static bool
+sql_query_executiona_plan_init (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
-    /* initialuze other variables*/
+    int i;
+    bool rc;
+    qp_col_t *qp_col;
+
+   qep->stage_id = QP_NODE_SEQ_SCAN;
+   
+    rc = sql_query_initialize_where_clause  (qep, tcatalog);
+    if (!rc) return rc;
+
+    rc = sql_query_initialize_groupby_clause (qep, tcatalog);
+    if (!rc) return rc;
+
+    rc = sql_query_initialize_having_clause (qep, tcatalog);
+    if (!rc) return rc;
+
+    rc = sql_query_initialize_select_clause (qep, tcatalog) ;
+    if (!rc) return rc;
+
+    rc = sql_query_initialize_orderby_clause (qep, tcatalog) ;
+    if (!rc) return rc;
+
+    /* initialize other variables*/
     qep->limit = 0;
     qep->is_join_started = false;
     qep->is_join_finished = false;
 
-
     /* initialize Iterators*/
     table_iterators_init (qep, &qep->titer);
-
 
     /* Initialize Joined Row*/
     joined_row_t *joined_row_tmplate = &qep->joined_row_tmplate;
@@ -415,5 +453,5 @@ sql_process_select_query (qep_struct_t *qep) {
     }
 
     sql_execute_qep (qep);
-
+    qep_deinit(qep);
 }

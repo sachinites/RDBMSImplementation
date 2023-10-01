@@ -55,6 +55,7 @@ main (int argc, char **argv) {
                 if (err == PARSE_SUCCESS) {
                     sql_process_create_query (&cdata);
                 }
+                sql_create_data_destroy(&cdata);
                 break;
 
             case SQL_INSERT_Q:
@@ -64,6 +65,7 @@ main (int argc, char **argv) {
                 if (err == PARSE_SUCCESS) {
                     sql_process_insert_query (&idata);
                 }
+                sql_insert_into_data_destroy(&idata);
                 break; 
 
             case SHOW_DB_TABLES:

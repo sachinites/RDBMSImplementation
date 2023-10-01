@@ -160,7 +160,6 @@ insert_into_query_parser () {
 
     if (token_code !=  PARSER_EOL) {
         PARSER_LOG_ERR (token_code, PARSER_EOL);
-        sql_insert_into_data_destroy(&idata);
         printf ("Failed\n");
         RETURN_PARSE_ERROR;
     }

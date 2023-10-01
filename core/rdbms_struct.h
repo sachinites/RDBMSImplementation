@@ -29,16 +29,12 @@ GLTHREAD_TO_STRUCT (glue_to_list_node, list_node_t, glue);
 
 typedef struct qp_col_ {
 
-    //ctable_val_t *ctable_val; 
-    schema_rec_t *schema_rec;
     sql_exptree_t *sql_tree;
     sql_agg_fn_t agg_fn;
     mexpr_var_t computed_value;
-    int owner_table_id;
+    bool alias_provided_by_user;
     unsigned char alias_name[SQL_ALIAS_NAME_LEN];
-    /* below is the ptr to the same column mentioned in select list
-        when this column is one of column in having clause conditions*/
-    struct qp_col_ *grpby_col_to_select_col_linkage;
+    
 }qp_col_t;
 
 typedef struct joined_row_ {
