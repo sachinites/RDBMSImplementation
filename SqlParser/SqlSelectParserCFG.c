@@ -298,6 +298,5 @@ select_query_parser () {
         RETURN_PARSE_ERROR;
     }
 
-    printf ("Success\n");
     RETURN_PARSE_SUCCESS;
 }

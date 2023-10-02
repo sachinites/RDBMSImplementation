@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <time.h>
 #include "ParserExport.h"
 #include "SqlParserStruct.h"
 #include "../core/sql_create.h"
@@ -21,6 +22,9 @@ main (int argc, char **argv) {
 
     parse_init ();
 
+    clock_t tclk ;
+    double time_taken ;
+
     while (true) {
 
         printf ("postgres=# ");
@@ -34,6 +38,8 @@ main (int argc, char **argv) {
 
         lex_set_scan_buffer (lex_buffer);
 
+        tclk  = clock();
+
         token_code = cyylex ();
 
         switch (token_code) {
@@ -46,7 +52,7 @@ main (int argc, char **argv) {
                     sql_process_select_query (&qep);
                 }
                 qep_deinit (&qep);
-            break;
+                break;
 
             case SQL_CREATE_Q:
 
@@ -78,6 +84,9 @@ main (int argc, char **argv) {
         }
 
         Parser_stack_reset();
+        tclk= clock() - tclk;
+        time_taken = ((double)tclk * 1000)/CLOCKS_PER_SEC; 
+        printf("%f msec\n", time_taken);
     }
 
     return 0;
