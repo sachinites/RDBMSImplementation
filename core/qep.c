@@ -18,48 +18,6 @@
 
 extern BPlusTree_t TableCatalogDef;
 
-bool 
- qep_resolve_select_asterisk (qep_struct_t *qep) {
-
-    int i;
-    glthread_t *curr;
-    qp_col_t *qp_col;    
-    list_node_t *lnode;
-    glthread_t *col_list_head;
-    ctable_val_t *ctable_val;
-    unsigned char opnd_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
-
-    for (i = 0; i < qep->join.table_cnt; i++) {
-
-        ctable_val = qep->join.tables[i].ctable_val;
-        col_list_head = &ctable_val->col_list_head;
-
-        ITERATE_GLTHREAD_BEGIN (col_list_head, curr) {
-
-            lnode = glue_to_list_node (curr);
-            qp_col = (qp_col_t *)calloc (1, sizeof (qp_col_t));
-            qp_col->agg_fn = SQL_AGG_FN_NONE;
-            qp_col->alias_name[0] = '\0';
-            qp_col->computed_value.dtype = MEXPR_DTYPE_INVALID;
-            if (qep->join.table_cnt > 1) {
-                memset (opnd_name, 0, sizeof (opnd_name));
-                snprintf (opnd_name, sizeof(opnd_name), "%s.%s", 
-                    ctable_val->table_name, (unsigned char *)lnode->data);
-                qp_col->sql_tree = sql_create_exp_tree_for_one_operand (opnd_name);
-                strncpy (qp_col->alias_name, opnd_name, sizeof (qp_col->alias_name));
-            }
-            else {
-                qp_col->sql_tree = sql_create_exp_tree_for_one_operand ((unsigned char *)lnode->data);
-                strncpy (qp_col->alias_name, (unsigned char *)lnode->data, sizeof (qp_col->alias_name));
-            }
-            qep->select.sel_colmns[qep->select.n++] = qp_col;
-
-        } ITERATE_GLTHREAD_END (col_list_head, curr);
-    }
-
-    return true;
- }
-
 static void 
 table_iterators_init (qep_struct_t *qep,
                                 table_iterators_t **_titer) {
@@ -126,7 +84,63 @@ sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
     if (!qep->where.gexptree) return true;
 
-    /* initializing Where Clause*/
+    /* Initializing Where Clause
+        Initializing Where clause in 3 steps :
+        1. Check for operands in the where.gexptree, and if the operand is an Alias of columns specified in 
+            select clause. Replace these operand nodes with select expression trees for that operand.
+        2. Clone and Resolve where.gexptree to per-table expression trees for each table in join table list
+        3. Resolve where.gexptree against all join tables put together
+    */
+
+   int opnd_len;
+    qp_col_t *qp_col;
+    mexpt_tree_t *clone_tree;
+    mexpt_node_t *opnd_node;
+    bool alias_resolved = false;
+    bool all_alias_resolved = false;
+
+    while (!all_alias_resolved) {
+
+        all_alias_resolved = true;
+        alias_resolved = false;
+
+        mexpt_iterate_operands_begin (qep->where.gexptree->tree, opnd_node) {
+
+            if (opnd_node->u.opd_node.is_resolved) continue;
+
+                /* All Unresolved nodes are opernads of type 'variable'*/
+                opnd_len = strlen (opnd_node->u.opd_node.opd_value.variable_name);
+
+                for (i = 0 ; i < qep->select.n; i++) {
+
+                    qp_col = qep->select.sel_colmns[i];
+                    if (!qp_col->alias_provided_by_user) continue;
+
+                    if ( (strlen (qp_col->alias_name) != opnd_len) || 
+                            (strncmp (qp_col->alias_name, 
+                            opnd_node->u.opd_node.opd_value.variable_name, 
+                            SQL_ALIAS_NAME_LEN)) ) continue;;
+
+                    all_alias_resolved = false;
+                    clone_tree = mexpt_clone (qp_col->sql_tree->tree);
+                    assert (clone_tree);
+
+                    if (!mexpt_concatenate_mexpt_trees (qep->where.gexptree->tree, 
+                                                                                opnd_node,
+                                                                                clone_tree)) {
+                        printf ("Error : %s(%d) Failed to resolve Where clause Alias name %s\n",
+                            __FUNCTION__, __LINE__, qp_col->alias_name);
+                        return false;
+                    }
+                    alias_resolved = true;
+                    break;
+                }
+            
+            if (!all_alias_resolved || alias_resolved) break;
+
+        } mexpt_iterate_operands_end (qep->where.gexptree->tree, opnd_node)
+    }
+
 
     for (i = 0; i < qep->join.table_cnt; i++) {
 
@@ -144,13 +158,12 @@ sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                         qep->join.tables[i].ctable_val, i, 
                         &qep->joined_row_tmplate)) {
 
-            printf("Error : Failed toresolve per table Where Expression Tree\n");
+            printf("Error : Failed to resolve per table Where Expression Tree\n");
             return false;
         }
     }
 
-    /* Important to resolve the Global Tree after per-Table Trees because we need to
-        make copies of this tree */
+
     if (!sql_resolve_exptree(&TableCatalogDef,
                              qep->where.gexptree,
                              qep, &qep->joined_row_tmplate)) {
@@ -161,6 +174,50 @@ sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
     return true;
 }
+
+static bool 
+qep_resolve_select_asterisk (qep_struct_t *qep) {
+
+    int i;
+    glthread_t *curr;
+    qp_col_t *qp_col;    
+    list_node_t *lnode;
+    glthread_t *col_list_head;
+    ctable_val_t *ctable_val;
+    unsigned char opnd_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
+
+    if (qep->select.n ) return true;
+
+    for (i = 0; i < qep->join.table_cnt; i++) {
+
+        ctable_val = qep->join.tables[i].ctable_val;
+        col_list_head = &ctable_val->col_list_head;
+
+        ITERATE_GLTHREAD_BEGIN (col_list_head, curr) {
+
+            lnode = glue_to_list_node (curr);
+            qp_col = (qp_col_t *)calloc (1, sizeof (qp_col_t));
+            qp_col->agg_fn = SQL_AGG_FN_NONE;
+            qp_col->alias_name[0] = '\0';
+            qp_col->computed_value.dtype = MEXPR_DTYPE_INVALID;
+            if (qep->join.table_cnt > 1) {
+                memset (opnd_name, 0, sizeof (opnd_name));
+                snprintf (opnd_name, sizeof(opnd_name), "%s.%s", 
+                    ctable_val->table_name, (unsigned char *)lnode->data);
+                qp_col->sql_tree = sql_create_exp_tree_for_one_operand (opnd_name);
+                strncpy (qp_col->alias_name, opnd_name, sizeof (qp_col->alias_name));
+            }
+            else {
+                qp_col->sql_tree = sql_create_exp_tree_for_one_operand ((unsigned char *)lnode->data);
+                strncpy (qp_col->alias_name, (unsigned char *)lnode->data, sizeof (qp_col->alias_name));
+            }
+            qep->select.sel_colmns[qep->select.n++] = qp_col;
+
+        } ITERATE_GLTHREAD_END (col_list_head, curr);
+    }
+
+    return true;
+ }
 
 static bool
 sql_query_initialize_select_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
@@ -216,7 +273,14 @@ sql_query_executiona_plan_init (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     qp_col_t *qp_col;
 
    qep->stage_id = QP_NODE_SEQ_SCAN;
+
+    /* Before we initialize anything, expand the select * first */
+    rc = qep_resolve_select_asterisk (qep);
+    if (!rc) return;
    
+   /* The order in which we initializes the below clauses matters. Select
+        clause must be initialized in the end because rest of the clauses clones
+        expression trees of  select clause. */
     rc = sql_query_initialize_where_clause  (qep, tcatalog);
     if (!rc) return rc;
 
@@ -226,10 +290,10 @@ sql_query_executiona_plan_init (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     rc = sql_query_initialize_having_clause (qep, tcatalog);
     if (!rc) return rc;
 
-    rc = sql_query_initialize_select_clause (qep, tcatalog) ;
+    rc = sql_query_initialize_orderby_clause (qep, tcatalog) ;
     if (!rc) return rc;
 
-    rc = sql_query_initialize_orderby_clause (qep, tcatalog) ;
+    rc = sql_query_initialize_select_clause (qep, tcatalog) ;
     if (!rc) return rc;
 
     /* initialize other variables*/

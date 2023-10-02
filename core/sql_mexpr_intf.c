@@ -97,7 +97,6 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
     mexpt_remove_unresolved_operands ( ) followed by mexpt_optimize( )
     */
    
-    bool rc = true;
     int tindex = 0, i;
     BPluskey_t bpkey;
     mexpt_node_t *node;
@@ -122,8 +121,8 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
         else {
             ctable_val =  sql_catalog_table_lookup_by_table_name (tcatalog, table_name_out);
             if (!ctable_val) {
-                rc = false;
-                continue;
+                printf ("Error : %s(%d) Table %s does not exit\n", __FUNCTION__, __LINE__, table_name_out);
+                return false;
             }
             for (i = 0; i < qep->join.table_cnt; i++) {
                 if (ctable_val != qep->join.tables[i].ctable_val) continue;
@@ -133,12 +132,11 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
                 schema_rec =  (schema_rec_t *) BPlusTree_Query_Key (ctable_val->schema_table, &bpkey);
                 break;
             }
-            if (!schema_rec) {
-                printf("Info (%s) : Operand %s could not be resolved against table %s\n", __FUNCTION__,
+        }
+        if (!schema_rec) {
+            printf("Error : %s(%d) : Column %s could not be found in table %s\n", __FUNCTION__, __LINE__,
                        node->u.opd_node.opd_value.variable_name, ctable_val->table_name);
-                rc = false;
-                continue;
-            }
+            return false;
         }
         data_src = (exp_tree_data_src_t *)calloc(1, sizeof(exp_tree_data_src_t));
         data_src->table_index = tindex;
@@ -147,9 +145,8 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
         mexpt_tree_install_operand_properties(node, data_src, sql_column_value_resolution_fn);
    } mexpt_iterate_operands_end(sql_exptree->tree, node);
 
-   mexpt_remove_unresolved_operands (sql_exptree->tree, true);
    mexpt_optimize (sql_exptree->tree->root);
-   return rc;
+   return true;
 }
 
 bool 
