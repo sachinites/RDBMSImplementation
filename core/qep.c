@@ -108,34 +108,37 @@ sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
             if (opnd_node->u.opd_node.is_resolved) continue;
 
-                /* All Unresolved nodes are opernads of type 'variable'*/
-                opnd_len = strlen (opnd_node->u.opd_node.opd_value.variable_name);
+            /* All Unresolved nodes are opernads of type 'variable'*/
+            opnd_len = strlen(opnd_node->u.opd_node.opd_value.variable_name);
 
-                for (i = 0 ; i < qep->select.n; i++) {
+            for (i = 0; i < qep->select.n; i++) {
 
-                    qp_col = qep->select.sel_colmns[i];
-                    if (!qp_col->alias_provided_by_user) continue;
+                qp_col = qep->select.sel_colmns[i];
+                if (!qp_col->alias_provided_by_user)
+                    continue;
 
-                    if ( (strlen (qp_col->alias_name) != opnd_len) || 
-                            (strncmp (qp_col->alias_name, 
-                            opnd_node->u.opd_node.opd_value.variable_name, 
-                            SQL_ALIAS_NAME_LEN)) ) continue;;
+                if ((strlen(qp_col->alias_name) != opnd_len) ||
+                    (strncmp(qp_col->alias_name,
+                             opnd_node->u.opd_node.opd_value.variable_name,
+                             SQL_ALIAS_NAME_LEN)))
+                    continue;
 
-                    all_alias_resolved = false;
-                    clone_tree = mexpt_clone (qp_col->sql_tree->tree);
-                    assert (clone_tree);
+                all_alias_resolved = false;
+                clone_tree = mexpt_clone(qp_col->sql_tree->tree);
+                assert(clone_tree);
 
-                    if (!mexpt_concatenate_mexpt_trees (qep->where.gexptree->tree, 
-                                                                                opnd_node,
-                                                                                clone_tree)) {
-                        printf ("Error : %s(%d) Failed to resolve Where clause Alias name %s\n",
-                            __FUNCTION__, __LINE__, qp_col->alias_name);
-                        return false;
-                    }
-                    alias_resolved = true;
-                    break;
+                if (!mexpt_concatenate_mexpt_trees(qep->where.gexptree->tree,
+                                                   opnd_node,
+                                                   clone_tree)) {
+
+                    printf("Error : %s(%d) Failed to resolve Where clause Alias name %s\n",
+                           __FUNCTION__, __LINE__, qp_col->alias_name);
+                    return false;
                 }
-            
+                alias_resolved = true;
+                break;
+            }
+
             if (!all_alias_resolved || alias_resolved) break;
 
         } mexpt_iterate_operands_end (qep->where.gexptree->tree, opnd_node)
@@ -266,7 +269,7 @@ sql_query_initialize_select_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 }
 
 static bool
-sql_query_executiona_plan_init (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
     int i;
     bool rc;
@@ -322,8 +325,68 @@ sql_query_executiona_plan_init (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 }
 
 void 
-qep_deinit (qep_struct_t *qep_struct) {
+qep_deinit (qep_struct_t *qep) {
 
+    int i;
+    qp_col_t *qp_col;
+
+    if (qep->where.gexptree) {
+        mexpt_destroy (qep->where.gexptree->tree->root, true);
+        free (qep->where.gexptree->tree);
+        free(qep->where.gexptree);
+        qep->where.gexptree = NULL;
+    }
+
+    if (qep->groupby.n) {
+
+        for (i = 0; i < qep->groupby.n; i++) {
+
+            qp_col = qep->groupby.col_list[i];
+
+            if (qp_col->sql_tree) {
+                mexpt_destroy(qp_col->sql_tree->tree->root, true);
+                free(qp_col->sql_tree->tree);
+                free(qp_col->sql_tree);
+                qp_col->sql_tree = NULL;
+            }
+            free(qp_col);
+        }
+
+        if (qep->groupby.ht) {
+
+            hashtable_destroy(qep->groupby.ht, 1);
+            qep->groupby.ht = NULL;
+        }
+    }
+
+    if (qep->having.gexptree) {
+        mexpt_destroy (qep->having.gexptree->tree->root, true);
+        free (qep->having.gexptree->tree);
+        free(qep->having.gexptree);
+        qep->having.gexptree = NULL;
+    }
+
+    if (qep->select.n) {
+
+        for (i = 0; i < qep->select.n; i++) {
+
+            qp_col = qep->select.sel_colmns[i];
+            if (qp_col->sql_tree) {
+                mexpt_destroy(qp_col->sql_tree->tree->root, true);
+                free(qp_col->sql_tree->tree);
+                free(qp_col->sql_tree);
+                qp_col->sql_tree = NULL;
+            }
+            free(qp_col);            
+        }
+    }
+
+    free (qep->titer);
+    qep->titer = NULL;
+
+    free (qep->joined_row_tmplate.rec_array);
+    free(qep->joined_row_tmplate.schema_table_array);
+    free(qep->joined_row_tmplate.table_id_array);
 }
 
 
@@ -510,7 +573,7 @@ sql_process_select_query (qep_struct_t *qep) {
 
     int i;
 
-    if (!sql_query_executiona_plan_init (qep, &TableCatalogDef)) {
+    if (!sql_query_init_execution_plan (qep, &TableCatalogDef)) {
 
         printf ("Error : Failed to initialize Query Execution Plan\n");
         return;
