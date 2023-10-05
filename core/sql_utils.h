@@ -2,6 +2,7 @@
 #define __SQL_UTILS__
 
 #include <string.h>
+#include <math.h>
 #include "../Parsers/SqlParserStruct.h"
 #include "rdbms_struct.h"
 #include "../BPlusTreeLib/BPlusTree.h"
@@ -69,5 +70,13 @@ qp_col_is_equal (qp_col_t *col1, qp_col_t *col2);
 
 qp_col_t *
 qp_col_lookup_identical (qp_col_t **col_list, int size, qp_col_t *key_col) ;
+
+
+static inline bool 
+mexpr_double_is_integer (double d) {
+
+    double int_part = floor (d);
+    return int_part == d;
+}
 
 #endif 

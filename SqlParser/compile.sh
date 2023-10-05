@@ -16,4 +16,5 @@ g++ -g -c -fpermissive ../core/Catalog.c -o ../core/Catalog.o
 g++ -g -c -fpermissive ../gluethread/glthread.c -o ../gluethread/glthread.o
 g++ -g -c ../c-hashtable/hashtable.c -o ../c-hashtable/hashtable.o
 g++ -g -c   ../c-hashtable/hashtable_itr.c -o ../c-hashtable/hashtable_itr.o
+#g++ -g -c -fpermissive ../core/SqlMexprIntf.cpp -o ../core/SqlMexprIntf.o
 g++ -g ../core/qep.o ../core/sql_mexpr_intf.o lex.yy.o SqlSelectParserCFG.o SqlCreateParserCFG.o SqlParserMain.o ../BPlusTreeLib/BPlusTree.o ../../MathExpressionParser/ParserMexpr.o ../../MathExpressionParser/MExpr.o ../../MathExpressionParser/ExpressionParser.o ../core/sql_utils.o ../core/sql_create.o ../core/Catalog.o ../gluethread/glthread.o SqlInsertIntoParserCFG.o ../core/sql_insert_into.o ../c-hashtable/hashtable.o ../c-hashtable/hashtable_itr.o ../core/sql_io.o -o exe -lfl -lm

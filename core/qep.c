@@ -15,6 +15,7 @@
 #include "../c-hashtable/hashtable.h"
 #include "../c-hashtable/hashtable_itr.h"
 #include "sql_mexpr_intf.h"
+#include "../../MathExpressionParser/MExpr.h"
 
 extern BPlusTree_t TableCatalogDef;
 

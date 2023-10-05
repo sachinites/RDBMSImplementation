@@ -5,7 +5,6 @@
 #include "../gluethread/glthread.h"
 #include "sql_const.h"
 #include "../BPlusTreeLib/BPlusTree.h"
-#include "../../MathExpressionParser/ParserMexpr.h"
 
 typedef struct catalog_table_value ctable_val_t ;
 typedef struct schema_rec_ schema_rec_t ;
@@ -47,6 +46,5 @@ typedef struct joined_row_ {
     int *table_id_array;    
 
 } joined_row_t;
-
 
 #endif 
