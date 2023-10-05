@@ -118,7 +118,9 @@ typedef enum math_fns_ {
     SQL_MATH_SQRT = MATH_SQRT,              // sqrt (a)
     SQL_MATH_SQR = MATH_SQR,                // sqr(a)
     SQL_MATH_SIN = MATH_SIN,                 // sin(a)
+    SQL_MATH_COS = MATH_COS,                // cos(a)
     SQL_MATH_POW = MATH_POW,               // pow(a,b) : a power b
+    SQL_MATH_MOD = MATH_MOD,            // a % b
     /* Reserved enums*/
     SQL_MATH_FNS_MAX = MEXPR_LIB_MAX_CODE_USED + 81
 
