@@ -45,4 +45,15 @@ sql_evaluate_exp_tree (sql_exptree_t *sql_exptree);
 sql_exptree_t *
 sql_create_exp_tree_for_one_operand (unsigned char *opnd_name) ;
 
+#define SqlExprTree_Iterator_Operands_Begin(tree_ptr, dtype_var_ptr)          \
+    { MexprNode*_next_node = NULL;  dtype_var_ptr = NULL;                      \
+        MexprNode* node_ptr = NULL;                                                                 \
+    for (node_ptr = tree_ptr->tree->lst_head;  node_ptr; node_ptr = _next_node){       \
+        _next_node = node_ptr->lst_right;                                                           \
+         dtype_var_ptr = dynamic_cast <Dtype_VARIABLE *>(node_ptr);
+
+
+#define SqlExprTree_Iterator_Operands_End }}
+
+
 #endif 

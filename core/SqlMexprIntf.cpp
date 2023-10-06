@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <memory.h>
-#include "../BPlusTreeLib/BPlusTree.h"
 #include "Catalog.h"
 #include "sql_utils.h"
 #include "SqlMexprIntf.h"
@@ -79,15 +78,21 @@ sql_create_exp_tree_compute ()  {
 
     sql_exptree_t *sql_exptree = (sql_exptree_t *) calloc (1, sizeof (sql_exptree_t ));
     sql_exptree->tree = Parser_Mexpr_build_math_expression_tree ();
+
     if (!sql_exptree->tree) {
+        printf ("Error : %s(%d) Expression Parsing Failed\n",   __FUNCTION__, __LINE__);
         free (sql_exptree) ;
         return NULL;
     }
+
     if (!sql_exptree->tree->validate(sql_exptree->tree->root)) {
+        printf ("Error : %s(%d) Expression Tree doesnt pass Validation test\n", 
+                __FUNCTION__, __LINE__);
         sql_exptree->tree->destroy(sql_exptree->tree->root);
         free (sql_exptree) ;
          return NULL;
     }
+
     sql_exptree->tree->optimize(sql_exptree->tree->root);
     return sql_exptree;
 }
@@ -97,11 +102,15 @@ sql_create_exp_tree_conditional () {
 
     sql_exptree_t *sql_exptree = (sql_exptree_t *) calloc (1, sizeof (sql_exptree_t ));
     sql_exptree->tree = Parser_Mexpr_Condition_build_expression_tree ();
+
     if (!sql_exptree->tree) {
+        printf ("Error : %s(%d) Expression Parsing Failed\n",   __FUNCTION__, __LINE__);
         free (sql_exptree) ;
         return NULL;
     }
     if (!sql_exptree->tree->validate(sql_exptree->tree->root)) {
+        printf ("Error : %s(%d) Expression Tree doesnt pass Validation test\n", 
+                __FUNCTION__, __LINE__);
         sql_exptree->tree->destroy(sql_exptree->tree->root);
         free (sql_exptree) ;
          return NULL;
