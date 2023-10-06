@@ -104,7 +104,6 @@ sql_create_exp_tree_conditional () {
     sql_exptree->tree = Parser_Mexpr_Condition_build_expression_tree ();
 
     if (!sql_exptree->tree) {
-        printf ("Error : %s(%d) Expression Parsing Failed\n",   __FUNCTION__, __LINE__);
         free (sql_exptree) ;
         return NULL;
     }
