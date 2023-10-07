@@ -207,7 +207,7 @@ qep_resolve_select_asterisk (qep_struct_t *qep) {
             if (qep->join.table_cnt > 1) {
                 memset (opnd_name, 0, sizeof (opnd_name));
                 snprintf (opnd_name, sizeof(opnd_name), "%s.%s", 
-                    ctable_val->table_name, (unsigned char *)lnode->data);
+                    ctable_val->table_name, (char *)lnode->data);
                 qp_col->sql_tree = sql_create_exp_tree_for_one_operand (opnd_name);
                 strncpy (qp_col->alias_name, opnd_name, sizeof (qp_col->alias_name));
             }
@@ -247,8 +247,10 @@ sql_query_initialize_select_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                 qp_col = qep->select.sel_colmns[i];
                 if (sql_is_expression_tree_only_operand (qp_col->sql_tree)
                         && qp_col->alias_name[0] == '\0') {
+
                      strncpy(qp_col->alias_name,  
-                        sql_get_opnd_variable_name(sql_tree_get_root (qp_col->sql_tree)).c_str(), sizeof (qp_col->alias_name));
+                        sql_get_opnd_variable_name(sql_tree_get_root (qp_col->sql_tree)).c_str(), 
+                        sizeof (qp_col->alias_name));
                 }
             }
     }

@@ -95,5 +95,6 @@ extern void lex_set_scan_buffer (const char *buffer) ;
 #define PARSER_QUIT 10001
 #define PARSER_WHITE_SPACE  10002
 #define PARSER_CONTINUE_NEXTLINE    10003
+#define PARSER_INVALID_CODE INT32_MAX
 
 #endif 

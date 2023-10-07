@@ -59,14 +59,16 @@ void sql_emit_select_output(int n_col,
     int num_columns = n_col;
 
     int column_width = 20; // Default column width
+
     if (num_columns > 0) {
         column_width = 80 / num_columns; // Adjust column width based on available space
     }
 
     // Print each row of data
     for (i = 0; i < n_col; i++) {
+
         qp_col = col_list_head[i];
-       Dtype *dtype = qp_col->computed_value;
+        Dtype *dtype = qp_col->computed_value;
 
         if (qp_col->agg_fn == SQL_COUNT) {
             printf("%-*d|", column_width,  (dynamic_cast <Dtype_INT *>(dtype))->dtype.int_val);
@@ -74,12 +76,15 @@ void sql_emit_select_output(int n_col,
         }
 
         switch (dtype->did) {
+
             case MATH_CPP_STRING:
                 printf("%-*s|", column_width, (dynamic_cast <Dtype_STRING*>(dtype))->dtype.str_val.c_str());
                 break;
+
             case MATH_CPP_INT:
                 printf("%-*d|", column_width, (dynamic_cast <Dtype_INT *>(dtype))->dtype.int_val);
                 break;
+
             case MATH_CPP_DOUBLE:
                 if (mexpr_double_is_integer ( (dynamic_cast <Dtype_DOUBLE *>(dtype))->dtype.d_val)) {
                     printf("%-*d|", column_width, (int)(dynamic_cast <Dtype_DOUBLE *>(dtype))->dtype.d_val);
@@ -88,9 +93,11 @@ void sql_emit_select_output(int n_col,
                     printf("%-*f|", column_width, (dynamic_cast <Dtype_DOUBLE *>(dtype))->dtype.d_val);
                 }
                 break;
+
             case MATH_CPP_BOOL:
                 assert(0);
                 break;
+                
             #if 0
             case SQL_IPV4_ADDR: {
                 assert(0);

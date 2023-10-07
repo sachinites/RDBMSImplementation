@@ -364,6 +364,7 @@ sql_create_exp_tree_for_one_operand (char *opnd_name) {
     sql_exptree_t *sql_exptree = (sql_exptree_t *)calloc(1, sizeof(sql_exptree_t));
     sql_exptree->tree = new MexprTree();
     sql_exptree->tree->root = dtype_var;
+    sql_exptree->tree->lst_head = sql_exptree->tree->root;
     return sql_exptree;
 }
 
