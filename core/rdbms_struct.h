@@ -1,6 +1,8 @@
 #ifndef __RDBMS_STRUCT__
 #define __RDBMS_STRUCT__
 
+#include <string>
+
 #include "../SqlParser/SqlParserStruct.h"
 #include "../gluethread/glthread.h"
 #include "sql_const.h"
@@ -10,6 +12,8 @@ typedef struct catalog_table_value ctable_val_t ;
 typedef struct schema_rec_ schema_rec_t ;
 typedef struct ast_node_ ast_node_t;
 typedef struct sql_exptree_ sql_exptree_t;
+
+class Dtype;
 
 typedef struct  key_mdata_ {
 
@@ -30,9 +34,9 @@ typedef struct qp_col_ {
 
     sql_exptree_t *sql_tree;
     sql_agg_fn_t agg_fn;
-    mexpr_var_t computed_value;
+    Dtype* computed_value;
     bool alias_provided_by_user;
-    unsigned char alias_name[SQL_ALIAS_NAME_LEN];
+    std::string alias_name;
     
 }qp_col_t;
 

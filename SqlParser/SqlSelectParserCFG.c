@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <assert.h>
+#include <string>
 #include "ParserExport.h"
 #include "SqlParserStruct.h"
-#include "../../MathExpressionParser/ParserMexpr.h"
-#include "../core/sql_mexpr_intf.h"
+#include "../core/SqlMexprIntf.h"
 #include "../core/qep.h"
+
 
 /* CFG 
 
@@ -40,7 +42,7 @@ LMT  -> $  |  limit <integer>
 
 
 qep_struct_t qep;
-unsigned char *L_alias_name = NULL;
+std::string* L_alias_name = NULL;
 
 static parse_rc_t WHERE() ;
 static parse_rc_t TABS() ;
@@ -93,7 +95,7 @@ TABS() {
         RETURN_PARSE_ERROR;
     }
 
-    L_alias_name = qep.join.tables[qep.join.table_cnt].alias_name;
+    L_alias_name = &qep.join.tables[qep.join.table_cnt].alias_name;
 
     err = L();
     assert (err == PARSE_SUCCESS);
@@ -122,7 +124,6 @@ L() {
 
     if (token_code != SQL_AS) {
         yyrewind(1);
-        L_alias_name[0] = '\0';
        RETURN_PARSE_SUCCESS;
     }
 
@@ -130,11 +131,10 @@ L() {
 
     if (token_code != SQL_IDENTIFIER) {
         yyrewind(2);
-        L_alias_name[0] = '\0';
         RETURN_PARSE_SUCCESS;
     }
 
-    strncpy (L_alias_name,  lex_curr_token, lex_curr_token_len);
+    L_alias_name->assign (std::string( (char *)  lex_curr_token));
     RETURN_PARSE_SUCCESS;
 }
 
@@ -147,6 +147,7 @@ COL() {
     qp_col_t *qp_col = (qp_col_t *)calloc (1, sizeof (qp_col_t));
     qp_col->agg_fn = SQL_AGG_FN_NONE;
     qp_col->alias_provided_by_user = false;
+    qp_col->alias_name = "";
 
     do {
 
@@ -156,11 +157,11 @@ COL() {
         if (!qp_col->sql_tree) break;
         
         /* COL ->MEXPR as L */
-        L_alias_name = qp_col->alias_name;
+        L_alias_name = &qp_col->alias_name;
         err = L();
         assert (err == PARSE_SUCCESS);
         
-        if (qp_col->alias_name[0] != '\0') {
+        if (!qp_col->alias_name.empty()) {
             qp_col->alias_provided_by_user = true;
         }
 
@@ -188,7 +189,7 @@ COL() {
             RETURN_PARSE_ERROR;
         }
 
-        qp_col->agg_fn = token_code;
+        qp_col->agg_fn = (sql_agg_fn_t)token_code;
 
         token_code = cyylex();
 
@@ -203,7 +204,7 @@ COL() {
          if (token_code != SQL_BRACKET_END) RETURN_PARSE_ERROR;
 
          /* COL -> AGG_FN(MEXPR) as L */
-         L_alias_name = qp_col->alias_name;
+         L_alias_name = &qp_col->alias_name;
          err = L();
          assert (err == PARSE_SUCCESS);      
 

@@ -74,7 +74,7 @@ main (int argc, char **argv) {
                 sql_insert_into_data_destroy(&idata);
                 break; 
 
-            case SHOW_DB_TABLES:
+            case SQL_SHOW_DB_TABLES:
                 sql_show_table_catalog (NULL);
                 break;
 

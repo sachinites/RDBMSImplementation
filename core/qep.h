@@ -55,7 +55,7 @@ typedef struct qep_struct_ {
         struct {
 
             ctable_val_t *ctable_val;
-            unsigned char alias_name[SQL_ALIAS_NAME_LEN];
+            std::string alias_name;
 
         } tables [SQL_MAX_TABLES_IN_JOIN_LIST];
 

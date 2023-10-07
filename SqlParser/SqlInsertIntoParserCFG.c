@@ -4,8 +4,6 @@
 #include <string.h>
 #include "ParserExport.h"
 #include "SqlParserStruct.h"
-#include "../../MathExpressionParser/ParserMexpr.h"
-#include "../core/sql_mexpr_intf.h"
 #include "../core/sql_insert_into.h"
 
 /* CFG 

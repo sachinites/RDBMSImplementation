@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <memory.h>
+#include <assert.h>
 #include "Catalog.h"
 #include "sql_utils.h"
 #include "SqlMexprIntf.h"
@@ -353,12 +354,95 @@ sql_evaluate_exp_tree (sql_exptree_t *sql_exptree) {
 }
 
 sql_exptree_t *
-sql_create_exp_tree_for_one_operand (unsigned char *opnd_name) {
+sql_create_exp_tree_for_one_operand (std::string opnd_name) {
 
-    Dtype_VARIABLE *dtype_var = new Dtype_VARIABLE(std::string ((char *)opnd_name));
+    Dtype_VARIABLE *dtype_var = new Dtype_VARIABLE(opnd_name);
     dtype_var->is_resolved = false;
     sql_exptree_t *sql_exptree = (sql_exptree_t *)calloc(1, sizeof(sql_exptree_t));
     sql_exptree->tree = new MexprTree();
     sql_exptree->tree->root = dtype_var;
     return sql_exptree;
+}
+
+bool 
+sql_opnd_node_is_resolved (MexprNode *opnd_node) {
+
+    Dtype *dtype = dynamic_cast <Dtype *> (opnd_node);
+    return dtype->is_resolved;
+}
+
+
+std::string 
+sql_get_opnd_variable_name (MexprNode *opnd_node) {
+
+    Dtype_VARIABLE *dtype = dynamic_cast <Dtype_VARIABLE *> (opnd_node);
+    return dtype->variable_name;
+}
+
+sql_exptree_t *
+sql_clone_expression_tree (sql_exptree_t *src_tree) {
+
+    if (!src_tree) return NULL;
+    sql_exptree_t * sql_exptree = (sql_exptree_t *) calloc (1, sizeof (sql_exptree_t));
+    if (src_tree->tree == NULL) return sql_exptree;
+    sql_exptree->tree = src_tree->tree->clone(src_tree->tree->root);
+    return sql_exptree;
+}
+
+bool 
+sql_concatenate_expr_trees (sql_exptree_t *parent_tree, 
+                                                MexprNode *opnd_node,
+                                                sql_exptree_t *child_tree) {
+
+    bool rc = parent_tree->tree->concatenate (opnd_node, child_tree->tree);
+    free (child_tree);
+    return rc;
+}
+
+void 
+sql_destrpy_exp_tree (sql_exptree_t *tree) {
+
+    tree->tree->destroy(tree->tree->root);
+    free(tree);
+}
+
+MexprNode *
+sql_tree_get_first_operand (sql_exptree_t *tree) {
+
+    if (!tree->tree) return NULL;
+    return tree->tree->lst_head;
+}
+
+MexprNode *
+sql_tree_get_next_operand (MexprNode *node) {
+
+    if (!node) return node;
+    assert (dynamic_cast <Dtype_VARIABLE *> (node) ); 
+    return node->lst_right;
+}
+
+bool 
+sql_is_expression_tree_only_operand (sql_exptree_t *sql_exptree) {
+
+    return sql_exptree->tree->IsLoneVariableOperandNode();
+}
+
+MexprNode *
+sql_tree_get_root (sql_exptree_t *tree) {
+    if (!tree->tree || !tree->tree->root) return NULL;
+    return tree->tree->root;
+}
+
+void 
+InstallDtypeOperandProperties (MexprNode *node, void *data_src, Dtype *(*compute_fn_ptr)(void *)) {
+
+    Dtype_VARIABLE *dtype_node = dynamic_cast <Dtype_VARIABLE *> (node);
+    dtype_node->InstallOperandProperties (data_src, compute_fn_ptr);
+}
+
+uint8_t  
+sql_tree_remove_unresolve_operands(sql_exptree_t *sql_exptree) {
+
+    if (!sql_exptree || sql_exptree->tree) return 0;
+    return sql_exptree->tree->RemoveUnresolveOperands();
 }

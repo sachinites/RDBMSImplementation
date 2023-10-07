@@ -5,6 +5,7 @@
 #include <memory.h>
 #include <stdio.h>
 #include <assert.h>
+#include <string>
 #include "sql_const.h"
 #include "Catalog.h"
 #include "sql_utils.h"
@@ -283,24 +284,14 @@ parser_split_table_column_name ( unsigned char *composite_col_name,
 }
 
 #if 0
-bool 
-qp_col_is_equal (qp_col_t *col1, qp_col_t *col2) {
+void 
+string_trim_quotes (std::string str_val) {
 
-    //if (col1->ctable_val != col2->ctable_val) return false;
-    if (col1->owner_table_id != col2->owner_table_id) return false;
-    if (col1->schema_rec != col2->schema_rec) return false;
-    if (col1->agg_fn != col2->agg_fn) return false;
-    return true;
+    str_val.erase(  std::remove(str_val.begin(), 
+                            str_val.end(), '\"'), 
+                            str_val.end() );
+    str_val.erase(  std::remove(str_val.begin(), 
+                            str_val.end(), '\''), 
+                            str_val.end() );
 }
-
-qp_col_t *
-qp_col_lookup_identical (qp_col_t **col_list, int size, qp_col_t *key_col) {
-
-    int i;
-    for (i = 0; i < size; i++) {
-
-        if (qp_col_is_equal (col_list[i] , key_col)) return col_list[i];
-    }
-    return NULL;
-}
-#endif 
+#endif

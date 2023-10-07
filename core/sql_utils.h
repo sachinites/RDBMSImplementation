@@ -3,7 +3,6 @@
 
 #include <string.h>
 #include <math.h>
-#include "../Parsers/SqlParserStruct.h"
 #include "rdbms_struct.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 
@@ -78,5 +77,8 @@ mexpr_double_is_integer (double d) {
     double int_part = floor (d);
     return int_part == d;
 }
+
+void 
+string_trim_quotes (std::string str);
 
 #endif 

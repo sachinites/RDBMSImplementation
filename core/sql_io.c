@@ -9,7 +9,8 @@
 #include "sql_io.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "sql_utils.h"
-#include "sql_mexpr_intf.h"
+#include "SqlMexprIntf.h"
+#include "../../MathExpressionParser/Dtype.h"
 
 static void 
 print_line(int num_columns, int column_width) {
@@ -40,7 +41,7 @@ sql_print_hdr (qp_col_t **col_list, int n_cols ) {
     // Print the header row with column names
     for (i = 0; i < n_cols; i++) {
         col = col_list[i];
-        printf("%-*s|", column_width, col->alias_name);
+        printf("%-*s|", column_width, col->alias_name.c_str());
     }
 
     printf("\n");
@@ -55,7 +56,6 @@ void sql_emit_select_output(int n_col,
 
     int i;
     qp_col_t *qp_col;
-    mexpr_dtypes_t dtype;
     int num_columns = n_col;
 
     int column_width = 20; // Default column width
@@ -66,31 +66,29 @@ void sql_emit_select_output(int n_col,
     // Print each row of data
     for (i = 0; i < n_col; i++) {
         qp_col = col_list_head[i];
-        mexpr_var_t *val = &qp_col->computed_value;
+       Dtype *dtype = qp_col->computed_value;
 
         if (qp_col->agg_fn == SQL_COUNT) {
-            printf("%-*d|", column_width, *(int *)val);
+            printf("%-*d|", column_width,  (dynamic_cast <Dtype_INT *>(dtype))->dtype.int_val);
             continue;
         }
 
-        dtype = val->dtype;
-
-        switch (dtype) {
-            case MEXPR_DTYPE_STRING:
-                printf("%-*s|", column_width, val->u.str_val);
+        switch (dtype->did) {
+            case MATH_CPP_STRING:
+                printf("%-*s|", column_width, (dynamic_cast <Dtype_STRING*>(dtype))->dtype.str_val.c_str());
                 break;
-            case MEXPR_DTYPE_INT:
-                printf("%-*d|", column_width, val->u.int_val);
+            case MATH_CPP_INT:
+                printf("%-*d|", column_width, (dynamic_cast <Dtype_INT *>(dtype))->dtype.int_val);
                 break;
-            case MEXPR_DTYPE_DOUBLE:
-                if (mexpr_double_is_integer (val->u.d_val)) {
-                    printf("%-*d|", column_width, (int)val->u.d_val);
+            case MATH_CPP_DOUBLE:
+                if (mexpr_double_is_integer ( (dynamic_cast <Dtype_DOUBLE *>(dtype))->dtype.d_val)) {
+                    printf("%-*d|", column_width, (int)(dynamic_cast <Dtype_DOUBLE *>(dtype))->dtype.d_val);
                 }
                 else {
-                    printf("%-*f|", column_width, val->u.d_val);
+                    printf("%-*f|", column_width, (dynamic_cast <Dtype_DOUBLE *>(dtype))->dtype.d_val);
                 }
                 break;
-            case MEXPR_DTYPE_BOOL:
+            case MATH_CPP_BOOL:
                 assert(0);
                 break;
             #if 0

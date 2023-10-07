@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <assert.h>
 #include "ParserExport.h"
 #include "SqlParserStruct.h"
-#include "../../MathExpressionParser/ParserMexpr.h"
-#include "../core/sql_mexpr_intf.h"
+#include "../core/SqlMexprIntf.h"
 #include "../core/sql_create.h"
 
 /* Grammar for Create Query 

@@ -4,6 +4,8 @@
 #include <arpa/inet.h>
 #include <memory.h>
 #include <string.h>
+#include <string>
+#include <assert.h>
 #include "sql_insert_into.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "Catalog.h"

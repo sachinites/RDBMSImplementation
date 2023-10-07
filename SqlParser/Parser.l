@@ -339,7 +339,7 @@ lex_set_scan_buffer (const char *buffer) {
 }
 
 "\\dt\n" {
-    return SHOW_DB_TABLES;
+    return SQL_SHOW_DB_TABLES;
 }
 
 "," {
