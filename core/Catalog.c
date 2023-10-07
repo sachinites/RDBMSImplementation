@@ -176,7 +176,7 @@ Catalog_create_schema_table_records (sql_create_data_t *cdata,
 
         (*bkeys)[i] = (BPluskey_t *)calloc(1, sizeof(BPluskey_t));
         (*bkeys)[i]->key = (void *)calloc(1, SQL_COLUMN_NAME_MAX_SIZE);
-        strncpy((*bkeys)[i]->key, cdata->column_data[i].col_name, SQL_COLUMN_NAME_MAX_SIZE);
+        strncpy( (char *) (*bkeys)[i]->key, cdata->column_data[i].col_name, SQL_COLUMN_NAME_MAX_SIZE);
         (*bkeys)[i]->key_size = SQL_COLUMN_NAME_MAX_SIZE;
 
         (*crecords)[i] = (schema_rec_t *)calloc(1, sizeof(schema_rec_t));
@@ -216,60 +216,9 @@ sql_show_table_catalog (BPlusTree_t *TableCatalog) {
     printf ("(%d rows)\n", rows);
 }
 
-
-#if 0
-bool
-sql_process_select_wildcard (BPlusTree_t *tcatalog, ast_node_t *select_kw, ast_node_t *table_name_node) {
-
-    void *rec;
-    glthread_t *curr;
-    list_node_t *lnode;
-    ast_node_t *column_node;
-    ctable_val_t *ctable_val;
-    BPlusTree_t *tcatalog_to_use;
-    BPluskey_t bpkey;
-
-    tcatalog_to_use = tcatalog ? tcatalog : &TableCatalogDef;
-
-    if (!tcatalog_to_use->Root)  {
-        printf ("Error : relation does not exist\n");
-        return false;
-    }
-
-    bpkey.key =  table_name_node->u.identifier.identifier.name;
-    bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;        
-
-    ctable_val = (ctable_val_t *)BPlusTree_Query_Key (tcatalog_to_use, &bpkey);
-
-    if (!ctable_val) {
-        printf ("Error : relation does not exist\n");
-        return false;
-    }
-
-    ITERATE_GLTHREAD_BEGIN(&ctable_val->col_list_head, curr) {
-
-        lnode = glue_to_list_node (curr);
-        column_node = (ast_node_t *) calloc (1, sizeof (ast_node_t));
-        column_node->entity_type = SQL_IDENTIFIER;
-        column_node->u.identifier.ident_type = SQL_COLUMN_NAME;
-        snprintf (column_node->u.identifier.identifier.name, 
-                      sizeof (column_node->u.identifier.identifier.name),
-                      "%s.%s",
-                      table_name_node->u.identifier.identifier.name, (char *)lnode->data);
-        column_node->data = (int *)calloc (1, sizeof (int));
-        *(int *)column_node->data = *(int *)table_name_node->data;
-        ast_add_child (select_kw, column_node);
-
-    } ITERATE_GLTHREAD_END(&ctable_val->col_list_head, curr) 
-
-    return true;
-}
-
-#endif
-
 ctable_val_t *
 sql_catalog_table_lookup_by_table_name (BPlusTree_t *TableCatalog, 
-                                                                      unsigned char *entity_name) {
+                                                                      char *entity_name) {
 
     BPluskey_t bkey;
     catalog_table_key_t ckey;

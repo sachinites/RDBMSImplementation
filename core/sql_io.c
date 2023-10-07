@@ -41,7 +41,7 @@ sql_print_hdr (qp_col_t **col_list, int n_cols ) {
     // Print the header row with column names
     for (i = 0; i < n_cols; i++) {
         col = col_list[i];
-        printf("%-*s|", column_width, col->alias_name.c_str());
+        printf("%-*s|", column_width, col->alias_name);
     }
 
     printf("\n");

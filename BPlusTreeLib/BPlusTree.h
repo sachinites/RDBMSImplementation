@@ -79,7 +79,7 @@ extern void BPlusTree_Delete(
 		key_ptr = NULL;	\
 		rec_ptr = NULL;	 \
 		while (_bnode && !_bnode->isLeaf) {	\
-        	_bnode = _bnode->child[0];	\
+        	_bnode = (BPlusTreeNode *)_bnode->child[0];	\
     	}	\
 		while (_bnode)	{ \
 			for (_i = 0; _i < _bnode->key_num; _i++) {	\

@@ -29,7 +29,7 @@ main (int argc, char **argv) {
 
         printf ("postgres=# ");
 
-        fgets (lex_buffer, sizeof (lex_buffer), stdin);
+        fgets ( (char *)lex_buffer, sizeof (lex_buffer), stdin);
 
         if (lex_buffer[0] == '\n') {
             lex_buffer[0] = 0;

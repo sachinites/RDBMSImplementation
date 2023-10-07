@@ -10,9 +10,9 @@
 
 #include "ParserExport.h"
 
-unsigned char lex_buffer[MAX_STRING_SIZE] = {0};
-unsigned char *curr_ptr = lex_buffer;
-unsigned char *lex_curr_token;
+char lex_buffer[MAX_STRING_SIZE] = {0};
+char *curr_ptr = lex_buffer;
+char *lex_curr_token;
 int lex_curr_token_len;
 
 stack_t undo_stack = {-1, {0, 0, 0}};
@@ -21,7 +21,7 @@ void
 lex_push(lex_data_t lex_data) {
     assert (undo_stack.top < MAX_MEXPR_LEN -1);
     undo_stack.data[++undo_stack.top] = lex_data;
-    lex_curr_token = (unsigned char *)lex_data.token_val;
+    lex_curr_token = (char *)lex_data.token_val;
     lex_curr_token_len = lex_data.token_len;
 }
 
@@ -30,8 +30,8 @@ lex_pop() {
     assert (undo_stack.top > -1);
     lex_data_t res = undo_stack.data[undo_stack.top] ;
     undo_stack.top--;
-    lex_curr_token = (unsigned char *)res.token_val;
-     lex_curr_token_len = res.token_len;
+    lex_curr_token = ( char *)res.token_val;
+    lex_curr_token_len = res.token_len;
     return res;
 }
 
@@ -57,13 +57,13 @@ yyrewind (int n) {
     yy_scan_string(curr_ptr);
 }
 
-unsigned char *
+char *
 parser_alloc_token_value_default (uint16_t token_id) {
 
-    unsigned char *ptr = (unsigned char *)(calloc (1, yyleng + 1));
+    char *ptr = (char *)(calloc (1, yyleng + 1));
     strncpy (ptr, yytext, yyleng);
     ptr [yyleng] = '\0';
-    return (void *)ptr;
+    return ptr;
 }
 
 int 

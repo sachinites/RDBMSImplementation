@@ -14,7 +14,7 @@ typedef struct sql_create_data_ sql_create_data_t ;
 
 typedef struct schema_rec_ {
 
-    unsigned char column_name [SQL_COLUMN_NAME_MAX_SIZE];
+    char column_name [SQL_COLUMN_NAME_MAX_SIZE];
     sql_dtype_t dtype;
     int dtype_size;
     bool is_primary_key;
@@ -39,9 +39,9 @@ typedef enum catalog_entry_type_ {
 typedef struct catalog_table_key {
 
     schema_scope scope;
-    unsigned char entity_name [SQL_MAX_ENTITY_NAME_LEN];
+     char entity_name [SQL_MAX_ENTITY_NAME_LEN];
     catalog_entry_type_t type;
-    unsigned char owner[32];
+    char owner[32];
 
 } catalog_table_key_t;
 #pragma pack(pop)
@@ -49,7 +49,7 @@ typedef struct catalog_table_key {
 
 typedef struct catalog_table_value {
 
-    unsigned char table_name [SQL_TABLE_NAME_MAX_SIZE];
+    char table_name [SQL_TABLE_NAME_MAX_SIZE];
     BPlusTree_t  *rdbms_table;
     BPlusTree_t  *schema_table;
     glthread_t col_list_head;
@@ -64,13 +64,10 @@ Catalog_create_schema_table_records ( sql_create_data_t *cdata,
                                                         BPluskey_t ***bkeys,
                                                         schema_rec_t ***crecords) ;
 
-bool
-sql_process_select_wildcard (BPlusTree_t *tcatalog, ast_node_t *select_kw, ast_node_t *table_name_node) ;
-
 void 
 sql_show_table_catalog (BPlusTree_t *TableCatalog) ;
 
 ctable_val_t *
-sql_catalog_table_lookup_by_table_name (BPlusTree_t *TableCatalog, unsigned char *entity_name);
+sql_catalog_table_lookup_by_table_name (BPlusTree_t *TableCatalog, char *entity_name);
 
 #endif 

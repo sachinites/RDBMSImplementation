@@ -28,7 +28,7 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
     ctable_val_t *ctable_val;
     BPluskey_t bpkey, new_bpkey;
 
-    unsigned char *table_name = idata->table_name;
+    char *table_name = idata->table_name;
 
     if (!sql_validate_insert_query_data (tcatalog, idata)) {
         return false;
@@ -45,19 +45,23 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
     BPlusTree_t *data_table = ctable_val->rdbms_table;
     glthread_t *col_list_head = &ctable_val->col_list_head;
 
+    void *_rec;
     int key_size = 0;
     int rec_size = 0;
     schema_rec_t *rec;
+
     BPlusTreeNode *bnode;
 
-    BPTREE_ITERATE_ALL_RECORDS_BEGIN(schema_table, bpkey_ptr, rec) {
+    BPTREE_ITERATE_ALL_RECORDS_BEGIN(schema_table, bpkey_ptr, _rec) {
     
+        rec = (schema_rec_t *)_rec;
+
         if (rec->is_primary_key) {
              key_size += rec->dtype_size;
         }
         rec_size += rec->dtype_size;
 
-    } BPTREE_ITERATE_ALL_RECORDS_END(schema_table, bpkey_ptr, rec);
+    } BPTREE_ITERATE_ALL_RECORDS_END(schema_table, bpkey_ptr, _rec);
 
     new_bpkey.key = calloc (1, key_size);
     new_bpkey.key_size = key_size;

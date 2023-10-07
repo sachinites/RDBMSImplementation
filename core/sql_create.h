@@ -6,13 +6,13 @@
 
 typedef struct sql_create_data_ {
 
-    unsigned char table_name [SQL_TABLE_NAME_MAX_SIZE];
+    char table_name [SQL_TABLE_NAME_MAX_SIZE];
 
     int n_cols;
 
     struct {
 
-        unsigned char col_name [SQL_COLUMN_NAME_MAX_SIZE];
+        char col_name [SQL_COLUMN_NAME_MAX_SIZE];
         sql_dtype_t dtype;
         int dtype_len;
         bool is_primary_key;

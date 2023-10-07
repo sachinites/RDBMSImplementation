@@ -36,7 +36,7 @@ typedef struct qp_col_ {
     sql_agg_fn_t agg_fn;
     Dtype* computed_value;
     bool alias_provided_by_user;
-    std::string alias_name;
+    char alias_name[SQL_ALIAS_NAME_LEN];
     
 }qp_col_t;
 

@@ -264,12 +264,12 @@ joined_row_search ( int table_id, joined_row_t *joined_row) {
 }
 
 void 
-parser_split_table_column_name ( unsigned char *composite_col_name, 
-                                                        unsigned char *table_name_out,
-                                                        unsigned char *col_name_out) {
+parser_split_table_column_name ( char *composite_col_name, 
+                                                        char *table_name_out,
+                                                        char *col_name_out) {
 
     const char del[2] = ".";
-    unsigned char composite_col_name_dup[SQL_COMPOSITE_COLUMN_NAME_SIZE] = {0};
+    char composite_col_name_dup[SQL_COMPOSITE_COLUMN_NAME_SIZE] = {0};
 
     strncpy (composite_col_name_dup, composite_col_name, SQL_COMPOSITE_COLUMN_NAME_SIZE);
     char *str1 = strtok (composite_col_name_dup, del);

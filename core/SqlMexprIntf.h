@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <string>
 
 class MexprTree;
 class Dtype;
@@ -43,7 +44,7 @@ Dtype *
 sql_evaluate_exp_tree (sql_exptree_t *sql_exptree);
 
 sql_exptree_t *
-sql_create_exp_tree_for_one_operand (std::string opnd_name) ;
+sql_create_exp_tree_for_one_operand (char * opnd_name) ;
 
 bool 
 sql_is_expression_tree_only_operand (sql_exptree_t *sql_exptree);

@@ -40,7 +40,7 @@ table_iterators_init (qep_struct_t *qep,
 }
 
 bool 
-qep_struct_record_table (qep_struct_t *qep_struct, unsigned char *table_name) {
+qep_struct_record_table (qep_struct_t *qep_struct, char *table_name) {
 
     ctable_val_t *ctable_val;
 
@@ -116,11 +116,12 @@ sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
             for (i = 0; i < qep->select.n; i++) {
 
                 qp_col = qep->select.sel_colmns[i];
-                if (!qp_col->alias_provided_by_user)
-                    continue;
+                if (!qp_col->alias_provided_by_user) continue;
 
-                if ( (qp_col->alias_name.length() != opnd_len) ||
-                      (qp_col->alias_name != sql_get_opnd_variable_name(opnd_node)) )
+                if ((strlen(qp_col->alias_name) != opnd_len) ||
+                    (strncmp(qp_col->alias_name,
+                             sql_get_opnd_variable_name(opnd_node).c_str(),
+                             SQL_ALIAS_NAME_LEN)))
                     continue;
 
                 all_alias_resolved = false;
@@ -132,7 +133,7 @@ sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                                                    clone_tree)) {
 
                     printf("Error : %s(%d) Failed to resolve Where clause Alias name %s\n",
-                           __FUNCTION__, __LINE__, qp_col->alias_name.c_str());
+                           __FUNCTION__, __LINE__, qp_col->alias_name);
                     return false;
                 }
                 alias_resolved = true;
@@ -183,10 +184,10 @@ qep_resolve_select_asterisk (qep_struct_t *qep) {
     glthread_t *curr;
     qp_col_t *qp_col;    
     list_node_t *lnode;
-    std::string opnd_name;
     ctable_val_t *ctable_val;
     glthread_t *col_list_head;
-    
+    char opnd_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
+
     if (qep->select.n ) return true;
 
     for (i = 0; i < qep->join.table_cnt; i++) {
@@ -199,18 +200,20 @@ qep_resolve_select_asterisk (qep_struct_t *qep) {
             lnode = glue_to_list_node (curr);
             qp_col = (qp_col_t *)calloc (1, sizeof (qp_col_t));
             qp_col->agg_fn = SQL_AGG_FN_NONE;
-            qp_col->alias_name = "";
+            qp_col->alias_name[0] = '\0';
             /* Will allocate at the time of computation in select query*/
             qp_col->computed_value = NULL;
+
             if (qep->join.table_cnt > 1) {
-                opnd_name = std::string ((char *)ctable_val->table_name) + "." + 
-                                       std::string ((char *)lnode->data) ;
+                memset (opnd_name, 0, sizeof (opnd_name));
+                snprintf (opnd_name, sizeof(opnd_name), "%s.%s", 
+                    ctable_val->table_name, (unsigned char *)lnode->data);
                 qp_col->sql_tree = sql_create_exp_tree_for_one_operand (opnd_name);
-                qp_col->alias_name = opnd_name;
+                strncpy (qp_col->alias_name, opnd_name, sizeof (qp_col->alias_name));
             }
             else {
-                qp_col->sql_tree = sql_create_exp_tree_for_one_operand (std::string((char *)lnode->data));
-                qp_col->alias_name = std::string ((char *)lnode->data);
+                qp_col->sql_tree = sql_create_exp_tree_for_one_operand ((char *)lnode->data);
+                strncpy (qp_col->alias_name, (char *)lnode->data, sizeof (qp_col->alias_name));
             }
             qep->select.sel_colmns[qep->select.n++] = qp_col;
 
@@ -243,8 +246,9 @@ sql_query_initialize_select_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
                 qp_col = qep->select.sel_colmns[i];
                 if (sql_is_expression_tree_only_operand (qp_col->sql_tree)
-                        && qp_col->alias_name.empty()) {
-                     qp_col->alias_name = sql_get_opnd_variable_name(sql_tree_get_root (qp_col->sql_tree));
+                        && qp_col->alias_name[0] == '\0') {
+                     strncpy(qp_col->alias_name,  
+                        sql_get_opnd_variable_name(sql_tree_get_root (qp_col->sql_tree)).c_str(), sizeof (qp_col->alias_name));
                 }
             }
     }

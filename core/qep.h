@@ -55,7 +55,7 @@ typedef struct qep_struct_ {
         struct {
 
             ctable_val_t *ctable_val;
-            std::string alias_name;
+            char alias_name[SQL_ALIAS_NAME_LEN];
 
         } tables [SQL_MAX_TABLES_IN_JOIN_LIST];
 
@@ -123,7 +123,7 @@ void
 qep_deinit (qep_struct_t *qep);
 
 bool 
-qep_struct_record_table (qep_struct_t *qep, unsigned char *table_name);
+qep_struct_record_table (qep_struct_t *qep,  char *table_name);
 
 void 
 sql_process_select_query (qep_struct_t *qep) ;

@@ -225,8 +225,8 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
     schema_rec_t *schema_rec = NULL;
     exp_tree_data_src_t *data_src = NULL;
     Dtype_VARIABLE *opnd_var = NULL;
-    unsigned char table_name_out [SQL_TABLE_NAME_MAX_SIZE];
-    unsigned char lone_col_name [SQL_COLUMN_NAME_MAX_SIZE];
+    char table_name_out [SQL_TABLE_NAME_MAX_SIZE];
+    char lone_col_name [SQL_COLUMN_NAME_MAX_SIZE];
 
    MexprTree_Iterator_Operands_Begin (sql_exptree->tree, node) {
 
@@ -235,7 +235,8 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
         if (opnd_var->is_resolved) continue;;
         
         parser_split_table_column_name (
-                (unsigned char *)opnd_var->variable_name.c_str(), table_name_out, lone_col_name);
+                (char *)sql_get_opnd_variable_name(node).c_str(), 
+                table_name_out, lone_col_name);
 
         if (table_name_out[0] == '\0') {
             tindex = 0;
@@ -260,8 +261,9 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
             }
         }
         if (!schema_rec) {
-            printf("Error : %s(%d) : Column %s could not be found in table %s\n", __FUNCTION__, __LINE__,
-                        opnd_var->variable_name.c_str(), ctable_val->table_name);
+            printf("Error : %s(%d) : Column %s could not be found in table %s\n", 
+                __FUNCTION__, __LINE__,
+                sql_get_opnd_variable_name(node).c_str(), ctable_val->table_name);
             return false;
         }
         data_src = (exp_tree_data_src_t *)calloc(1, sizeof(exp_tree_data_src_t));
@@ -286,8 +288,8 @@ sql_resolve_exptree_against_table (sql_exptree_t *sql_exptree,
     schema_rec_t *schema_rec = NULL;
     exp_tree_data_src_t *data_src = NULL;
     Dtype_VARIABLE *opnd_var = NULL;
-    unsigned char table_name_out [SQL_TABLE_NAME_MAX_SIZE];
-    unsigned char lone_col_name [SQL_COLUMN_NAME_MAX_SIZE];
+    char table_name_out [SQL_TABLE_NAME_MAX_SIZE];
+    char lone_col_name [SQL_COLUMN_NAME_MAX_SIZE];
 
    MexprTree_Iterator_Operands_Begin (sql_exptree->tree, node) {
 
@@ -296,7 +298,8 @@ sql_resolve_exptree_against_table (sql_exptree_t *sql_exptree,
          if (opnd_var->is_resolved) continue;;
 
         parser_split_table_column_name (
-                (unsigned char *)opnd_var->variable_name.c_str(), table_name_out, lone_col_name);
+                (char *)sql_get_opnd_variable_name(node).c_str(), 
+                table_name_out, lone_col_name);
 
         if (table_name_out[0] == '\0') {
             if (table_id != 0) continue;
@@ -354,9 +357,9 @@ sql_evaluate_exp_tree (sql_exptree_t *sql_exptree) {
 }
 
 sql_exptree_t *
-sql_create_exp_tree_for_one_operand (std::string opnd_name) {
+sql_create_exp_tree_for_one_operand (char *opnd_name) {
 
-    Dtype_VARIABLE *dtype_var = new Dtype_VARIABLE(opnd_name);
+    Dtype_VARIABLE *dtype_var = new Dtype_VARIABLE(std::string (opnd_name));
     dtype_var->is_resolved = false;
     sql_exptree_t *sql_exptree = (sql_exptree_t *)calloc(1, sizeof(sql_exptree_t));
     sql_exptree->tree = new MexprTree();

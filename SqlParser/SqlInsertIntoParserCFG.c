@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <string.h>
+#include <assert.h>
 #include "ParserExport.h"
 #include "SqlParserStruct.h"
 #include "../core/sql_insert_into.h"

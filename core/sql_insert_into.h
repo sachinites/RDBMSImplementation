@@ -10,10 +10,10 @@ typedef struct sql_value_ {
 
     union {
 
-        unsigned char str_val[SQL_OPERAND_MAX_VALUE];
+        char str_val[SQL_OPERAND_MAX_VALUE];
         int int_val;
         double d_val;
-        unsigned char ipv4_addr_str[16];
+        char ipv4_addr_str[16];
 
     } u;
 } sql_value_t;
@@ -21,7 +21,7 @@ typedef struct sql_value_ {
 
 typedef struct sql_insert_into_data_ {
 
-    unsigned char table_name[SQL_TABLE_NAME_MAX_SIZE];
+    char table_name[SQL_TABLE_NAME_MAX_SIZE];
     int i;
     sql_value_t  sql_values [SQL_MAX_COLUMNS_SUPPORTED_PER_TABLE];
 

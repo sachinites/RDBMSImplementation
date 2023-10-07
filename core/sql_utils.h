@@ -59,9 +59,9 @@ void *
 sql_get_column_value_from_joined_row (joined_row_t *joined_row, qp_col_t *col);
 
 void 
-parser_split_table_column_name ( unsigned char *composite_col_name, 
-                                                        unsigned char *table_name_out,
-                                                        unsigned char *col_name_out);
+parser_split_table_column_name ( char *composite_col_name, 
+                                                        char *table_name_out,
+                                                        char *col_name_out);
 
 
 bool 
