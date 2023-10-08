@@ -248,21 +248,6 @@ sql_compute_aggregate (sql_agg_fn_t agg_fn,
     }
 }
 
-static void *
-joined_row_search ( int table_id, joined_row_t *joined_row) {
-
-    if (joined_row->size == 1) {
-
-        if (joined_row->table_id_array[0] == table_id) {
-            return  joined_row->rec_array[0];
-        }
-
-        return NULL;
-    }
-
-   return joined_row->rec_array[table_id];
-}
-
 void 
 parser_split_table_column_name ( char *composite_col_name, 
                                                         char *table_name_out,
@@ -283,15 +268,3 @@ parser_split_table_column_name ( char *composite_col_name,
     strncpy (col_name_out, str2, SQL_COLUMN_NAME_MAX_SIZE);
 }
 
-#if 0
-void 
-string_trim_quotes (std::string str_val) {
-
-    str_val.erase(  std::remove(str_val.begin(), 
-                            str_val.end(), '\"'), 
-                            str_val.end() );
-    str_val.erase(  std::remove(str_val.begin(), 
-                            str_val.end(), '\''), 
-                            str_val.end() );
-}
-#endif

@@ -334,7 +334,7 @@ qep_deinit (qep_struct_t *qep) {
 
     if (qep->where.gexptree) {
         
-        sql_destrpy_exp_tree (qep->where.gexptree);
+        sql_destroy_exp_tree (qep->where.gexptree);
         qep->where.gexptree = NULL;
     }
 
@@ -345,8 +345,12 @@ qep_deinit (qep_struct_t *qep) {
             qp_col = qep->groupby.col_list[i];
 
             if (qp_col->sql_tree) {
-                sql_destrpy_exp_tree (qp_col->sql_tree );
+                sql_destroy_exp_tree (qp_col->sql_tree );
                 qp_col->sql_tree = NULL;
+                if (qp_col->computed_value) {
+                    sql_destroy_Dtype_value_holder (qp_col->computed_value);
+                    qp_col->computed_value = NULL;
+                }
             }
             free(qp_col);
         }
@@ -359,7 +363,7 @@ qep_deinit (qep_struct_t *qep) {
     }
 
     if (qep->having.gexptree) {
-        sql_destrpy_exp_tree (qep->having.gexptree);
+        sql_destroy_exp_tree (qep->having.gexptree);
         qep->having.gexptree = NULL;
     }
 
@@ -369,8 +373,13 @@ qep_deinit (qep_struct_t *qep) {
 
             qp_col = qep->select.sel_colmns[i];
             if (qp_col->sql_tree) {
-                 sql_destrpy_exp_tree (qp_col->sql_tree);
+                 sql_destroy_exp_tree (qp_col->sql_tree);
                 qp_col->sql_tree = NULL;
+            }
+
+            if (qp_col->computed_value) {
+                sql_destroy_Dtype_value_holder(qp_col->computed_value);
+                qp_col->computed_value = NULL;
             }
             free(qp_col);            
         }
@@ -538,6 +547,12 @@ sql_execute_qep (qep_struct_t *qep) {
 
             if (qp_col->agg_fn = SQL_AGG_FN_NONE) {
                 
+                /* Flush the old result*/
+                if (qp_col->computed_value) {
+                     sql_destroy_Dtype_value_holder (qp_col->computed_value);
+                     qp_col->computed_value = NULL;
+                }
+
                 qp_col->computed_value = sql_evaluate_exp_tree (qp_col->sql_tree);
             }
             else {

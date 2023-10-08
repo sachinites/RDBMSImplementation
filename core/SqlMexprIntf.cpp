@@ -404,7 +404,7 @@ sql_concatenate_expr_trees (sql_exptree_t *parent_tree,
 }
 
 void 
-sql_destrpy_exp_tree (sql_exptree_t *tree) {
+sql_destroy_exp_tree (sql_exptree_t *tree) {
 
     tree->tree->destroy(tree->tree->root);
     free(tree);
@@ -449,4 +449,10 @@ sql_tree_remove_unresolve_operands(sql_exptree_t *sql_exptree) {
 
     if (!sql_exptree || sql_exptree->tree) return 0;
     return sql_exptree->tree->RemoveUnresolveOperands();
+}
+
+void 
+sql_destroy_Dtype_value_holder (Dtype *dtype) {
+
+    delete dtype;
 }

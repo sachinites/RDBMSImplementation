@@ -67,7 +67,7 @@ sql_concatenate_expr_trees (sql_exptree_t *parent_tree,
                                                 sql_exptree_t *child_tree);
 
 void 
-sql_destrpy_exp_tree (sql_exptree_t *tree);
+sql_destroy_exp_tree (sql_exptree_t *tree);
 
 MexprNode *
 sql_tree_get_first_operand (sql_exptree_t *tree);
@@ -85,5 +85,8 @@ sql_tree_get_root (sql_exptree_t *tree) ;
 
 void 
 InstallDtypeOperandProperties (MexprNode *node, void *data_src, Dtype *(*compute_fn_ptr)(void *)) ;
+
+void 
+sql_destroy_Dtype_value_holder (Dtype *dtype);
 
 #endif 
