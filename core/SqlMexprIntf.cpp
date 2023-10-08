@@ -331,6 +331,7 @@ sql_resolve_exptree_against_table (sql_exptree_t *sql_exptree,
 
    } MexprTree_Iterator_Operands_End;
 
+   sql_exptree->tree->RemoveUnresolveOperands();
    sql_exptree->tree->optimize (sql_exptree->tree->root);
    return true;
 }
