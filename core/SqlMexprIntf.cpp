@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <assert.h>
+#include <list>
+#include <string>
 #include "Catalog.h"
 #include "sql_utils.h"
 #include "SqlMexprIntf.h"
@@ -19,6 +21,8 @@ mexpr_convert_infix_to_postfix (lex_data_t *infix, int sizein, int *size_out) ;
 static MexprTree *
 Parser_Mexpr_build_math_expression_tree () {
 
+    int i;
+    std::string *string_ptr;
     MexprTree *tree = NULL; 
 
     int stack_chkp = undo_stack.top + 1;
@@ -33,10 +37,24 @@ Parser_Mexpr_build_math_expression_tree () {
     lex_data_t **postfix = mexpr_convert_infix_to_postfix (
                                             &undo_stack.data[stack_chkp], undo_stack.top + 1 - stack_chkp, &size_out);
     
-    int i;
-    lex_data_t *lex_data;        
-
    tree = new MexprTree (postfix, size_out);
+
+    /* Free the post fix array now */
+   for (i = 0; i < size_out; i++) {
+
+        if (postfix[i] -> token_code == MATH_CPP_STRING_LST) {
+
+            std::list<std::string *> *str_lst_ptr = 
+                reinterpret_cast <std::list<std::string *> *> (postfix[i]->token_val);
+
+            for (std::list<std::string *>::iterator it = str_lst_ptr->begin(); 
+                        it != str_lst_ptr->end(); ++it) {
+                delete *it;
+            }
+            delete str_lst_ptr;
+        }
+        free(postfix[i]);
+   }
    free(postfix);
 
     return tree; 
@@ -46,6 +64,7 @@ Parser_Mexpr_build_math_expression_tree () {
 static MexprTree *
 Parser_Mexpr_Condition_build_expression_tree () {
 
+    int i;
     MexprTree *tree = NULL; 
 
     int stack_chkp = undo_stack.top + 1;
@@ -63,13 +82,27 @@ Parser_Mexpr_Condition_build_expression_tree () {
     int size_out = 0;
     lex_data_t **postfix = mexpr_convert_infix_to_postfix (
                                             &undo_stack.data[stack_chkp], undo_stack.top + 1 - stack_chkp, &size_out);
-    
-    int i;
-    lex_data_t *lex_data;        
 
-    tree = new MexprTree (postfix, size_out);
+    tree = new MexprTree(postfix, size_out);
 
-    free(postfix);
+    /* Free the post fix array now */
+   for (i = 0; i < size_out; i++) {
+
+        if (postfix[i] -> token_code == MATH_CPP_STRING_LST) {
+
+            std::list<std::string *> *str_lst_ptr = 
+                reinterpret_cast <std::list<std::string *> *> (postfix[i]->token_val);
+
+            for (std::list<std::string *>::iterator it = str_lst_ptr->begin(); 
+                        it != str_lst_ptr->end(); ++it) {
+                delete *it;
+            }
+            delete str_lst_ptr;
+        }
+        free(postfix[i]);
+   }
+   free(postfix);
+
     return tree;
 }
 
