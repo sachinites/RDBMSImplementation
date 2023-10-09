@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string>
+#include "../SqlParser/SqlParserStruct.h"
+#include "../../MathExpressionParser/MExprcppEnums.h"
 
 class MexprTree;
 class Dtype;
@@ -88,5 +90,8 @@ InstallDtypeOperandProperties (MexprNode *node, void *data_src, Dtype *(*compute
 
 void 
 sql_destroy_Dtype_value_holder (Dtype *dtype);
+
+mexprcpp_dtypes_t
+sql_to_mexpr_dtype_converter (sql_dtype_t sql_dtype) ;
 
 #endif 

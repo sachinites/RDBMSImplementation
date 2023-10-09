@@ -18,6 +18,40 @@ parse_rc_t E ();
 extern lex_data_t **
 mexpr_convert_infix_to_postfix (lex_data_t *infix, int sizein, int *size_out) ;
 
+static void
+postfix_lex_data_array_destroy (lex_data_t **postfix, int size) {
+    
+    int i;
+
+    for (i = 0; i < size; i++) {
+
+        /* postfix array may have holes !*/
+        if (!postfix[i]) continue;
+
+        switch (postfix[i]->token_code) {
+
+            case MATH_CPP_STRING_LST: 
+            {
+                std::list<std::string *> *str_lst_ptr =
+                    reinterpret_cast<std::list<std::string *> *>(postfix[i]->token_val);
+
+                for (std::list<std::string *>::iterator it = str_lst_ptr->begin();
+                    it != str_lst_ptr->end(); ++it) {
+                    delete *it;
+                }
+                delete str_lst_ptr;
+            }
+            break;
+
+            default:
+            break;
+        }
+
+        free(postfix[i]);
+    }
+    free(postfix);
+}
+
 static MexprTree *
 Parser_Mexpr_build_math_expression_tree () {
 
@@ -38,25 +72,7 @@ Parser_Mexpr_build_math_expression_tree () {
                                             &undo_stack.data[stack_chkp], undo_stack.top + 1 - stack_chkp, &size_out);
     
    tree = new MexprTree (postfix, size_out);
-
-    /* Free the post fix array now */
-   for (i = 0; i < size_out; i++) {
-
-        if (postfix[i] -> token_code == MATH_CPP_STRING_LST) {
-
-            std::list<std::string *> *str_lst_ptr = 
-                reinterpret_cast <std::list<std::string *> *> (postfix[i]->token_val);
-
-            for (std::list<std::string *>::iterator it = str_lst_ptr->begin(); 
-                        it != str_lst_ptr->end(); ++it) {
-                delete *it;
-            }
-            delete str_lst_ptr;
-        }
-        free(postfix[i]);
-   }
-   free(postfix);
-
+    postfix_lex_data_array_destroy (postfix, size_out);
     return tree; 
 }
 
@@ -84,28 +100,9 @@ Parser_Mexpr_Condition_build_expression_tree () {
                                             &undo_stack.data[stack_chkp], undo_stack.top + 1 - stack_chkp, &size_out);
 
     tree = new MexprTree(postfix, size_out);
-
-    /* Free the post fix array now */
-   for (i = 0; i < size_out; i++) {
-
-        if (postfix[i] -> token_code == MATH_CPP_STRING_LST) {
-
-            std::list<std::string *> *str_lst_ptr = 
-                reinterpret_cast <std::list<std::string *> *> (postfix[i]->token_val);
-
-            for (std::list<std::string *>::iterator it = str_lst_ptr->begin(); 
-                        it != str_lst_ptr->end(); ++it) {
-                delete *it;
-            }
-            delete str_lst_ptr;
-        }
-        free(postfix[i]);
-   }
-   free(postfix);
-
+    postfix_lex_data_array_destroy (postfix, size_out);
     return tree;
 }
-
 
 sql_exptree_t *
 sql_create_exp_tree_compute ()  {
@@ -303,7 +300,10 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
         data_src->table_index = tindex;
         data_src->schema_rec = schema_rec;
         data_src->joined_row = joined_row;
-        opnd_var->InstallOperandProperties (data_src, sql_column_value_resolution_fn);
+        opnd_var->InstallOperandProperties (
+                sql_to_mexpr_dtype_converter (schema_rec->dtype) , 
+                data_src, 
+                sql_column_value_resolution_fn);
 
    } MexprTree_Iterator_Operands_End;
 
@@ -352,15 +352,19 @@ sql_resolve_exptree_against_table (sql_exptree_t *sql_exptree,
         }
 
         if (!schema_rec) {
-                printf("Info (%s) : Operand %s could not be resolved against table %s\n", __FUNCTION__,
-                        opnd_var->variable_name.c_str(), ctable_val->table_name);
+                printf("Info (%s) : Operand %s could not be resolved against table %s\n", 
+                        __FUNCTION__,
+                        opnd_var->dtype.variable_name.c_str(), ctable_val->table_name);
                 continue;
         }
         data_src = (exp_tree_data_src_t *)calloc(1, sizeof(exp_tree_data_src_t));
         data_src->table_index = table_id,
         data_src->schema_rec = schema_rec;
         data_src->joined_row = joined_row;
-        opnd_var->InstallOperandProperties (data_src, sql_column_value_resolution_fn);
+        opnd_var->InstallOperandProperties (
+                        sql_to_mexpr_dtype_converter (schema_rec->dtype), 
+                        data_src,
+                        sql_column_value_resolution_fn);
 
    } MexprTree_Iterator_Operands_End;
 
@@ -414,7 +418,7 @@ std::string
 sql_get_opnd_variable_name (MexprNode *opnd_node) {
 
     Dtype_VARIABLE *dtype = dynamic_cast <Dtype_VARIABLE *> (opnd_node);
-    return dtype->variable_name;
+    return dtype->dtype.variable_name;
 }
 
 sql_exptree_t *
@@ -472,10 +476,13 @@ sql_tree_get_root (sql_exptree_t *tree) {
 }
 
 void 
-InstallDtypeOperandProperties (MexprNode *node, void *data_src, Dtype *(*compute_fn_ptr)(void *)) {
+InstallDtypeOperandProperties (MexprNode *node, 
+                                                    mexprcpp_dtypes_t resolved_did,
+                                                    void *data_src, 
+                                                    Dtype *(*compute_fn_ptr)(void *)) {
 
     Dtype_VARIABLE *dtype_node = dynamic_cast <Dtype_VARIABLE *> (node);
-    dtype_node->InstallOperandProperties (data_src, compute_fn_ptr);
+    dtype_node->InstallOperandProperties (resolved_did, data_src, compute_fn_ptr);
 }
 
 uint8_t  
