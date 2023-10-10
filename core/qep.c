@@ -548,11 +548,10 @@ sql_execute_qep (qep_struct_t *qep) {
             if (qp_col->agg_fn = SQL_AGG_FN_NONE) {
                 
                 /* Flush the old result*/
-                if (qp_col->computed_value) {
+                if (qp_col->computed_value ) {
                      sql_destroy_Dtype_value_holder (qp_col->computed_value);
                      qp_col->computed_value = NULL;
                 }
-
                 qp_col->computed_value = sql_evaluate_exp_tree (qp_col->sql_tree);
             }
             else {

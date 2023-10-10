@@ -217,7 +217,7 @@ sql_column_value_resolution_fn (void *_data_src) {
         default:
             assert(0);
     }
-
+    dtype->del_after_use = true;
     return dtype;
 }
 
@@ -384,7 +384,7 @@ sql_evaluate_conditional_exp_tree (sql_exptree_t *sql_exptree) {
     res = sql_exptree->tree->evaluate (sql_exptree->tree->root);
     d_bool = dynamic_cast <Dtype_BOOL *> (res);
     rc = d_bool->dtype.b_val;
-    delete d_bool;
+    if (d_bool->del_after_use) delete d_bool;
     return rc;
 }
 
@@ -495,5 +495,6 @@ sql_tree_remove_unresolve_operands(sql_exptree_t *sql_exptree) {
 void 
 sql_destroy_Dtype_value_holder (Dtype *dtype) {
 
+    if (!dtype->del_after_use) return;
     delete dtype;
 }

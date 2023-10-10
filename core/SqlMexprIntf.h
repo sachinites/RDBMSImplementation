@@ -80,7 +80,7 @@ sql_tree_get_next_operand (MexprNode *node);
 #define SqlExprTree_Iterator_Operands_Begin(tree_ptr, node_ptr) \
     for (node_ptr = sql_tree_get_first_operand(tree_ptr) ;  \
             node_ptr;   \
-            node_ptr = sql_tree_get_next_operand (sql_tree_get_next_operand (node_ptr)))
+            node_ptr = sql_tree_get_next_operand (node_ptr))
 
 MexprNode *
 sql_tree_get_root (sql_exptree_t *tree) ;
