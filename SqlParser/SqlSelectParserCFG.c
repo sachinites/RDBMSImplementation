@@ -149,6 +149,7 @@ COL() {
     qp_col_t *qp_col = (qp_col_t *)calloc (1, sizeof (qp_col_t));
     qp_col->agg_fn = SQL_AGG_FN_NONE;
     qp_col->alias_provided_by_user = false;
+    qep.select.sel_colmns[qep.select.n++] = qp_col;
 
     do {
 
@@ -166,7 +167,6 @@ COL() {
             qp_col->alias_provided_by_user = true;
         }
 
-        qep.select.sel_colmns[qep.select.n++] = qp_col;
         RETURN_PARSE_SUCCESS;
 
     } while (0);

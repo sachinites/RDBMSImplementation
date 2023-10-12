@@ -14,6 +14,7 @@ typedef struct ast_node_ ast_node_t;
 typedef struct sql_exptree_ sql_exptree_t;
 
 class Dtype;
+class Aggregator;
 
 typedef struct  key_mdata_ {
 
@@ -35,6 +36,7 @@ typedef struct qp_col_ {
     sql_exptree_t *sql_tree;
     sql_agg_fn_t agg_fn;
     Dtype* computed_value;
+    Aggregator *aggregator;
     bool alias_provided_by_user;
     char alias_name[SQL_ALIAS_NAME_LEN];
     

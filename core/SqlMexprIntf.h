@@ -10,6 +10,8 @@
 class MexprTree;
 class Dtype;
 class MexprNode;
+class Aggregator;
+
 typedef struct catalog_table_value ctable_val_t;
 typedef struct BPlusTree BPlusTree_t ;
 typedef struct joined_row_ joined_row_t;
@@ -93,5 +95,20 @@ sql_destroy_Dtype_value_holder (Dtype *dtype);
 
 mexprcpp_dtypes_t
 sql_to_mexpr_dtype_converter (sql_dtype_t sql_dtype) ;
+
+mexprcpp_agg_t 
+sql_to_mexpr_agg_fn_converter (sql_agg_fn_t agg_fn) ;
+
+Aggregator *
+sql_get_aggregator (qp_col_t *qp_col);
+
+void
+sql_destroy_aggregator (qp_col_t *qp_col) ;
+
+void 
+sql_column_value_aggregate (qp_col_t *qp_col, Dtype *new_value);
+
+Dtype *
+sql_column_get_aggregated_value (qp_col_t *qp_col) ;
 
 #endif 

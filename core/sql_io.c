@@ -68,7 +68,9 @@ void sql_emit_select_output(int n_col,
     for (i = 0; i < n_col; i++) {
 
         qp_col = col_list_head[i];
-        Dtype *dtype = qp_col->computed_value;
+        Dtype *dtype = (qp_col->agg_fn != SQL_AGG_FN_NONE ) ? \
+                                    sql_column_get_aggregated_value (qp_col) :  \
+                                    qp_col->computed_value;
 
         if (qp_col->agg_fn == SQL_COUNT) {
             printf("%-*d|", column_width,  (dynamic_cast <Dtype_INT *>(dtype))->dtype.int_val);
@@ -98,15 +100,10 @@ void sql_emit_select_output(int n_col,
                 assert(0);
                 break;
                 
-            #if 0
-            case SQL_IPV4_ADDR: {
-                assert(0);
-                unsigned char ipv4_addr_str[16];
-                inet_ntop(AF_INET, val->u., ipv4_addr_str, 16);
-                printf("%-*s|", column_width, ipv4_addr_str);
+            case MATH_CPP_IPV4: {
+                printf("%-*s|", column_width, (dynamic_cast <Dtype_IPv4_addr*>(dtype))->dtype.ip_addr_str.c_str());
                 break;
             }
-            #endif
             default:
                 assert(0);
         }

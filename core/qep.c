@@ -351,6 +351,9 @@ qep_deinit (qep_struct_t *qep) {
                     sql_destroy_Dtype_value_holder (qp_col->computed_value);
                     qp_col->computed_value = NULL;
                 }
+                else if (qp_col->aggregator){
+                    sql_destroy_aggregator (qp_col);
+                }
             }
             free(qp_col);
         }
@@ -380,6 +383,9 @@ qep_deinit (qep_struct_t *qep) {
             if (qp_col->computed_value) {
                 sql_destroy_Dtype_value_holder(qp_col->computed_value);
                 qp_col->computed_value = NULL;
+            }
+            else if (qp_col->aggregator){
+                sql_destroy_aggregator (qp_col);
             }
             free(qp_col);            
         }
@@ -522,6 +528,7 @@ sql_execute_qep (qep_struct_t *qep) {
     int i;
     int row_no = 0;
     qp_col_t *qp_col;
+    Dtype *computed_value;
     bool is_aggregation = false;
 
     while (qep_execute_join (qep)) {
@@ -545,7 +552,7 @@ sql_execute_qep (qep_struct_t *qep) {
 
             qp_col = qep->select.sel_colmns[i];
 
-            if (qp_col->agg_fn = SQL_AGG_FN_NONE) {
+            if (qp_col->agg_fn == SQL_AGG_FN_NONE) {
                 
                 /* Flush the old result*/
                 if (qp_col->computed_value ) {
@@ -556,6 +563,23 @@ sql_execute_qep (qep_struct_t *qep) {
             }
             else {
                 /* Process Agg fn*/
+
+                is_aggregation = true;
+
+                if (!qp_col->aggregator) {
+                    qp_col->computed_value =  sql_evaluate_exp_tree (qp_col->sql_tree);
+                    qp_col->aggregator = sql_get_aggregator (qp_col);
+                    assert (qp_col->aggregator);
+                    sql_column_value_aggregate  (qp_col,  qp_col->computed_value);
+                    sql_destroy_Dtype_value_holder (qp_col->computed_value);
+                    qp_col->computed_value = NULL;
+                }
+                else {
+                    computed_value = sql_evaluate_exp_tree (qp_col->sql_tree);
+                    sql_column_value_aggregate  (qp_col, computed_value);
+                    sql_destroy_Dtype_value_holder (computed_value);
+                }
+                
             }
         }
 
@@ -572,9 +596,16 @@ sql_execute_qep (qep_struct_t *qep) {
             if (qep->limit == row_no) {
                 break;
             }
-        }        
-
+        }
     }  /* While ends */
+
+    /* Case 2 :  No Group by Clause,  Aggregated Columns */
+    if (!qep->groupby.n && is_aggregation) {
+
+        sql_print_hdr(qep->select.sel_colmns, qep->select.n);
+        sql_emit_select_output(qep->select.n, qep->select.sel_colmns);
+        printf ("(1 rows)\n");
+    }
 }
 
 void 

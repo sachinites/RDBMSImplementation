@@ -3,11 +3,13 @@
 #include <assert.h>
 #include <list>
 #include <string>
+#include <arpa/inet.h>
 #include "Catalog.h"
 #include "sql_utils.h"
 #include "SqlMexprIntf.h"
 #include "../SqlParser/ParserExport.h"
 #include "../../MathExpressionParser/Dtype.h"
+#include "../../MathExpressionParser/Aggregators.h"
 #include "qep.h"
 
 /* Imports from ExpressionParser*/
@@ -212,8 +214,16 @@ sql_column_value_resolution_fn (void *_data_src) {
         break;        
 
         case SQL_IPV4_ADDR:
-            /* Not Supported by Mexpr Yet*/
-            break;
+        {
+            char ipv4_str[16];
+            dtype =  Dtype::factory (MATH_CPP_IPV4);
+            Dtype_IPv4_addr *dtype_v4 = dynamic_cast <Dtype_IPv4_addr *> (dtype);
+            dtype_v4->dtype.ipaddr_int= *(uint32_t *)val;
+            inet_ntop ( AF_INET, &dtype_v4->dtype.ipaddr_int, ipv4_str, 16);
+            dtype_v4->dtype.ip_addr_str = std::string (ipv4_str);
+        }
+        break;
+
         default:
             assert(0);
     }
@@ -497,4 +507,40 @@ sql_destroy_Dtype_value_holder (Dtype *dtype) {
 
     if (!dtype->del_after_use) return;
     delete dtype;
+}
+
+Aggregator *
+sql_get_aggregator (qp_col_t *qp_col) {
+
+    if (qp_col->agg_fn == SQL_AGG_FN_NONE) return NULL;
+    
+    /* Column must have got its Ist computed value, so that we know 
+         Dtype of Aggregator we need*/
+    assert (qp_col->computed_value);
+
+    Aggregator *aggregator = Aggregator::factory (
+                    sql_to_mexpr_agg_fn_converter (qp_col->agg_fn),  // which agg fn we need
+                    (qp_col->computed_value->did) );  // what is the data type to aggregate
+
+    return aggregator;
+}
+
+
+void
+sql_destroy_aggregator (qp_col_t *qp_col) {
+
+    delete qp_col->aggregator;
+    qp_col->aggregator = NULL;
+}
+
+void 
+sql_column_value_aggregate (qp_col_t *qp_col, Dtype *new_value) {
+
+    qp_col->aggregator->aggregate (new_value);
+}
+
+Dtype *
+sql_column_get_aggregated_value (qp_col_t *qp_col) {
+
+    return qp_col->aggregator->getAggregatedValue();
 }
