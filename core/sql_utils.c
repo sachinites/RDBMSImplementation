@@ -268,3 +268,20 @@ parser_split_table_column_name ( char *composite_col_name,
     strncpy (col_name_out, str2, SQL_COLUMN_NAME_MAX_SIZE);
 }
 
+qp_col_t *
+sql_get_qp_col_by_alias_name (qp_col_t **qp_col_array, 
+                                                    int n, char *alias_name) {
+
+    int i;
+    qp_col_t *qp_col;
+
+    for (i = 0; i < n; i++) {
+
+        qp_col = qp_col_array[i];
+        if (!qp_col->alias_provided_by_user) continue;
+        if (strncmp (alias_name, qp_col->alias_name, SQL_ALIAS_NAME_LEN)) continue;
+        if (strlen (alias_name) != strlen (qp_col->alias_name)) continue;
+        return qp_col;
+    }
+    return NULL;
+}

@@ -64,13 +64,6 @@ parser_split_table_column_name ( char *composite_col_name,
                                                         char *col_name_out);
 
 
-bool 
-qp_col_is_equal (qp_col_t *col1, qp_col_t *col2);
-
-qp_col_t *
-qp_col_lookup_identical (qp_col_t **col_list, int size, qp_col_t *key_col) ;
-
-
 static inline bool 
 mexpr_double_is_integer (double d) {
 
@@ -80,5 +73,9 @@ mexpr_double_is_integer (double d) {
 
 void 
 string_trim_quotes (std::string str);
+
+qp_col_t *
+sql_get_qp_col_by_alias_name (qp_col_t **qp_col_array, 
+                                                    int n, char *alias_name) ;
 
 #endif 

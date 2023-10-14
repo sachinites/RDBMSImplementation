@@ -113,7 +113,7 @@ sql_create_exp_tree_compute ()  {
     sql_exptree->tree = Parser_Mexpr_build_math_expression_tree ();
 
     if (!sql_exptree->tree) {
-        printf ("Error : %s(%d) Expression Parsing Failed\n",   __FUNCTION__, __LINE__);
+        //printf ("Info : %s(%d) Expression Parsing Failed\n",   __FUNCTION__, __LINE__);
         free (sql_exptree) ;
         return NULL;
     }
@@ -474,7 +474,7 @@ sql_tree_get_next_operand (MexprNode *node) {
 }
 
 bool 
-sql_is_expression_tree_only_operand (sql_exptree_t *sql_exptree) {
+sql_is_single_operand_expression_tree (sql_exptree_t *sql_exptree) {
 
     return sql_exptree->tree->IsLoneVariableOperandNode();
 }
@@ -543,4 +543,22 @@ Dtype *
 sql_column_get_aggregated_value (qp_col_t *qp_col) {
 
     return qp_col->aggregator->getAggregatedValue();
+}
+
+bool 
+sql_tree_validate (sql_exptree_t *tree) {
+
+    return tree->tree->validate (tree->tree->root);
+}
+
+bool 
+sql_tree_optimize (sql_exptree_t *tree) {
+
+    return tree->tree->optimize (tree->tree->root);
+}
+
+int 
+sql_dtype_serialize (Dtype *dtype, void *mem) {
+
+    return dtype->serialize (mem);
 }

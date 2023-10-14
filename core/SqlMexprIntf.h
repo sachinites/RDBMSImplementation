@@ -51,7 +51,7 @@ sql_exptree_t *
 sql_create_exp_tree_for_one_operand (char * opnd_name) ;
 
 bool 
-sql_is_expression_tree_only_operand (sql_exptree_t *sql_exptree);
+sql_is_single_operand_expression_tree (sql_exptree_t *sql_exptree);
 
 bool 
 sql_opnd_node_is_resolved (MexprNode *opnd_node);
@@ -87,6 +87,12 @@ sql_tree_get_next_operand (MexprNode *node);
 MexprNode *
 sql_tree_get_root (sql_exptree_t *tree) ;
 
+bool 
+sql_tree_validate (sql_exptree_t *tree);
+
+bool 
+sql_tree_optimize (sql_exptree_t *tree);
+
 void 
 InstallDtypeOperandProperties (MexprNode *node, void *data_src, Dtype *(*compute_fn_ptr)(void *)) ;
 
@@ -110,5 +116,8 @@ sql_column_value_aggregate (qp_col_t *qp_col, Dtype *new_value);
 
 Dtype *
 sql_column_get_aggregated_value (qp_col_t *qp_col) ;
+
+int 
+sql_dtype_serialize (Dtype *dtype, void *mem);
 
 #endif 

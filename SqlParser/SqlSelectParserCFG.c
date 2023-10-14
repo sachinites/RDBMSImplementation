@@ -44,12 +44,68 @@ LMT  -> $  |  limit <integer>
 qep_struct_t qep;
 char *L_alias_name = NULL;
 
+static parse_rc_t INDTF_LST();
+static parse_rc_t GROUP_BY ();
 static parse_rc_t WHERE() ;
 static parse_rc_t TABS() ;
 static parse_rc_t L() ;
 static parse_rc_t COL();
 static parse_rc_t COLLIST();
 
+/* INDTF_LST -> IDENT | IDENT , INDTF_LST */
+parse_rc_t
+INDTF_LST() {
+
+    parse_init();
+    qp_col_t *qp_col;
+
+    sql_exptree_t *exp_tree = sql_create_exp_tree_compute ();
+
+    if (!exp_tree) RETURN_PARSE_ERROR;
+
+    qp_col = (qp_col_t *)calloc (1, sizeof (qp_col_t));
+    qp_col->agg_fn = SQL_AGG_FN_NONE;
+    qp_col->aggregator = NULL;
+    qp_col->alias_provided_by_user = false;
+    qp_col->computed_value = NULL;
+    qp_col->link_to_groupby_col = NULL;
+    qp_col->sql_tree = exp_tree;
+    qep.groupby.col_list[qep.groupby.n++] = qp_col;
+
+    token_code = cyylex();
+
+    if (token_code != SQL_COMMA) {
+        yyrewind(1);
+        RETURN_PARSE_SUCCESS;
+    }
+
+    err = INDTF_LST() ;
+
+    if (err == PARSE_ERR) RETURN_PARSE_ERROR;
+
+    RETURN_PARSE_SUCCESS;
+}
+
+
+/* GRPBY ->  $  |  group by INDTF_LST HAVING */
+parse_rc_t
+GROUP_BY () {
+
+    parse_init();
+
+    token_code = cyylex();
+
+    if (token_code != SQL_GROUP_BY) {
+        yyrewind(1);
+        RETURN_PARSE_SUCCESS;
+    }
+
+    err = INDTF_LST();
+
+    if (err == PARSE_ERR) RETURN_PARSE_ERROR;
+
+    RETURN_PARSE_SUCCESS;
+}
 
 /* WHERE -> $ | where LEXPR */
 parse_rc_t
@@ -291,6 +347,14 @@ select_query_parser () {
         printf ("Error : Parsing Error on Where Clause\n");
         RETURN_PARSE_ERROR;        
     }
+
+    err = GROUP_BY();
+
+    if (err == PARSE_ERR) {
+
+        printf ("Error : Parsing Error on GROUP BY Clause\n");
+        RETURN_PARSE_ERROR;        
+    }    
 
     token_code = cyylex ();
 

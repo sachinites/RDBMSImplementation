@@ -73,7 +73,8 @@ typedef struct qep_struct_ {
         int n;
         qp_col_t *col_list[SQL_MAX_COLS_IN_GROUPBY_LIST];
         hashtable_t *ht;
-
+        void *ht_key_storage;
+        
     } groupby;
 
     struct {
@@ -112,7 +113,7 @@ typedef struct qep_struct_ {
     bool is_join_finished;
     table_iterators_t *titer;
 
-    joined_row_t joined_row_tmplate;
+    joined_row_t *joined_row_tmplate;
 } qep_struct_t;
 
 
