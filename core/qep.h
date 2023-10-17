@@ -73,13 +73,14 @@ typedef struct qep_struct_ {
         int n;
         qp_col_t *col_list[SQL_MAX_COLS_IN_GROUPBY_LIST];
         hashtable_t *ht;
-        void *ht_key_storage;
+        int ht_key_size;
         
     } groupby;
 
     struct {
 
-         sql_exptree_t *gexptree;
+         sql_exptree_t *gexptree_phase1;
+         sql_exptree_t *gexptree_phase2;
          int8_t having_phase; // either 1 or 2
 
     } having;

@@ -56,6 +56,12 @@ sql_is_single_operand_expression_tree (sql_exptree_t *sql_exptree);
 bool 
 sql_opnd_node_is_resolved (MexprNode *opnd_node);
 
+bool 
+sql_opnd_node_is_unresolvable (MexprNode *opnd_node) ;
+
+void 
+sql_opnd_node_mark_unresolvable (MexprNode *opnd_node) ;
+
 uint8_t 
  sql_tree_remove_unresolve_operands(sql_exptree_t *sql_exptree);
 
@@ -119,5 +125,8 @@ sql_column_get_aggregated_value (qp_col_t *qp_col) ;
 
 int 
 sql_dtype_serialize (Dtype *dtype, void *mem);
+
+int
+sql_tree_expand_all_aliases (qep_struct_t *qep, sql_exptree_t *sql_tree);
 
 #endif 

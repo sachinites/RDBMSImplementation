@@ -75,7 +75,12 @@ void
 string_trim_quotes (std::string str);
 
 qp_col_t *
-sql_get_qp_col_by_alias_name (qp_col_t **qp_col_array, 
-                                                    int n, char *alias_name) ;
+sql_get_qp_col_by_name (   qp_col_t **qp_col_array, 
+                                                        int n, 
+                                                        char *name, 
+                                                        bool is_alias);
+
+#define QP_COL_NAME(qp_col_t_ptr) \
+    ((char *)sql_get_opnd_variable_name (sql_tree_get_root (gqp_col->sql_tree)).c_str())
 
 #endif 

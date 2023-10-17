@@ -272,7 +272,8 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
 
         opnd_var = dynamic_cast <Dtype_VARIABLE *> (node);
 
-        if (opnd_var->is_resolved) continue;;
+        if (sql_opnd_node_is_resolved (opnd_var)) continue;
+        if (sql_opnd_node_is_unresolvable (opnd_var)) continue;
         
         parser_split_table_column_name (
                 (char *)sql_get_opnd_variable_name(node).c_str(), 
@@ -338,7 +339,8 @@ sql_resolve_exptree_against_table (sql_exptree_t *sql_exptree,
 
         opnd_var = dynamic_cast <Dtype_VARIABLE *> (node);
 
-         if (opnd_var->is_resolved) continue;;
+        if (sql_opnd_node_is_resolved (opnd_var)) continue;
+        if (sql_opnd_node_is_unresolvable (opnd_var)) continue;
 
         parser_split_table_column_name (
                 (char *)sql_get_opnd_variable_name(node).c_str(), 
@@ -423,6 +425,20 @@ sql_opnd_node_is_resolved (MexprNode *opnd_node) {
     return dtype->is_resolved;
 }
 
+bool 
+sql_opnd_node_is_unresolvable (MexprNode *opnd_node) {
+
+    Dtype *dtype = dynamic_cast <Dtype *> (opnd_node);
+    return dtype->unresolvable;
+}
+
+void 
+sql_opnd_node_mark_unresolvable (MexprNode *opnd_node) {
+
+    Dtype *dtype = dynamic_cast <Dtype *> (opnd_node);
+    dtype->unresolvable = true;
+}
+
 
 std::string 
 sql_get_opnd_variable_name (MexprNode *opnd_node) {
@@ -498,7 +514,7 @@ InstallDtypeOperandProperties (MexprNode *node,
 uint8_t  
 sql_tree_remove_unresolve_operands(sql_exptree_t *sql_exptree) {
 
-    if (!sql_exptree || sql_exptree->tree) return 0;
+    if (!sql_exptree || !sql_exptree->tree) return 0;
     return sql_exptree->tree->RemoveUnresolveOperands();
 }
 
@@ -561,4 +577,43 @@ int
 sql_dtype_serialize (Dtype *dtype, void *mem) {
 
     return dtype->serialize (mem);
+}
+
+int
+sql_tree_expand_all_aliases (qep_struct_t *qep, sql_exptree_t *sql_tree) {
+
+    int count = 0;
+    qp_col_t *sqp_col;
+    std::string opnd_name;
+    MexprNode *opnd_node;
+    bool all_alias_expanded = false;
+
+    while (!all_alias_expanded) {
+        
+        all_alias_expanded = true;
+
+        SqlExprTree_Iterator_Operands_Begin (sql_tree, opnd_node) {
+
+             if (sql_opnd_node_is_unresolvable (opnd_node)) continue;
+             
+            opnd_name = sql_get_opnd_variable_name (opnd_node);
+
+            sqp_col = sql_get_qp_col_by_name (
+                                             qep->select.sel_colmns,
+                                             qep->select.n, 
+                                             (char *)opnd_name.c_str(), true);
+
+            if (!sqp_col ) continue;
+
+            all_alias_expanded = false;
+
+            sql_concatenate_expr_trees (sql_tree, 
+                                                          opnd_node, 
+                                                          sql_clone_expression_tree( sqp_col->sql_tree ));
+
+            count++;
+            break;
+        }
+    }
+    return count;
 }

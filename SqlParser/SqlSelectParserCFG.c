@@ -44,6 +44,7 @@ LMT  -> $  |  limit <integer>
 qep_struct_t qep;
 char *L_alias_name = NULL;
 
+static parse_rc_t HAVING();
 static parse_rc_t INDTF_LST();
 static parse_rc_t GROUP_BY ();
 static parse_rc_t WHERE() ;
@@ -51,6 +52,31 @@ static parse_rc_t TABS() ;
 static parse_rc_t L() ;
 static parse_rc_t COL();
 static parse_rc_t COLLIST();
+
+/* HAVING  ->  $  |  having LEXPR */
+parse_rc_t
+HAVING() {
+
+    parse_init();
+
+    token_code = cyylex();
+
+    if (token_code != SQL_HAVING) {
+        yyrewind(1);
+        RETURN_PARSE_SUCCESS;
+    }
+
+    qep.having.gexptree_phase1 = sql_create_exp_tree_conditional ();
+
+    if (!qep.having.gexptree_phase1) {
+
+        printf ("Error : Could not build Having clause expression tree\n");
+        RETURN_PARSE_SUCCESS;
+    }
+
+    RETURN_PARSE_SUCCESS;
+}
+
 
 /* INDTF_LST -> IDENT | IDENT , INDTF_LST */
 parse_rc_t
@@ -353,6 +379,14 @@ select_query_parser () {
     if (err == PARSE_ERR) {
 
         printf ("Error : Parsing Error on GROUP BY Clause\n");
+        RETURN_PARSE_ERROR;        
+    }    
+
+    err = HAVING ();
+
+    if (err == PARSE_ERR) {
+
+        printf ("Error : Parsing Error on HAVING Clause\n");
         RETURN_PARSE_ERROR;        
     }    
 

@@ -12,9 +12,9 @@
 #include "sql_io.h"
 #include "sql_utils.h"
 #include "sql_group_by.h"
+#include "SqlMexprIntf.h"
 #include "../c-hashtable/hashtable.h"
 #include "../c-hashtable/hashtable_itr.h"
-#include "SqlMexprIntf.h"
 
 extern BPlusTree_t TableCatalogDef;
 
@@ -59,306 +59,6 @@ sql_query_initialize_orderby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     return true;
 }
 
-static bool
-sql_query_initialize_having_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
-
-    qep->having.having_phase = 1;
-
-    if (qep->having.gexptree) {
-
-
-    }
-    return true;
-}
-
-static bool
-sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
-
-    bool rc;
-    int i, j, k;
-    int tindex;
-    ctable_val_t *ctable_val;
-    MexprNode *exptree_node;
-    qp_col_t *gqp_col, *sqp_col;
-    bool all_alias_resolved = false;
-    char table_name_out [SQL_TABLE_NAME_MAX_SIZE];
-    char lone_col_name [SQL_COLUMN_NAME_MAX_SIZE];
-
-    if (qep->groupby.n == 0)  return true;
-
-    /*
-        Algorithm :
-
-        For all qp_cols in group by list, 
-        1. if the qp_col is a single operand tree
-            1.1. if the operand node is a variable
-                1.1.1 if the operand node variable name matches with the alias name of qp_col in select list
-                    1.1.1.1 if select's qp_col has agg_fn applied, abort the query
-                    1.1.1.2 concatenate the groupby qp_col exp tree with that of select's qp_col exp tree
-                    1.1.1.3 resolve all the operands of the concatednated tree against all tables in join list
-                    1.1.1.4 if any operand unresolved, abort the query
-                    1.1.1.5 validate the exp tree 
-                    1.1.1.6 optimize the exp tree 
-                    1.1.1.7 link select;s qp_col->link_to_groupby_col = group by 's qp_col
-
-                1.1.2 if the operand node variable name matches with the variable name of a single operand node in select list whose alias_provided_by_user = false
-                    1.1.2.1  if select's qp_col has agg_fn applied, abort the query
-                    1.1.2.2 resolve group by operand node against a table ( default or composite ), if not resolved abort the query
-                    1.1.2.3 link select;s qp_col->link_to_groupby_col = group by 's qp_col
-
-            1.2 if the operand ndoe is a constant value
-                1.2.1 Nothing else to do
-
-        2. if the qp_col is a multi-node tree
-            2.1 Resolve all operands of the exp tree against all tables in join list
-            Unresolved operands left after above step are alias names
-            2.2 for each unresolved operand in exp tree
-                2.2.1 search in select list a qp_col with same alias name
-                2.2.2 concatenate group by exp tree with select's qp_col
-            2.3 Resolve the exp tree again against all tables, if any unresolved opnd, abort the query
-            2.4 validate the exp tree, abort if fails
-            2.5 optimize the exp tree 
-    */
-
-    for (i = 0; i < qep->groupby.n; i++) {
-
-        gqp_col = qep->groupby.col_list[i];
-
-        // 1.1  if the operand node is a variable
-        if (sql_is_single_operand_expression_tree (gqp_col->sql_tree)) {
-            
-            sqp_col = sql_get_qp_col_by_alias_name (
-                                qep->select.sel_colmns,
-                                qep->select.n, 
-                                (char *)sql_get_opnd_variable_name (
-                                       sql_tree_get_root (gqp_col->sql_tree)).c_str()  );
-
-            //1.1.1 if the operand node variable name matches with the alias name of qp_col in select list
-            if (sqp_col) {
-
-                //1.1.1.1 if select's qp_col has agg_fn applied, abort the query
-                if (sqp_col->agg_fn != SQL_AGG_FN_NONE) {
-
-                    printf ("Error : Aggregate fn cannot be applied on column %s\n", sqp_col->alias_name);
-                    return false;
-                }
-
-                //1.1.1.2 concatenate the groupby qp_col exp tree with that of select's qp_col exp tree
-                assert (sql_concatenate_expr_trees ( gqp_col->sql_tree, 
-                                                                sql_tree_get_root (gqp_col->sql_tree),
-                                                                sql_clone_expression_tree (sqp_col->sql_tree)
-                                                                ));
-
-                // 1.1.1.3 resolve all the operands of the concatednated tree against all tables in join list
-                rc =  (sql_resolve_exptree (tcatalog, 
-                                                             gqp_col->sql_tree, 
-                                                             qep,
-                                                             qep->joined_row_tmplate));
-
-                // 1.1.1.4 if any operand unresolved, abort the query
-                if (!rc) {
-
-                    printf ("Error : Group by Column %s could not be resolved\n", sqp_col->alias_name);
-                    return false;
-                }
-
-                //1.1.1.5 validate the exp tree 
-                rc = sql_tree_validate (gqp_col->sql_tree);
-
-                if (!rc) {
-
-                    printf ("Error : Exp Tree of Group by Column %s could not be validated\n", 
-                        sqp_col->alias_name);
-                    return false;
-                }
-
-                //1.1.1.6 optimize the exp tree 
-                rc = sql_tree_optimize (gqp_col->sql_tree);
-
-                if (!rc) {
-
-                    printf ("Error : Exp Tree of Group by Column %s could not be Optimized\n",
-                         sqp_col->alias_name);
-                    return false;
-                }
-
-                // 1.1.1.7 link select;s qp_col->link_to_groupby_col = group by 's qp_col
-                sqp_col->link_to_groupby_col = gqp_col;
-            }
-
-            else {
-                
-                for (j = 0; j < qep->select.n; j++ ) {
-
-                    sqp_col = qep->select.sel_colmns[j];
-                    
-                    // 1.1.2 if the operand node variable name matches with the variable name of a single operand
-                    // node in select list whose alias_provided_by_user = false
-
-                    if (!sql_is_single_operand_expression_tree  (sqp_col->sql_tree)) continue;
-                    //if (sqp_col->alias_provided_by_user ) continue;
-                    if (strncmp  ( 
-                            sql_get_opnd_variable_name (sql_tree_get_root (sqp_col->sql_tree)).c_str(), 
-                            sql_get_opnd_variable_name (sql_tree_get_root (gqp_col->sql_tree)).c_str(),
-                            SQL_ALIAS_NAME_LEN ) ) {
-                        continue;
-                    }
-
-                    // 1.1.2.1  if select's qp_col has agg_fn applied, abort the query
-                    if (sqp_col->agg_fn != SQL_AGG_FN_NONE) {
-
-                        printf ("Error : Aggregate fn cannot be applied on column %s\n",
-                                    sql_get_opnd_variable_name (sql_tree_get_root (sqp_col->sql_tree)).c_str());
-                        return false;                        
-                    }
-
-                    // 1.1.2.2 resolve group by operand node against a table ( default or composite ), if not 
-                    //  resolved abort the query
-                    parser_split_table_column_name (
-                        (char *)sql_get_opnd_variable_name (sql_tree_get_root (sqp_col->sql_tree)).c_str(),
-                        table_name_out, lone_col_name);                    
-
-                    tindex = -1;
-
-                    if (table_name_out[0] == '\0' ) {
-                        
-                        tindex = 0;
-                        ctable_val = qep->join.tables[0].ctable_val;
-                    }
-                    else {
-
-                        ctable_val =  sql_catalog_table_lookup_by_table_name (tcatalog, table_name_out);
-
-                        if (!ctable_val) {
-                            printf ("Error : Table name %s do not exist\n", table_name_out);
-                            return false;
-                        }
-
-                        for (k = 0; k < qep->join.table_cnt; k++) {
-
-                            if (ctable_val != qep->join.tables[k].ctable_val) continue;
-                            tindex = k;
-                            break;
-                        }
-
-                        if (tindex == -1) {
-
-                            printf("Error : Table %s is not specified in Join list\n", table_name_out);
-                            return false;
-                        }
-                    }
-
-                    rc = sql_resolve_exptree_against_table (sqp_col->sql_tree, 
-                                                                            ctable_val, 
-                                                                            tindex,
-                                                                            qep->joined_row_tmplate);
-                    
-                    if (!rc) {
-
-                        printf ("Error : Select column %s could not be resolved against table %s\n",
-                                    sql_get_opnd_variable_name (sql_tree_get_root (sqp_col->sql_tree)).c_str(),
-                                    ctable_val->table_name);
-                        return false;
-                    }
-
-                    //1.1.2.3 link select;s qp_col->link_to_groupby_col = group by 's qp_col
-                    sqp_col->link_to_groupby_col = gqp_col;
-                    break;
-                }
-
-                if (j ==  qep->select.n) {
-                    printf ("Error : group by column name %s is unrecognized\n", 
-                         sql_get_opnd_variable_name (sql_tree_get_root (gqp_col->sql_tree)).c_str());
-                    return false;
-                }
-
-            }
-
-            return true;
-        }
-
-        // Implement 2
-
-        //2.1 
-        rc =  (sql_resolve_exptree (tcatalog, 
-                                                    gqp_col->sql_tree, 
-                                                    qep,
-                                                    qep->joined_row_tmplate));
-
-        //2.2
-
-        while (!all_alias_resolved) {
-
-            all_alias_resolved = true;
-
-            SqlExprTree_Iterator_Operands_Begin(gqp_col->sql_tree, exptree_node) {
-
-                if (sql_opnd_node_is_resolved(exptree_node)) continue;
-
-                // 2.2.1 search in select list a qp_col with same alias name
-                sqp_col = sql_get_qp_col_by_alias_name(
-                    qep->select.sel_colmns,
-                    qep->select.n,
-                    (char *)sql_get_opnd_variable_name(exptree_node).c_str());
-
-                if (!sqp_col) {
-
-                    printf("Error : Alias name %s could not be resolved\n",
-                           (char *)sql_get_opnd_variable_name(exptree_node).c_str());
-                    return false;
-                }
-
-                all_alias_resolved = false;
-                
-                //2.2.2 concatenate group by exp tree with select's qp_col
-                rc = (sql_concatenate_expr_trees(gqp_col->sql_tree,
-                                                 exptree_node,
-                                                 sql_clone_expression_tree(sqp_col->sql_tree)));
-
-                if (!rc) {
-
-                    printf("Error : Failed to concatenate exp tree of %s select column against group by clause\n",
-                           sqp_col->alias_name);
-                    return false;
-                }
-
-                if (!all_alias_resolved ) break;
-            }
-        }
-
-        //2.3 Resolve the exp tree again against all tables, if any unresolved opnd, abort the query
-        rc =  (sql_resolve_exptree (tcatalog, 
-                                                             gqp_col->sql_tree, 
-                                                             qep,
-                                                             qep->joined_row_tmplate));                
-
-        if (!rc) {
-
-            printf ("Error : Could not resolve Unnamed %dth group by Expression Tree\n", i);
-            return false;
-        }
-
-        // 2.4 validate the exp tree, abort if fails
-        rc = sql_tree_validate (gqp_col->sql_tree);
-
-        if (!rc) {
-
-            printf ("Error : Could not validate Unnamed %dth group by Expression Tree\n", i); 
-            return false;
-        }
-
-        //2.5 optimize the exp tree 
-        rc = sql_tree_optimize (gqp_col->sql_tree);
-
-        if (!rc) {
-
-            printf ("Error : Could not optimize Unnamed %dth group by Expression Tree\n", i); 
-            return false;
-        }
-    }
-
-    return true;
-}
 
 static bool
 sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
@@ -649,9 +349,14 @@ qep_deinit (qep_struct_t *qep) {
         }
     }
 
-    if (qep->having.gexptree) {
-        sql_destroy_exp_tree (qep->having.gexptree);
-        qep->having.gexptree = NULL;
+    if (qep->having.gexptree_phase1) {
+        sql_destroy_exp_tree (qep->having.gexptree_phase1);
+        qep->having.gexptree_phase1 = NULL;
+    }
+
+    if (qep->having.gexptree_phase2) {
+        sql_destroy_exp_tree (qep->having.gexptree_phase2);
+        qep->having.gexptree_phase2 = NULL;
     }
 
     if (qep->select.n) {
@@ -833,7 +538,8 @@ sql_execute_qep (qep_struct_t *qep) {
         /* Check if the query has group by clause */
         if (qep->groupby.n) {
 
-            sql_setup_group_by_hashtable (qep);
+            sql_group_by_clause_group_records (qep);
+            continue;
         }
 
         for (i = 0; i < qep->select.n; i++) {
@@ -886,6 +592,15 @@ sql_execute_qep (qep_struct_t *qep) {
             }
         }
     }  /* While ends */
+
+
+    /* Handling group by Phase 2*/
+    if (qep->groupby.n) {
+
+        sql_process_group_by_grouped_records (qep);    
+    }
+
+
 
     /* Case 2 :  No Group by Clause,  Aggregated Columns */
     if (!qep->groupby.n && is_aggregation) {

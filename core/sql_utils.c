@@ -10,6 +10,7 @@
 #include "Catalog.h"
 #include "sql_utils.h"
 #include "sql_create.h"
+#include "SqlMexprIntf.h"
 
 int 
 rdbms_key_comp_fn (BPluskey_t *key_1, BPluskey_t *key_2, key_mdata_t *key_mdata, int size) {
@@ -269,19 +270,40 @@ parser_split_table_column_name ( char *composite_col_name,
 }
 
 qp_col_t *
-sql_get_qp_col_by_alias_name (qp_col_t **qp_col_array, 
-                                                    int n, char *alias_name) {
+sql_get_qp_col_by_name (   qp_col_t **qp_col_array, 
+                                                        int n, 
+                                                        char *name, 
+                                                        bool is_alias) {
 
     int i;
+    int len;
     qp_col_t *qp_col;
 
+    len = strlen (name) ;
+    
     for (i = 0; i < n; i++) {
 
         qp_col = qp_col_array[i];
-        if (!qp_col->alias_provided_by_user) continue;
-        if (strncmp (alias_name, qp_col->alias_name, SQL_ALIAS_NAME_LEN)) continue;
-        if (strlen (alias_name) != strlen (qp_col->alias_name)) continue;
-        return qp_col;
+
+        if (is_alias) {
+
+            if (!qp_col->alias_provided_by_user) continue;
+            if (strncmp (name, qp_col->alias_name, SQL_ALIAS_NAME_LEN)) continue;
+            if (len != strlen (qp_col->alias_name)) continue;
+            return qp_col;
+        }
+        else {
+
+            if (!sql_is_single_operand_expression_tree  (qp_col->sql_tree)) continue;
+
+            if (strncmp (
+                name, 
+                sql_get_opnd_variable_name (sql_tree_get_root (qp_col->sql_tree)).c_str(),
+                SQL_COMPOSITE_COLUMN_NAME_SIZE)) continue;
+
+            return qp_col;
+        }
     }
+
     return NULL;
 }
