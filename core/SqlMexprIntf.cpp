@@ -318,6 +318,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
 
    } MexprTree_Iterator_Operands_End;
 
+   assert (sql_exptree->tree->validate(sql_exptree->tree->root));
    sql_exptree->tree->optimize (sql_exptree->tree->root);
    return true;
 }
@@ -381,6 +382,7 @@ sql_resolve_exptree_against_table (sql_exptree_t *sql_exptree,
    } MexprTree_Iterator_Operands_End;
 
    sql_exptree->tree->RemoveUnresolveOperands();
+   assert (sql_exptree->tree->validate(sql_exptree->tree->root));
    sql_exptree->tree->optimize (sql_exptree->tree->root);
    return true;
 }
@@ -595,7 +597,7 @@ sql_tree_expand_all_aliases (qep_struct_t *qep, sql_exptree_t *sql_tree) {
         SqlExprTree_Iterator_Operands_Begin (sql_tree, opnd_node) {
 
              if (sql_opnd_node_is_unresolvable (opnd_node)) continue;
-             
+
             opnd_name = sql_get_opnd_variable_name (opnd_node);
 
             sqp_col = sql_get_qp_col_by_name (

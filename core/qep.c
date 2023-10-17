@@ -75,57 +75,7 @@ sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
         3. Resolve where.gexptree against all join tables put together
     */
 
-    int opnd_len;
-    qp_col_t *qp_col;
-    MexprNode *opnd_node;
-    sql_exptree_t *clone_tree;
-
-    bool alias_resolved = false;
-    bool all_alias_resolved = false;
-
-    while (!all_alias_resolved) {
-
-        all_alias_resolved = true;
-        alias_resolved = false;
-
-        SqlExprTree_Iterator_Operands_Begin (qep->where.gexptree, opnd_node) {
-
-            if (sql_opnd_node_is_resolved (opnd_node)) continue;
-
-            /* All Unresolved nodes are opernads of type 'variable'*/
-            opnd_len = sql_get_opnd_variable_name(opnd_node).length();
-
-            for (i = 0; i < qep->select.n; i++) {
-
-                qp_col = qep->select.sel_colmns[i];
-                if (!qp_col->alias_provided_by_user) continue;
-
-                if ((strlen(qp_col->alias_name) != opnd_len) ||
-                    (strncmp(qp_col->alias_name,
-                             sql_get_opnd_variable_name(opnd_node).c_str(),
-                             SQL_ALIAS_NAME_LEN)))
-                    continue;
-
-                all_alias_resolved = false;
-                clone_tree = sql_clone_expression_tree(qp_col->sql_tree);
-                assert(clone_tree);
-
-                if (!sql_concatenate_expr_trees(qep->where.gexptree,
-                                                   opnd_node,
-                                                   clone_tree)) {
-
-                    printf("Error : %s(%d) Failed to resolve Where clause Alias name %s\n",
-                           __FUNCTION__, __LINE__, qp_col->alias_name);
-                    return false;
-                }
-                alias_resolved = true;
-                break;
-            }
-
-            if (!all_alias_resolved || alias_resolved) break;
-        }
-    }
-
+    sql_tree_expand_all_aliases (qep, qep->where.gexptree);
 
     for (i = 0; i < qep->join.table_cnt; i++) {
 
@@ -239,12 +189,14 @@ sql_query_initialize_select_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     /* Now Resolve Expressression Trees for all select columns*/
     for (i = 0; i < qep->select.n; i++) {
 
+        sql_tree_expand_all_aliases (qep, qep->select.sel_colmns[i]->sql_tree);
+        
         if (!sql_resolve_exptree (&TableCatalogDef, 
                                                 qep->select.sel_colmns[i]->sql_tree,
                                                 qep, qep->joined_row_tmplate)) {
             
-            printf ("Error : Failed to resolve Global Where Expression Tree "
-                    "against %d th columns\n", i);
+            printf ("Error : Failed to resolve Expression Tree for select column %s\n", 
+                        qep->select.sel_colmns[i]->alias_name);
             return false;
         }
     }    

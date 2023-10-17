@@ -50,10 +50,7 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                     return false;
                 }
 
-                assert (sql_concatenate_expr_trees ( gqp_col->sql_tree, 
-                                                                sql_tree_get_root (gqp_col->sql_tree),
-                                                                sql_clone_expression_tree (sqp_col->sql_tree)
-                                                                ));
+                sql_tree_expand_all_aliases (qep, gqp_col->sql_tree);
 
                 rc =  (sql_resolve_exptree (tcatalog, 
                                                              gqp_col->sql_tree, 
@@ -63,24 +60,6 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                 if (!rc) {
 
                     printf ("Error : Group by Column %s could not be resolved\n", sqp_col->alias_name);
-                    return false;
-                }
-
-                rc = sql_tree_validate (gqp_col->sql_tree);
-
-                if (!rc) {
-
-                    printf ("Error : Exp Tree of Group by Column %s could not be validated\n", 
-                        sqp_col->alias_name);
-                    return false;
-                }
-
-                rc = sql_tree_optimize (gqp_col->sql_tree);
-
-                if (!rc) {
-
-                    printf ("Error : Exp Tree of Group by Column %s could not be Optimized\n",
-                         sqp_col->alias_name);
                     return false;
                 }
 
@@ -146,70 +125,20 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                 }
 
             }
-
-            return true;
         }
 
         // 3. The group by column is an expression */
 
-        while (!all_alias_resolved) {
-
-            all_alias_resolved = true;
-
-            SqlExprTree_Iterator_Operands_Begin(gqp_col->sql_tree, exptree_node) {
-
-                if (sql_opnd_node_is_resolved(exptree_node)) continue;
-
-                sqp_col = sql_get_qp_col_by_name(
-                    qep->select.sel_colmns,
-                    qep->select.n,
-                    (char *)sql_get_opnd_variable_name(exptree_node).c_str(), true);
-
-                if (!sqp_col) {
-                    continue;
-                }
-
-                all_alias_resolved = false;
-                
-                rc = (sql_concatenate_expr_trees(gqp_col->sql_tree,
-                                                 exptree_node,
-                                                 sql_clone_expression_tree(sqp_col->sql_tree)));
-
-                if (!rc) {
-
-                    printf("Error : Failed to concatenate exp tree of %s select column against group by clause\n",
-                           sqp_col->alias_name);
-                    return false;
-                }
-
-                if (!all_alias_resolved ) break;
-            }
-        }
+        sql_tree_expand_all_aliases (qep, gqp_col->sql_tree);
 
         rc =  (sql_resolve_exptree (tcatalog, 
-                                                             gqp_col->sql_tree, 
-                                                             qep,
-                                                             qep->joined_row_tmplate));                
+                                                    gqp_col->sql_tree, 
+                                                    qep,
+                                                    qep->joined_row_tmplate));                
 
         if (!rc) {
 
             printf ("Error : Could not resolve Unnamed %dth group by Expression Tree\n", i);
-            return false;
-        }
-
-        rc = sql_tree_validate (gqp_col->sql_tree);
-
-        if (!rc) {
-
-            printf ("Error : Could not validate Unnamed %dth group by Expression Tree\n", i); 
-            return false;
-        }
-
-        rc = sql_tree_optimize (gqp_col->sql_tree);
-
-        if (!rc) {
-
-            printf ("Error : Could not optimize Unnamed %dth group by Expression Tree\n", i); 
             return false;
         }
     }
