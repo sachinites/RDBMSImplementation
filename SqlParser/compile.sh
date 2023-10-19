@@ -18,7 +18,4 @@ g++ -g -c ../c-hashtable/hashtable.c -o ../c-hashtable/hashtable.o
 g++ -g -c   ../c-hashtable/hashtable_itr.c -o ../c-hashtable/hashtable_itr.o
 g++ -g -c  ../core/SqlMexprIntf.cpp -o ../core/SqlMexprIntf.o
 
-# create Executable
-#g++ -g ../core/qep.o lex.yy.o SqlSelectParserCFG.o SqlCreateParserCFG.o SqlParserMain.o ../BPlusTreeLib/BPlusTree.o ../../MathExpressionParser/ExpressionParser.o ../../MathExpressionParser/Operators.o ../../MathExpressionParser/Dtype.o ../../MathExpressionParser/MexprTree.o ../../MathExpressionParser/EnumConvertor.o ../core/sql_utils.o ../core/sql_create.o ../core/Catalog.o ../gluethread/glthread.o SqlInsertIntoParserCFG.o ../core/sql_insert_into.o ../c-hashtable/hashtable.o ../c-hashtable/hashtable_itr.o ../core/sql_io.o ../core/SqlMexprIntf.o -o exe -lfl -lm
-
 g++ -g ../core/qep.o lex.yy.o SqlSelectParserCFG.o SqlCreateParserCFG.o SqlParserMain.o ../BPlusTreeLib/BPlusTree.o ../core/sql_utils.o ../core/sql_create.o ../core/Catalog.o ../gluethread/glthread.o SqlInsertIntoParserCFG.o ../core/sql_insert_into.o ../c-hashtable/hashtable.o ../c-hashtable/hashtable_itr.o ../core/sql_io.o ../core/SqlMexprIntf.o ../core/sql_group_by.o -o dbms.exe -lfl -lm -L ../../MathExpressionParser/ -lMexp

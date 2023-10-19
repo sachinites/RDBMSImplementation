@@ -156,7 +156,7 @@ typedef struct exp_tree_data_src_ {
 
     int table_index;
     schema_rec_t *schema_rec;
-    joined_row_t *joined_row;
+    joined_row_t **joined_row;
 
 } exp_tree_data_src_t;
 
@@ -182,7 +182,7 @@ sql_column_value_resolution_fn (void *_data_src) {
 
     exp_tree_data_src_t *data_src = (exp_tree_data_src_t *)_data_src;
 
-    void *rec = joined_row_search (data_src->table_index, data_src->joined_row);
+    void *rec = joined_row_search (data_src->table_index, *data_src->joined_row);
     if (!rec) return NULL;
 
     void *val = (void *)((char *)rec + data_src->schema_rec->offset);
@@ -239,7 +239,7 @@ bool
 sql_resolve_exptree (BPlusTree_t *tcatalog,
                                   sql_exptree_t *sql_exptree,
                                   qep_struct_t *qep,
-                                  joined_row_t *joined_row) {
+                                  joined_row_t **joined_row) {
     /* Algorithm : 
     1. Iterate over the operands opnd of the exptree
     2.  If opnd name is one word 'col_name', then resolve it against table_arr[0] only. Index = 0.
@@ -326,7 +326,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
 bool 
 sql_resolve_exptree_against_table (sql_exptree_t *sql_exptree, 
                                                          ctable_val_t * ctable_val, 
-                                                         int table_id, joined_row_t *joined_row) {
+                                                         int table_id, joined_row_t **joined_row) {
 
     BPluskey_t bpkey;
     MexprNode *node;
@@ -596,7 +596,7 @@ sql_tree_expand_all_aliases (qep_struct_t *qep, sql_exptree_t *sql_tree) {
 
         SqlExprTree_Iterator_Operands_Begin (sql_tree, opnd_node) {
 
-             if (sql_opnd_node_is_unresolvable (opnd_node)) continue;
+            if (sql_opnd_node_is_unresolvable (opnd_node)) continue;
 
             opnd_name = sql_get_opnd_variable_name (opnd_node);
 

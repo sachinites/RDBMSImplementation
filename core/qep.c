@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <memory.h>
 #include <arpa/inet.h>
+#include <list>
 #include "../stack/stack.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "qep.h"
@@ -90,7 +91,7 @@ sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
         if (!sql_resolve_exptree_against_table(
                         qep->where.exptree_per_table[i],
                         qep->join.tables[i].ctable_val, i, 
-                        qep->joined_row_tmplate)) {
+                        &qep->joined_row_tmplate)) {
 
             printf("Error : Failed to resolve per table Where Expression Tree\n");
             return false;
@@ -100,7 +101,7 @@ sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
     if (!sql_resolve_exptree(&TableCatalogDef,
                              qep->where.gexptree,
-                             qep, qep->joined_row_tmplate)) {
+                             qep, &qep->joined_row_tmplate)) {
 
         printf("Error : Failed to resolve Global Where Expression Tree\n");
         return false;
@@ -190,10 +191,10 @@ sql_query_initialize_select_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     for (i = 0; i < qep->select.n; i++) {
 
         sql_tree_expand_all_aliases (qep, qep->select.sel_colmns[i]->sql_tree);
-        
+
         if (!sql_resolve_exptree (&TableCatalogDef, 
                                                 qep->select.sel_colmns[i]->sql_tree,
-                                                qep, qep->joined_row_tmplate)) {
+                                                qep, &qep->joined_row_tmplate)) {
             
             printf ("Error : Failed to resolve Expression Tree for select column %s\n", 
                         qep->select.sel_colmns[i]->alias_name);
@@ -210,8 +211,6 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     int i;
     bool rc;
     qp_col_t *qp_col;
-
-   qep->stage_id = QP_NODE_SEQ_SCAN;
 
     qep->joined_row_tmplate = (joined_row_t *)calloc (1, sizeof (joined_row_t));
 
@@ -267,6 +266,10 @@ qep_deinit (qep_struct_t *qep) {
 
     int i;
     qp_col_t *qp_col;
+    struct hashtable_itr *itr;
+    joined_row_t *joined_row;
+    std::list<joined_row_t *> *record_lst;
+    ht_group_by_record_t *ht_group_by_record;
 
     if (qep->where.gexptree) {
         
@@ -296,6 +299,26 @@ qep_deinit (qep_struct_t *qep) {
 
         if (qep->groupby.ht) {
 
+            itr = hashtable_iterator(qep->groupby.ht);
+
+            do {
+
+                ht_group_by_record =  (ht_group_by_record_t *)hashtable_iterator_value (itr);
+                record_lst = ht_group_by_record->record_lst;
+
+                while (!record_lst->empty()) {
+
+                    joined_row = record_lst->front();
+                    record_lst->pop_front();
+                    free(joined_row->rec_array);
+                    free(joined_row); 
+                }
+                delete  record_lst;
+                ht_group_by_record->record_lst = NULL;
+
+            } while (hashtable_iterator_advance(itr));
+
+            free(itr);
             hashtable_destroy(qep->groupby.ht, 1);
             qep->groupby.ht = NULL;
         }
@@ -549,10 +572,9 @@ sql_execute_qep (qep_struct_t *qep) {
     /* Handling group by Phase 2*/
     if (qep->groupby.n) {
 
-        sql_process_group_by_grouped_records (qep);    
+        sql_process_group_by_grouped_records (qep); 
+        return;
     }
-
-
 
     /* Case 2 :  No Group by Clause,  Aggregated Columns */
     if (!qep->groupby.n && is_aggregation) {

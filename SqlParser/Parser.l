@@ -318,11 +318,11 @@ lex_set_scan_buffer (const char *buffer) {
     return SQL_MATH_SQR;
 }
 
-"mmax" {
+"hmax" {
     return SQL_MATH_MAX;
 }
 
-"mmin" {
+"hmin" {
     return SQL_MATH_MIN;
 }
 

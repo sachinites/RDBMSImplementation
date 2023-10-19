@@ -45,8 +45,6 @@ typedef struct table_iterators_ {
 } table_iterators_t;
 
 typedef struct qep_struct_ {
-
-    qp_stage_id_t stage_id;
     
     struct {
 
@@ -74,14 +72,13 @@ typedef struct qep_struct_ {
         qp_col_t *col_list[SQL_MAX_COLS_IN_GROUPBY_LIST];
         hashtable_t *ht;
         int ht_key_size;
-        
+
     } groupby;
 
     struct {
 
          sql_exptree_t *gexptree_phase1;
          sql_exptree_t *gexptree_phase2;
-         int8_t having_phase; // either 1 or 2
 
     } having;
 

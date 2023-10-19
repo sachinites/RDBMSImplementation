@@ -34,12 +34,12 @@ bool
 sql_resolve_exptree (BPlusTree_t *tcatalog,
                                   sql_exptree_t *sql_exptree,
                                   qep_struct_t *qep,
-                                  joined_row_t *joined_row) ;
+                                  joined_row_t **joined_row) ;
 
 bool 
 sql_resolve_exptree_against_table (sql_exptree_t *sql_exptree, 
                                                          ctable_val_t * ctable_val, 
-                                                         int table_id, joined_row_t *joined_row);
+                                                         int table_id, joined_row_t **joined_row);
                                                          
 bool 
 sql_evaluate_conditional_exp_tree (sql_exptree_t *sql_exptree);

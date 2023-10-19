@@ -4,6 +4,7 @@
 #include "Catalog.h"
 #include "qep.h"
 #include "sql_group_by.h"
+#include "sql_io.h"
 #include "SqlMexprIntf.h"
 #include "../c-hashtable/hashtable.h"
 #include "../c-hashtable/hashtable_itr.h"
@@ -55,7 +56,7 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                 rc =  (sql_resolve_exptree (tcatalog, 
                                                              gqp_col->sql_tree, 
                                                              qep,
-                                                             qep->joined_row_tmplate));
+                                                             &qep->joined_row_tmplate));
 
                 if (!rc) {
 
@@ -108,7 +109,7 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                 rc = sql_resolve_exptree_against_table (gqp_col->sql_tree, 
                                                                                 ctable_val, 
                                                                                 tindex,
-                                                                                qep->joined_row_tmplate);                
+                                                                                &qep->joined_row_tmplate);                
                 if (!rc) {
 
                     printf ("Error : Group by column %s could not be resolved against table %s\n",
@@ -134,7 +135,7 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
         rc =  (sql_resolve_exptree (tcatalog, 
                                                     gqp_col->sql_tree, 
                                                     qep,
-                                                    qep->joined_row_tmplate));                
+                                                    &qep->joined_row_tmplate));                
 
         if (!rc) {
 
@@ -187,7 +188,7 @@ sql_query_initialize_having_clause_phase1 (qep_struct_t *qep, BPlusTree_t *tcata
      }
 
      sql_tree_expand_all_aliases (qep, qep->having.gexptree_phase1);
-     sql_resolve_exptree (tcatalog, qep->having.gexptree_phase1, qep, qep->joined_row_tmplate);
+     sql_resolve_exptree (tcatalog, qep->having.gexptree_phase1, qep, &qep->joined_row_tmplate);
      sql_tree_remove_unresolve_operands (qep->having.gexptree_phase1);
     return true;
 }
@@ -208,13 +209,10 @@ sql_query_initialize_having_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
         qep->having.gexptree_phase2 = sql_clone_expression_tree (qep->having.gexptree_phase1);
     }
 
-    qep->having.having_phase = 1;
-
     bool rc = sql_query_initialize_having_clause_phase1 (qep, tcatalog);
     if (!rc) return false;
     return sql_query_initialize_having_clause_phase2 (qep, tcatalog);
 }
-
 
 /* This fn setup the hashtable also if it is a first record we are grouping*/
 void 
@@ -225,13 +223,13 @@ sql_group_by_clause_group_records (qep_struct_t *qep) {
     Dtype *dtype;
     qp_col_t *qp_col;
     int ht_key_size = 0;
+    joined_row_t *joined_row;
     unsigned int string_hash = 0;
     bool is_ht_exist = qep->groupby.ht ? true : false;
+    ht_group_by_record_t  *ht_group_by_record = NULL;
 
     /* Filter unwanted records */
     if (!sql_evaluate_conditional_exp_tree (qep->having.gexptree_phase1)) {
-
-        printf ("Group by phase 1 : Filtered\n");
         return;
     };
 
@@ -275,28 +273,147 @@ sql_group_by_clause_group_records (qep_struct_t *qep) {
     }
 
     /* Create a new joined_row to be inserted into HT*/
-    joined_row_t *joined_row = (joined_row_t *)calloc (1, sizeof (joined_row_t));
+    joined_row = (joined_row_t *)calloc (1, sizeof (joined_row_t));
     memcpy (joined_row, qep->joined_row_tmplate, sizeof (joined_row_t));
+    joined_row->rec_array = (void **)calloc (joined_row->size, sizeof (void *));
+    for (i = 0; i < joined_row->size; i++) {
+        joined_row->rec_array[i] = qep->joined_row_tmplate->rec_array[i];
+    }
 
-    std::list<joined_row_t *> *record_lst = 
-        reinterpret_cast  <std::list<joined_row_t *> *> (hashtable_search (qep->groupby.ht , ht_key));
+    ht_group_by_record = (ht_group_by_record_t  *)hashtable_search (qep->groupby.ht , ht_key);
 
-    if (record_lst) {
-        record_lst->push_back (joined_row);
+    if (ht_group_by_record) {
+        ht_group_by_record->record_lst->push_back (joined_row);
     }
     else {
+        ht_group_by_record = 
+                (ht_group_by_record_t *)calloc (1, sizeof (ht_group_by_record_t));
         std::list<joined_row_t *> *record_lst = new std::list<joined_row_t *>();
-         record_lst->push_back (joined_row);
-        assert((hashtable_insert (qep->groupby.ht, (void *)ht_key, (void *)record_lst)));
+        ht_group_by_record->record_lst = record_lst;
+        record_lst->push_back (joined_row);
+        assert((hashtable_insert (qep->groupby.ht, (void *)ht_key, (void *)ht_group_by_record)));
+    }
+}
+
+static void 
+sql_select_flush_computed_values (qep_struct_t *qep) {
+
+    int i;
+    qp_col_t *sqp_col;
+
+    for (i = 0; i < qep->select.n; i++) {
+
+        sqp_col = qep->select.sel_colmns[i];
+
+        if (sqp_col->computed_value) {
+            sql_destroy_Dtype_value_holder (sqp_col->computed_value);
+            sqp_col->computed_value = NULL;
+        }
+
+        if (sqp_col->aggregator) {
+            sql_destroy_aggregator (sqp_col);
+            sqp_col->aggregator = NULL;
+        }
+    }
+}
+
+static void 
+ sql_group_by_compute_aggregation (qep_struct_t *qep) {
+
+    int i;
+    qp_col_t *sqp_col;
+    Dtype *computed_value;
+
+    for (i = 0; i < qep->select.n; i++) {
+
+        sqp_col = qep->select.sel_colmns[i];
+       
+        if (sqp_col->agg_fn == SQL_AGG_FN_NONE) continue;
+
+        if (!sqp_col->aggregator) {
+
+            sqp_col->computed_value = sql_evaluate_exp_tree(sqp_col->sql_tree);
+            sqp_col->aggregator = sql_get_aggregator(sqp_col);
+            assert(sqp_col->aggregator);
+            sql_column_value_aggregate(sqp_col, sqp_col->computed_value);
+            sql_destroy_Dtype_value_holder(sqp_col->computed_value);
+            sqp_col->computed_value = NULL;
+        }
+        else
+        {
+            computed_value = sql_evaluate_exp_tree(sqp_col->sql_tree);
+            sql_column_value_aggregate(sqp_col, computed_value);
+            sql_destroy_Dtype_value_holder(computed_value);
+        }
     }
 
-    printf ("Group by Phase 1 : Added to HT\n");
-}
+ }
+
 
 void 
 sql_process_group_by_grouped_records (qep_struct_t *qep) {
 
+    int i;
+    int row_no = 0;
+    qp_col_t *sqp_col;
+    struct hashtable_itr *itr;
+    joined_row_t *first_record;
+    joined_row_t *  joined_row_backup;
+    std::list<joined_row_t *> *record_lst;
+    ht_group_by_record_t *ht_group_by_record;
 
+    itr = hashtable_iterator(qep->groupby.ht);
+
+    /* Thank you qep->joined_row_tmplate ! Now you are not needed any more.
+        We will rejuvenate you to point to joined rows stored in HT now !*/
+    joined_row_backup = qep->joined_row_tmplate;
+    qep->joined_row_tmplate = NULL;
+
+    do {
+
+        ht_group_by_record = (ht_group_by_record_t *)hashtable_iterator_value (itr);
+        record_lst = ht_group_by_record->record_lst;
+        row_no++;
+        first_record = NULL;
+
+        if (row_no == 1) {
+            sql_print_hdr(qep->select.sel_colmns, qep->select.n);
+        }
+
+        for (std::list<joined_row_t *>::iterator it = record_lst->begin(); 
+                it != record_lst->end(); 
+                ++it) {
+
+            qep->joined_row_tmplate = *it;
+            
+            if (!first_record) first_record = *it;
+
+            sql_group_by_compute_aggregation (qep);
+        }
+
+        qep->joined_row_tmplate = first_record;
+
+        /* Compute non-aggregated columns in select list*/
+        for (i = 0; i < qep->select.n; i++) {
+
+            sqp_col = qep->select.sel_colmns[i];
+
+            if (sqp_col->agg_fn != SQL_AGG_FN_NONE) continue;
+
+            assert (!sqp_col->computed_value);
+
+            sqp_col->computed_value =  sql_evaluate_exp_tree (sqp_col->sql_tree);
+        }
+
+        /* Apply phase 2 HAVING here !*/
+        sql_emit_select_output(qep->select.n, qep->select.sel_colmns);
+        sql_select_flush_computed_values (qep);
+
+    } while (hashtable_iterator_advance(itr));
+    
+    free(itr);
+    printf ("(%d rows)\n", row_no);
+    qep->joined_row_tmplate = joined_row_backup;
 }
 
 

@@ -1,8 +1,18 @@
 #ifndef __SQL_GROUP_BY__
 #define __SQL_GROUP_BY__
+#include <list>
 
 typedef struct qep_struct_ qep_struct_t;
 typedef struct BPlusTree BPlusTree_t;
+
+/* C Wrapper object over C++ object because we cannot insert 
+    C++ objects into HT. If you want you can use C++ hashmap etc.
+*/
+typedef struct ht_group_by_record_ {
+
+    std::list<joined_row_t *> *record_lst ;
+
+} ht_group_by_record_t;
 
 void 
  sql_group_by_clause_group_records (qep_struct_t *qep) ;
