@@ -2,6 +2,7 @@
 #define __QPLANNER__
 
 #include <list>
+#include <unordered_map>
 #include "../Tree/libtree.h"
 #include "../SqlParser/SqlParserStruct.h"
 #include "sql_const.h"
@@ -55,8 +56,12 @@ typedef struct qep_struct_ {
 
             ctable_val_t *ctable_val;
             char alias_name[SQL_ALIAS_NAME_LEN];
+            char table_name[SQL_TABLE_NAME_MAX_SIZE];
 
         } tables [SQL_MAX_TABLES_IN_JOIN_LIST];
+
+        /* Hash Map to store mapping from alias -> table name*/
+        std::unordered_map<std::string, std::string> *table_alias;
 
     } join;
 

@@ -49,6 +49,8 @@ qep_struct_record_table (qep_struct_t *qep_struct, char *table_name) {
     if (!ctable_val) return false;
 
     qep_struct->join.tables[qep_struct->join.table_cnt++].ctable_val = ctable_val ;
+    strncpy(qep_struct->join.tables[qep_struct->join.table_cnt].table_name , 
+                    table_name, SQL_TABLE_NAME_MAX_SIZE );
     return true;
 }
 
@@ -89,6 +91,8 @@ sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
         }
 
         if (!sql_resolve_exptree_against_table(
+                        qep->join.table_alias,
+                        tcatalog,
                         qep->where.exptree_per_table[i],
                         qep->join.tables[i].ctable_val, i, 
                         &qep->joined_row_tmplate)) {
@@ -205,6 +209,23 @@ sql_query_initialize_select_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     return true;
 }
 
+static void 
+qep_create_alias_to_table_name_mapping (qep_struct_t *qep) {
+
+    int i;
+
+    qep->join.table_alias = new std::unordered_map<std::string, std::string>();
+
+    for (i = 0; i < qep->join.table_cnt; i++) {
+
+        if (qep->join.tables[i].alias_name[0] != '\0') {
+            qep->join.table_alias->insert (
+                {  std::string (qep->join.tables[i].alias_name),   
+                    std::string (qep->join.tables[i].table_name)} );
+        }
+    }
+}
+
 static bool
 sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
@@ -212,7 +233,12 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     bool rc;
     qp_col_t *qp_col;
 
+    /* initialize the containers first as remaining initialization code is dependent on 
+        these two allocations */
     qep->joined_row_tmplate = (joined_row_t *)calloc (1, sizeof (joined_row_t));
+    qep->data_src_lst = new std::list<exp_tree_data_src_t *>();
+
+    qep_create_alias_to_table_name_mapping (qep);
 
     /* Before we initialize anything, expand the select * first */
     rc = qep_resolve_select_asterisk (qep);
@@ -258,7 +284,6 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
         joined_row_tmplate->table_id_array[i] = i;
     }    
 
-    qep->data_src_lst = new std::list<exp_tree_data_src_t *>();
     return true;
 }
 
@@ -269,6 +294,7 @@ qep_deinit (qep_struct_t *qep) {
     qp_col_t *qp_col;
     struct hashtable_itr *itr;
     joined_row_t *joined_row;
+    exp_tree_data_src_t *data_src;
     std::list<joined_row_t *> *record_lst;
     ht_group_by_record_t *ht_group_by_record;
 
@@ -367,14 +393,22 @@ qep_deinit (qep_struct_t *qep) {
     }
 
     /* Free Data Srcs*/
-    while (!qep->data_src_lst->empty()) {
+    if (qep->data_src_lst) {
 
-        exp_tree_data_src_t *data_src = qep->data_src_lst->front();
-        qep->data_src_lst->pop_front();
-        free(data_src);
+        while (!qep->data_src_lst->empty()) {
+
+            data_src = qep->data_src_lst->front();
+            qep->data_src_lst->pop_front();
+            free(data_src);
+        }
+        delete qep->data_src_lst;
+        qep->data_src_lst = NULL;
     }
-    delete qep->data_src_lst;
-    qep->data_src_lst = NULL;
+
+    /* Free Alias Hashmap*/
+    qep->join.table_alias->clear();
+    delete qep->join.table_alias;
+    qep->join.table_alias = NULL;
 }
 
 

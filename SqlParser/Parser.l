@@ -17,7 +17,7 @@ int lex_curr_token_len;
 
 stack_t undo_stack = {-1, {0, 0, 0}};
 
-void 
+static void 
 lex_push(lex_data_t lex_data) {
     assert (undo_stack.top < MAX_MEXPR_LEN -1);
     undo_stack.data[++undo_stack.top] = lex_data;
@@ -25,7 +25,7 @@ lex_push(lex_data_t lex_data) {
     lex_curr_token_len = lex_data.token_len;
 }
 
-lex_data_t
+static lex_data_t
 lex_pop() {
     assert (undo_stack.top > -1);
     lex_data_t res = undo_stack.data[undo_stack.top] ;
@@ -180,7 +180,7 @@ lex_set_scan_buffer (const char *buffer) {
     return SQL_INT;
 }
 
-"double" {
+"decimal" {
     return SQL_DOUBLE;
 }
 

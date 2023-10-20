@@ -61,8 +61,8 @@ Catalog_insert_new_table (BPlusTree_t *catalog, sql_create_data_t *cdata) ;
 
 int
 Catalog_create_schema_table_records ( sql_create_data_t *cdata,
-                                                        BPluskey_t ***bkeys,
-                                                        schema_rec_t ***crecords) ;
+                                                                 BPluskey_t ***bkeys,
+                                                                 schema_rec_t ***crecords) ;
 
 void 
 sql_show_table_catalog (BPlusTree_t *TableCatalog) ;

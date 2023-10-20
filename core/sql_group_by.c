@@ -73,6 +73,8 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                 */
                 
                 parser_split_table_column_name (
+                        qep->join.table_alias,
+                        tcatalog,
                         QP_COL_NAME (gqp_col),
                         table_name_out, lone_col_name);        
                 
@@ -106,7 +108,9 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                     }
                 }
 
-                rc = sql_resolve_exptree_against_table (gqp_col->sql_tree, 
+                rc = sql_resolve_exptree_against_table (qep->join.table_alias,
+                                                                                tcatalog,
+                                                                                gqp_col->sql_tree, 
                                                                                 ctable_val, 
                                                                                 tindex,
                                                                                 &qep->joined_row_tmplate);                
@@ -460,6 +464,8 @@ sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) {
     joined_row_t *  joined_row_backup;
     std::list<joined_row_t *> *record_lst;
     ht_group_by_record_t *ht_group_by_record;
+
+    if (!qep->groupby.ht) return;
 
     itr = hashtable_iterator(qep->groupby.ht);
 

@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string>
+#include <unordered_map>
 #include "../SqlParser/SqlParserStruct.h"
 #include "../../MathExpressionParser/MExprcppEnums.h"
 
@@ -37,7 +38,9 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
                                   joined_row_t **joined_row) ;
 
 bool 
-sql_resolve_exptree_against_table (sql_exptree_t *sql_exptree, 
+sql_resolve_exptree_against_table (std::unordered_map<std::string, std::string> *map,
+                                                         BPlusTree_t *tcatalog,
+                                                         sql_exptree_t *sql_exptree, 
                                                          ctable_val_t * ctable_val, 
                                                          int table_id, joined_row_t **joined_row);
                                                          

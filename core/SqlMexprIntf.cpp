@@ -266,6 +266,8 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
         if (sql_opnd_node_is_unresolvable (opnd_var)) continue;
         
         parser_split_table_column_name (
+                qep->join.table_alias,
+                tcatalog,
                 (char *)sql_get_opnd_variable_name(node).c_str(), 
                 table_name_out, lone_col_name);
 
@@ -298,6 +300,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
             return false;
         }
         data_src = (exp_tree_data_src_t *)calloc(1, sizeof(exp_tree_data_src_t));
+        qep->data_src_lst->push_back (data_src);
         data_src->table_index = tindex;
         data_src->schema_rec = schema_rec;
         data_src->joined_row = joined_row;
@@ -305,8 +308,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
                 sql_to_mexpr_dtype_converter (schema_rec->dtype) , 
                 data_src, 
                 sql_column_value_resolution_fn);
-        //qep->data_src_lst->push_back (data_src);
-
+        
    } MexprTree_Iterator_Operands_End;
 
    assert (sql_exptree->tree->validate(sql_exptree->tree->root));
@@ -315,9 +317,12 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
 }
 
 bool 
-sql_resolve_exptree_against_table (sql_exptree_t *sql_exptree, 
-                                                         ctable_val_t * ctable_val, 
-                                                         int table_id, joined_row_t **joined_row) {
+sql_resolve_exptree_against_table ( std::unordered_map<std::string, std::string> *map,
+                                                            BPlusTree_t *tcatalog,
+                                                           sql_exptree_t *sql_exptree, 
+                                                           ctable_val_t * ctable_val, 
+                                                           int table_id, 
+                                                           joined_row_t **joined_row) {
 
     BPluskey_t bpkey;
     MexprNode *node;
@@ -335,6 +340,8 @@ sql_resolve_exptree_against_table (sql_exptree_t *sql_exptree,
         if (sql_opnd_node_is_unresolvable (opnd_var)) continue;
 
         parser_split_table_column_name (
+                map,
+                tcatalog,
                 (char *)sql_get_opnd_variable_name(node).c_str(), 
                 table_name_out, lone_col_name);
 

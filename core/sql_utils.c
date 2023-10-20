@@ -250,10 +250,13 @@ sql_compute_aggregate (sql_agg_fn_t agg_fn,
 }
 
 void 
-parser_split_table_column_name ( char *composite_col_name, 
+parser_split_table_column_name ( std::unordered_map<std::string, std::string> *map,
+                                                        BPlusTree_t *tcatalog,
+                                                        char *composite_col_name, 
                                                         char *table_name_out,
                                                         char *col_name_out) {
 
+    ctable_val_t *ctable_val;
     const char del[2] = ".";
     char composite_col_name_dup[SQL_COMPOSITE_COLUMN_NAME_SIZE] = {0};
 
@@ -265,7 +268,17 @@ parser_split_table_column_name ( char *composite_col_name,
         table_name_out[0] = '\0';
         return;
     }
-    strncpy (table_name_out, str1, SQL_TABLE_NAME_MAX_SIZE);
+
+    ctable_val = sql_catalog_table_lookup_by_table_name (tcatalog, str1);
+
+    if (ctable_val) {
+        strncpy (table_name_out, str1, SQL_TABLE_NAME_MAX_SIZE);
+    }
+    else {
+        /* str1 should be table alias name */
+        std::string table_name = (*map)[std::string (str1)];
+        strncpy (table_name_out, table_name.c_str(), SQL_TABLE_NAME_MAX_SIZE);
+    }
     strncpy (col_name_out, str2, SQL_COLUMN_NAME_MAX_SIZE);
 }
 

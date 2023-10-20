@@ -34,8 +34,6 @@ extern char *curr_ptr ;
 extern char *lex_curr_token;
 extern int lex_curr_token_len;
 extern stack_t undo_stack;
-extern void lex_push(lex_data_t lex_data);
-extern lex_data_t lex_pop() ;
 extern void yyrewind (int n) ;
 extern char *parser_alloc_token_value_default (uint16_t token_id);
 extern int cyylex ();
