@@ -10,7 +10,6 @@
 
 typedef struct catalog_table_value ctable_val_t ;
 typedef struct schema_rec_ schema_rec_t ;
-typedef struct ast_node_ ast_node_t;
 typedef struct sql_exptree_ sql_exptree_t;
 
 class Dtype;
@@ -53,5 +52,13 @@ typedef struct joined_row_ {
     int *table_id_array;    
 
 } joined_row_t;
+
+typedef struct exp_tree_data_src_ {
+
+    int table_index;
+    schema_rec_t *schema_rec;
+    joined_row_t **joined_row;
+
+} exp_tree_data_src_t;
 
 #endif 

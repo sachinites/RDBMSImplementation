@@ -38,7 +38,6 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) 
     int n, i;
     list_node_t *lnode;
     BPluskey_t bkey;
-    ast_node_t *ast_node;
     BPluskey_t **bkeys;
     schema_rec_t **crecords;
 

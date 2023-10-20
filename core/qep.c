@@ -258,6 +258,7 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
         joined_row_tmplate->table_id_array[i] = i;
     }    
 
+    qep->data_src_lst = new std::list<exp_tree_data_src_t *>();
     return true;
 }
 
@@ -364,6 +365,16 @@ qep_deinit (qep_struct_t *qep) {
         free(qep->joined_row_tmplate->table_id_array);
         free(qep->joined_row_tmplate);
     }
+
+    /* Free Data Srcs*/
+    while (!qep->data_src_lst->empty()) {
+
+        exp_tree_data_src_t *data_src = qep->data_src_lst->front();
+        qep->data_src_lst->pop_front();
+        free(data_src);
+    }
+    delete qep->data_src_lst;
+    qep->data_src_lst = NULL;
 }
 
 
@@ -513,7 +524,7 @@ sql_execute_qep (qep_struct_t *qep) {
         /* Check if the query has group by clause */
         if (qep->groupby.n) {
 
-            sql_group_by_clause_group_records (qep);
+            sql_group_by_clause_group_records_phase1 (qep);
             continue;
         }
 
@@ -572,7 +583,7 @@ sql_execute_qep (qep_struct_t *qep) {
     /* Handling group by Phase 2*/
     if (qep->groupby.n) {
 
-        sql_process_group_by_grouped_records (qep); 
+        sql_group_by_clause_process_grouped_records_phase2 (qep); 
         return;
     }
 

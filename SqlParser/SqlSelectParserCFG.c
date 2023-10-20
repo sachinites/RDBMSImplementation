@@ -291,6 +291,10 @@ COL() {
          err = L();
          assert (err == PARSE_SUCCESS);      
 
+        if (qp_col->alias_name[0] != '\0') {
+            qp_col->alias_provided_by_user = true;
+        }
+        
     }   while (0); 
 
     RETURN_PARSE_SUCCESS;

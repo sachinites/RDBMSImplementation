@@ -1,6 +1,7 @@
 #ifndef __QPLANNER__
 #define __QPLANNER__
 
+#include <list>
 #include "../Tree/libtree.h"
 #include "../SqlParser/SqlParserStruct.h"
 #include "sql_const.h"
@@ -112,6 +113,11 @@ typedef struct qep_struct_ {
     table_iterators_t *titer;
 
     joined_row_t *joined_row_tmplate;
+
+    /* Remember, C objects cannot have STL C++ containers, but
+        can have pointers to them as members */
+    std::list<exp_tree_data_src_t *> *data_src_lst;
+
 } qep_struct_t;
 
 

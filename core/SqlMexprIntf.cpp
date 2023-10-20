@@ -151,15 +151,6 @@ sql_create_exp_tree_conditional () {
     return sql_exptree;
 }
 
-
-typedef struct exp_tree_data_src_ {
-
-    int table_index;
-    schema_rec_t *schema_rec;
-    joined_row_t **joined_row;
-
-} exp_tree_data_src_t;
-
 static void *
 joined_row_search ( int table_id, joined_row_t *joined_row) {
 
@@ -227,7 +218,6 @@ sql_column_value_resolution_fn (void *_data_src) {
         default:
             assert(0);
     }
-    dtype->del_after_use = true;
     return dtype;
 }
 
@@ -315,6 +305,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
                 sql_to_mexpr_dtype_converter (schema_rec->dtype) , 
                 data_src, 
                 sql_column_value_resolution_fn);
+        //qep->data_src_lst->push_back (data_src);
 
    } MexprTree_Iterator_Operands_End;
 
@@ -398,7 +389,7 @@ sql_evaluate_conditional_exp_tree (sql_exptree_t *sql_exptree) {
     res = sql_exptree->tree->evaluate (sql_exptree->tree->root);
     d_bool = dynamic_cast <Dtype_BOOL *> (res);
     rc = d_bool->dtype.b_val;
-    if (d_bool->del_after_use) delete d_bool;
+    delete d_bool;
     return rc;
 }
 
@@ -523,7 +514,6 @@ sql_tree_remove_unresolve_operands(sql_exptree_t *sql_exptree) {
 void 
 sql_destroy_Dtype_value_holder (Dtype *dtype) {
 
-    if (!dtype->del_after_use) return;
     delete dtype;
 }
 
@@ -618,4 +608,19 @@ sql_tree_expand_all_aliases (qep_struct_t *qep, sql_exptree_t *sql_tree) {
         }
     }
     return count;
+}
+
+void 
+InstallDtypeOperandProperties (MexprNode *node, 
+                                                    sql_dtype_t sql_dtype,
+                                                    void *data_src, Dtype *(*compute_fn_ptr)(void *))  {
+
+    Dtype_VARIABLE *dtype_var = 
+                dynamic_cast <Dtype_VARIABLE *> (node);
+
+    dtype_var->InstallOperandProperties (
+                sql_to_mexpr_dtype_converter (sql_dtype), 
+                data_src,
+                compute_fn_ptr );
+
 }

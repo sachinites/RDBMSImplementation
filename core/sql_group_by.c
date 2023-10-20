@@ -193,11 +193,110 @@ sql_query_initialize_having_clause_phase1 (qep_struct_t *qep, BPlusTree_t *tcata
     return true;
 }
 
+static Dtype *
+Wrapper_sql_column_get_aggregated_value (void *data_src) {
+
+    qp_col_t *sqp_col = (qp_col_t *)data_src;
+    Dtype  *res =  sql_column_get_aggregated_value (sqp_col);
+    return dynamic_cast<Dtype *> (res->clone());
+}
+
+extern sql_dtype_t
+mexpr_to_sql_dtype_converter (mexprcpp_dtypes_t dtype);
+
+/* Phase 2 HAVING exp tree contains Operands ( Aliases Or Actual table column) on which
+    some Agg fn is enforced. Rest of the operands are already marked as Unresolved. All these
+    operands are necessary present in select column list.
+    Data src will be : sqp_col
+    compute fn : Wrapper over sql_column_get_aggregated_value ( )
+*/
 
 static bool
-sql_query_initialize_having_clause_phase2 (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+sql_resolve_exptree_having_phase2 (qep_struct_t *qep,
+                                                            sql_exptree_t *exp_tree) {
 
+    qp_col_t *sqp_col;
+    std::string opnd_name;
+    MexprNode *opnd_node;
+
+    SqlExprTree_Iterator_Operands_Begin (qep->having.gexptree_phase2, opnd_node) {
+
+        if (sql_opnd_node_is_unresolvable (opnd_node)) continue;
+
+        opnd_name = sql_get_opnd_variable_name (opnd_node);
+
+        sqp_col = sql_get_qp_col_by_name (
+                                             qep->select.sel_colmns,
+                                             qep->select.n, 
+                                             (char *)opnd_name.c_str(), true);
+
+        if (!sqp_col) {
+
+            sqp_col = sql_get_qp_col_by_name (
+                                             qep->select.sel_colmns,
+                                             qep->select.n, 
+                                             (char *)opnd_name.c_str(), false);
+        }
+
+        assert (sqp_col);
+
+        InstallDtypeOperandProperties (
+                    opnd_node, 
+                    mexpr_to_sql_dtype_converter (sql_column_get_aggregated_value (sqp_col)->did),
+                    (void *)sqp_col,
+                    Wrapper_sql_column_get_aggregated_value);
+    }
+
+    sql_tree_remove_unresolve_operands (qep->having.gexptree_phase2);
     return true;
+}
+
+/* HAVING exp tree of phase 2 is exactly complementary ( opposite) to exp tree of phase 1.
+    In this case, we keep operands on which Agg fn is applied, and get rid of the rest
+*/
+static bool
+sql_query_initialize_having_clause_phase2 (qep_struct_t *qep) {
+
+    qp_col_t *sqp_col;
+    std::string opnd_name;
+    MexprNode *opnd_node;
+
+    if (!qep->having.gexptree_phase2) return true;
+
+    SqlExprTree_Iterator_Operands_Begin (qep->having.gexptree_phase2, opnd_node) {
+
+        opnd_name = sql_get_opnd_variable_name (opnd_node);
+
+        sqp_col = sql_get_qp_col_by_name (
+                                             qep->select.sel_colmns,
+                                             qep->select.n, 
+                                             (char *)opnd_name.c_str(), true);
+
+        if (!sqp_col) {
+
+            sqp_col = sql_get_qp_col_by_name (
+                                             qep->select.sel_colmns,
+                                             qep->select.n, 
+                                             (char *)opnd_name.c_str(), false);
+        }
+
+        if (!sqp_col) {
+            /* User has mentioned such a column in having condition which is not present in select
+                list by alias name or table column name. This column could be present in group by list 
+                but we have covered filtering based on that in phase 1 already. So, we dont need filtering
+                based on this operand any more*/
+            sql_opnd_node_mark_unresolvable(opnd_node);
+            continue;
+        }
+
+        if (sqp_col->agg_fn == SQL_AGG_FN_NONE) {
+
+             /* In phase 2, ignore filtering based on any operand which is not aggregated*/
+            sql_opnd_node_mark_unresolvable(opnd_node);
+        }
+    }
+
+    return sql_resolve_exptree_having_phase2 (qep, qep->having.gexptree_phase2);
 }
 
 bool
@@ -209,14 +308,14 @@ sql_query_initialize_having_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
         qep->having.gexptree_phase2 = sql_clone_expression_tree (qep->having.gexptree_phase1);
     }
 
-    bool rc = sql_query_initialize_having_clause_phase1 (qep, tcatalog);
-    if (!rc) return false;
-    return sql_query_initialize_having_clause_phase2 (qep, tcatalog);
+    return sql_query_initialize_having_clause_phase1 (qep, tcatalog);
+    //if (!rc) return false;
+    //return sql_query_initialize_having_clause_phase2 (qep, tcatalog);
 }
 
 /* This fn setup the hashtable also if it is a first record we are grouping*/
 void 
-sql_group_by_clause_group_records (qep_struct_t *qep) {
+sql_group_by_clause_group_records_phase1 (qep_struct_t *qep) {
     
     int i;
     char *ht_key;  
@@ -351,7 +450,7 @@ static void
 
 
 void 
-sql_process_group_by_grouped_records (qep_struct_t *qep) {
+sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) {
 
     int i;
     int row_no = 0;
@@ -403,6 +502,26 @@ sql_process_group_by_grouped_records (qep_struct_t *qep) {
             assert (!sqp_col->computed_value);
 
             sqp_col->computed_value =  sql_evaluate_exp_tree (sqp_col->sql_tree);
+        }
+
+        if (row_no == 1) {
+
+            /* We have computed the first Aggregated record data, its time to resolve and
+                initialize HAVING exp tree phase 2. We initialize this exp tree dynamically
+                (i.e. while we are in join loop) because the  data type of aggregated select columns
+                Would be known only after computation of Ist Aggrgated record */
+
+            if (!sql_query_initialize_having_clause_phase2 (qep)) {
+                printf ("Error : Failed to initialize HAVING clause phase 2 Exp tree\n");
+                break;
+            }
+        }
+    
+        if (!sql_evaluate_conditional_exp_tree (qep->having.gexptree_phase2)) {
+
+            sql_select_flush_computed_values (qep);
+            if (hashtable_iterator_advance(itr)) continue;
+            break;
         }
 
         /* Apply phase 2 HAVING here !*/

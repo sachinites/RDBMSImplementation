@@ -15,10 +15,10 @@ typedef struct ht_group_by_record_ {
 } ht_group_by_record_t;
 
 void 
- sql_group_by_clause_group_records (qep_struct_t *qep) ;
+ sql_group_by_clause_group_records_phase1 (qep_struct_t *qep) ;
 
 void 
-sql_process_group_by_grouped_records (qep_struct_t *qep) ;
+sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) ;
 
 bool
 sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) ;

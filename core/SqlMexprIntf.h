@@ -100,7 +100,9 @@ bool
 sql_tree_optimize (sql_exptree_t *tree);
 
 void 
-InstallDtypeOperandProperties (MexprNode *node, void *data_src, Dtype *(*compute_fn_ptr)(void *)) ;
+InstallDtypeOperandProperties (MexprNode *node, 
+                                                    sql_dtype_t sql_dtype,
+                                                    void *data_src, Dtype *(*compute_fn_ptr)(void *)) ;
 
 void 
 sql_destroy_Dtype_value_holder (Dtype *dtype);
