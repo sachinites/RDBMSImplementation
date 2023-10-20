@@ -24,8 +24,8 @@ SQLite Database System: Design and Implementation (First Edition)
 To Compile and build :
 =====================
 
-Download :  git clone https://github.com/sachinites/RDBMSImplementation and switched to branch 'ExprTree'
-Download : git clone https://github.com/sachinites/MathExpressionParser and switch to branch 'Oops'
+Download :  git clone https://github.com/sachinites/RDBMSImplementation and switched to branch 'DCB'
+Download : git clone https://github.com/sachinites/MathExpressionParser and switch to branch 'DCB'
 
 cd MathExpressionParser 
 git checkout Oops
