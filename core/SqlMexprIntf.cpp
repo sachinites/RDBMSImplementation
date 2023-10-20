@@ -439,7 +439,6 @@ sql_opnd_node_mark_unresolvable (MexprNode *opnd_node) {
     dtype->unresolvable = true;
 }
 
-
 std::string 
 sql_get_opnd_variable_name (MexprNode *opnd_node) {
 
@@ -539,7 +538,6 @@ sql_get_aggregator (qp_col_t *qp_col) {
 
     return aggregator;
 }
-
 
 void
 sql_destroy_aggregator (qp_col_t *qp_col) {

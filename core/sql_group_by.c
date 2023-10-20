@@ -163,6 +163,8 @@ sql_query_initialize_having_clause_phase1 (qep_struct_t *qep, BPlusTree_t *tcata
 
      SqlExprTree_Iterator_Operands_Begin (qep->having.gexptree_phase1, opnd_node) {
 
+        opnd_name = sql_get_opnd_variable_name (opnd_node);
+
         sqp_col = sql_get_qp_col_by_name (
                                              qep->select.sel_colmns,
                                              qep->select.n, 
@@ -457,11 +459,11 @@ void
 sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) {
 
     int i;
-    int row_no = 0;
     qp_col_t *sqp_col;
     struct hashtable_itr *itr;
     joined_row_t *first_record;
     joined_row_t *  joined_row_backup;
+    int row_no = 0, qualified_row_no = 0;
     std::list<joined_row_t *> *record_lst;
     ht_group_by_record_t *ht_group_by_record;
 
@@ -533,11 +535,12 @@ sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) {
         /* Apply phase 2 HAVING here !*/
         sql_emit_select_output(qep->select.n, qep->select.sel_colmns);
         sql_select_flush_computed_values (qep);
+        qualified_row_no++;
 
     } while (hashtable_iterator_advance(itr));
     
     free(itr);
-    printf ("(%d rows)\n", row_no);
+    printf ("(%d rows)\n", qualified_row_no);
     qep->joined_row_tmplate = joined_row_backup;
 }
 
