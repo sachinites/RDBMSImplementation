@@ -48,7 +48,7 @@ qep_struct_record_table (qep_struct_t *qep_struct, char *table_name) {
     ctable_val = sql_catalog_table_lookup_by_table_name  (&TableCatalogDef, table_name);
     if (!ctable_val) return false;
 
-    qep_struct->join.tables[qep_struct->join.table_cnt++].ctable_val = ctable_val ;
+    qep_struct->join.tables[qep_struct->join.table_cnt].ctable_val = ctable_val ;
     strncpy(qep_struct->join.tables[qep_struct->join.table_cnt].table_name , 
                     table_name, SQL_TABLE_NAME_MAX_SIZE );
     return true;
@@ -406,9 +406,13 @@ qep_deinit (qep_struct_t *qep) {
     }
 
     /* Free Alias Hashmap*/
-    qep->join.table_alias->clear();
-    delete qep->join.table_alias;
-    qep->join.table_alias = NULL;
+    if (qep->join.table_alias) {
+
+        qep->join.table_alias->clear();
+        delete qep->join.table_alias;
+        qep->join.table_alias = NULL;
+    }
+
 }
 
 

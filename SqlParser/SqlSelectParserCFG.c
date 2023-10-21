@@ -182,6 +182,8 @@ TABS() {
     err = L();
     assert (err == PARSE_SUCCESS);
 
+    qep.join.table_cnt++;
+
     token_code = cyylex();
 
     if (token_code != SQL_COMMA) {
@@ -350,7 +352,7 @@ select_query_parser () {
 
     if (err == PARSE_ERR) {
 
-        printf ("Failed\n");
+        printf ("Error : Column list parsing failed\n");
         RETURN_PARSE_ERROR;
     }
 

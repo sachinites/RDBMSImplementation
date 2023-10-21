@@ -496,6 +496,7 @@ sql_is_single_operand_expression_tree (sql_exptree_t *sql_exptree) {
 
 MexprNode *
 sql_tree_get_root (sql_exptree_t *tree) {
+    
     if (!tree->tree || !tree->tree->root) return NULL;
     return tree->tree->root;
 }

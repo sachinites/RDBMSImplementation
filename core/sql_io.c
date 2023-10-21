@@ -12,6 +12,9 @@
 #include "SqlMexprIntf.h"
 #include "../../MathExpressionParser/Dtype.h"
 
+#define SCREEN_WIDTH    80
+#define COLUMN_WIDTH   20
+
 static void 
 print_line(int num_columns, int column_width) {
     for (int i = 0; i < num_columns; i++) {
@@ -30,9 +33,9 @@ sql_print_hdr (qp_col_t **col_list, int n_cols ) {
     qp_col_t *col;
     int num_columns = n_cols;
 
-    int column_width = 20; // Default column width
+    int column_width = COLUMN_WIDTH; // Default column width
     if (num_columns > 0) {
-        column_width = 80 / num_columns; // Adjust column width based on available space
+        column_width = SCREEN_WIDTH / num_columns; // Adjust column width based on available space
     }
 
     // Print the top line
@@ -58,10 +61,10 @@ void sql_emit_select_output(int n_col,
     qp_col_t *qp_col;
     int num_columns = n_col;
 
-    int column_width = 20; // Default column width
+    int column_width = COLUMN_WIDTH; // Default column width
 
     if (num_columns > 0) {
-        column_width = 80 / num_columns; // Adjust column width based on available space
+        column_width = SCREEN_WIDTH / num_columns; // Adjust column width based on available space
     }
 
     // Print each row of data
@@ -71,11 +74,6 @@ void sql_emit_select_output(int n_col,
         Dtype *dtype = (qp_col->agg_fn != SQL_AGG_FN_NONE ) ? \
                                     sql_column_get_aggregated_value (qp_col) :  \
                                     qp_col->computed_value;
-
-        if (qp_col->agg_fn == SQL_COUNT) {
-            printf("%-*d|", column_width,  (dynamic_cast <Dtype_INT *>(dtype))->dtype.int_val);
-            continue;
-        }
 
         switch (dtype->did) {
 
