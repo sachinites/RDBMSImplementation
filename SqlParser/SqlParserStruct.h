@@ -67,6 +67,7 @@ typedef enum sql_op_ {
     SQL_GREATER_THAN_EQ,
     SQL_NOT,
     SQL_IN,
+    SQL_LIKE,
     SQL_BETWEEN, 
     SQL_OP_MAX
 

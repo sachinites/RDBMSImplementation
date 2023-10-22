@@ -310,6 +310,11 @@ lex_set_scan_buffer (const char *buffer) {
     return SQL_IN;
 }
 
+"LIKE" {
+    
+    return SQL_LIKE;
+}
+
 "sqrt" {
     return SQL_MATH_SQRT;
 }
