@@ -59,6 +59,30 @@ qep_struct_record_table (qep_struct_t *qep_struct, char *table_name) {
 static bool
 sql_query_initialize_orderby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
+    qp_col_t *sqp_col;
+
+    if (qep->orderby.column_name[0] == '\0') return true;
+
+    sqp_col = sql_get_qp_col_by_name (qep->select.sel_colmns,
+                                                                qep->select.n,
+                                                                qep->orderby.column_name,
+                                                                true);
+
+    if (!sqp_col) {
+
+        sqp_col = sql_get_qp_col_by_name (qep->select.sel_colmns,
+                                                                    qep->select.n,
+                                                                    qep->orderby.column_name,
+                                                                    false); 
+    }
+
+    if (!sqp_col) {
+
+        printf ("Error : Order by columns is not recognized\n");
+        return false;
+    }
+
+    qep->orderby.linkage_to_sel_column = sqp_col;
     return true;
 }
 

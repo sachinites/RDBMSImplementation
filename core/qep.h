@@ -104,10 +104,10 @@ typedef struct qep_struct_ {
 
     struct {
 
-        bool orderby;
-        qp_col_t *col;
-        /* AVL tree to store records ordered by 'order by'* field. Default is FCFS*/
-        avltree_t avl_order_by_root;
+        bool asc;
+        char column_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
+        qp_col_t *linkage_to_sel_column;
+        
     } orderby;
 
     uint32_t limit;  /* 0 means no limit*/

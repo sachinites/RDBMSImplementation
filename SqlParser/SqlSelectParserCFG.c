@@ -34,7 +34,7 @@ IDENT -> identifer | identider.identifer  [identifer can be col name or name of 
 
 ORDERBY  -> $  |  order by IDENT C
 
-C ->  asc |  dsc
+C ->  asc |  dsc | $
 
 LMT  -> $  |  limit <integer>
 
@@ -44,6 +44,7 @@ LMT  -> $  |  limit <integer>
 qep_struct_t qep;
 char *L_alias_name = NULL;
 
+static parse_rc_t ORDER_BY();
 static parse_rc_t HAVING();
 static parse_rc_t INDTF_LST();
 static parse_rc_t GROUP_BY ();
@@ -52,6 +53,44 @@ static parse_rc_t TABS() ;
 static parse_rc_t L() ;
 static parse_rc_t COL();
 static parse_rc_t COLLIST();
+
+
+// ORDERBY  -> $  |  order by IDENT C
+parse_rc_t
+ORDER_BY() {
+
+    parse_init();
+
+    token_code = cyylex();
+
+    if (token_code != SQL_ORDER_BY) {
+        yyrewind(1);
+        RETURN_PARSE_SUCCESS;
+    }
+
+    token_code = cyylex();
+
+    if (token_code != SQL_IDENTIFIER &&
+         token_code != SQL_IDENTIFIER_IDENTIFIER) {
+
+        yyrewind(2);
+        RETURN_PARSE_SUCCESS;
+    }
+
+    strncpy (qep.orderby.column_name, lex_curr_token, sizeof (qep.orderby.column_name));
+
+    token_code = cyylex();
+
+    if (token_code != SQL_ORDERBY_ASC &&
+         token_code != SQL_ORDERBY_DSC) {
+
+        yyrewind(1);
+        RETURN_PARSE_SUCCESS;
+    }
+
+    qep.orderby.asc = (token_code == SQL_ORDERBY_ASC);
+    RETURN_PARSE_SUCCESS;
+}
 
 /* HAVING  ->  $  |  having LEXPR */
 parse_rc_t
@@ -149,7 +188,7 @@ WHERE() {
     qep.where.gexptree = sql_create_exp_tree_conditional();
 
     if (!qep.where.gexptree) {
-        printf ("Error : Coulld not build Where Logical Expression Tree\n");
+        printf ("Error : Could not build Where Logical Expression Tree\n");
         RETURN_PARSE_ERROR;
     }
 

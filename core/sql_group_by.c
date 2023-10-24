@@ -459,6 +459,7 @@ void
 sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) {
 
     int i;
+    bool ht_itr;
     qp_col_t *sqp_col;
     struct hashtable_itr *itr;
     joined_row_t *first_record;
@@ -476,13 +477,15 @@ sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) {
     joined_row_backup = qep->joined_row_tmplate;
     qep->joined_row_tmplate = NULL;
 
+    ht_itr = true;
+
     do {
 
         ht_group_by_record = (ht_group_by_record_t *)hashtable_iterator_value (itr);
         record_lst = ht_group_by_record->record_lst;
         row_no++;
         first_record = NULL;
-
+        
         if (row_no == 1) {
             sql_print_hdr(qep->select.sel_colmns, qep->select.n);
         }
@@ -492,9 +495,7 @@ sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) {
                 ++it) {
 
             qep->joined_row_tmplate = *it;
-            
             if (!first_record) first_record = *it;
-
             sql_group_by_compute_aggregation (qep);
         }
 
@@ -504,11 +505,8 @@ sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) {
         for (i = 0; i < qep->select.n; i++) {
 
             sqp_col = qep->select.sel_colmns[i];
-
             if (sqp_col->agg_fn != SQL_AGG_FN_NONE) continue;
-
             assert (!sqp_col->computed_value);
-
             sqp_col->computed_value =  sql_evaluate_exp_tree (sqp_col->sql_tree);
         }
 
@@ -537,7 +535,8 @@ sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) {
         sql_select_flush_computed_values (qep);
         qualified_row_no++;
 
-    } while (hashtable_iterator_advance(itr));
+         ht_itr = !(hashtable_iterator_advance(itr) == 0);
+    } while (ht_itr);
     
     free(itr);
     printf ("(%d rows)\n", qualified_row_no);
