@@ -76,6 +76,7 @@ cyylex () {
     lex_data.token_len = yyleng;
     lex_data.token_val = parser_alloc_token_value_default  (token_code);
     lex_push(lex_data);
+    //printf ("code = %d, token = %s\n", token_code, lex_curr_token);
     return token_code;
 }
 
@@ -186,6 +187,10 @@ lex_set_scan_buffer (const char *buffer) {
 
 "ipv4" {
     return SQL_IPV4_ADDR;
+}
+
+"interval" {
+    return SQL_INTERVAL;
 }
 
 "primary key" {
@@ -353,6 +358,11 @@ lex_set_scan_buffer (const char *buffer) {
 
 "," {
     return SQL_COMMA;
+}
+
+\[[ \t]*[+-]?[0-9]+[ \t]*,[ \t]*[+-]?[0-9]+[ \t]*\] {
+    // [<integer>, <integer>]
+    return SQL_INTERVAL_VALUE;
 }
 
 [ ] { 

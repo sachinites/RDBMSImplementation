@@ -119,6 +119,14 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
                                 (void *)((char *)new_bpkey.key + key_offset));
                         key_offset += rec->dtype_size;
                         break;
+                    case SQL_INTERVAL:
+                        {
+                            memcpy((char *)new_bpkey.key + key_offset,
+                                    (unsigned char *)&idata->sql_values[i].u.ival,
+                                    rec->dtype_size);
+                            key_offset += rec->dtype_size;
+                        }
+                    break;
                     default:
                         assert(0);
                 }
@@ -146,6 +154,11 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
                     inet_pton(AF_INET,
                             (const char *)idata->sql_values[i].u.ipv4_addr_str,
                             (void *)((char *)record + rec->offset));
+                    break;
+                case SQL_INTERVAL:
+                    memcpy((char *)record + rec->offset,
+                        (unsigned char *)&idata->sql_values[i].u.ival,
+                        rec->dtype_size);
                     break;
                 default:
                     assert(0);

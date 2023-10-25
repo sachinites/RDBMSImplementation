@@ -77,6 +77,7 @@ DTYPE() {
         case SQL_INT:
         case SQL_DOUBLE:
         case SQL_IPV4_ADDR:
+        case SQL_INTERVAL:
             cdata.column_data[cdata.n_cols].dtype = (sql_dtype_t )token_code;
             cdata.column_data[cdata.n_cols].dtype_len = sql_dtype_size ((sql_dtype_t )token_code);
             RETURN_PARSE_SUCCESS;
@@ -84,6 +85,7 @@ DTYPE() {
             PARSER_LOG_ERR (token_code, SQL_INT);
             PARSER_LOG_ERR (token_code, SQL_DOUBLE);
             PARSER_LOG_ERR (token_code, SQL_IPV4_ADDR);
+             PARSER_LOG_ERR (token_code, SQL_INTERVAL);
             RETURN_PARSE_ERROR;
     }
     

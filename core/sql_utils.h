@@ -47,15 +47,7 @@ BPlusTree_value_format_fn_default (void *value, unsigned char *obuff, int buff_s
 
 key_mdata_t *
 sql_construct_table_key_mdata (sql_create_data_t *cdata, int *key_mdata_size);
-
-void 
-sql_compute_aggregate (sql_agg_fn_t agg_fn, 
-                                        void *src, void *dst, 
-                                        sql_dtype_t dtype, 
-                                        int dype_size,
-                                        int row_no);
-
-                                    
+                                  
 void *
 sql_get_column_value_from_joined_row (joined_row_t *joined_row, qp_col_t *col);
 
@@ -86,4 +78,7 @@ sql_get_qp_col_by_name (   qp_col_t **qp_col_array,
 #define QP_COL_NAME(qp_col_t_ptr) \
     ((char *)sql_get_opnd_variable_name (sql_tree_get_root (gqp_col->sql_tree)).c_str())
 
+bool
+sql_read_interval_values (char *string_fmt,
+                                            int *a, int *b);
 #endif 

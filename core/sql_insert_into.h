@@ -14,7 +14,10 @@ typedef struct sql_value_ {
         int int_val;
         double d_val;
         char ipv4_addr_str[16];
-
+        struct {
+            int lb;
+            int ub;
+        } ival;
     } u;
 } sql_value_t;
 

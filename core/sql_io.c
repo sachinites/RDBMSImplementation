@@ -102,6 +102,16 @@ void sql_emit_select_output(int n_col,
                 printf("%-*s|", column_width, (dynamic_cast <Dtype_IPv4_addr*>(dtype))->dtype.ip_addr_str.c_str());
                 break;
             }
+
+            case MATH_CPP_INTERVAL: 
+            {
+                Dtype_STRING *dtype_string = dtype->toString();
+                std::string str = dtype_string->dtype.str_val;
+                printf("%-*s|", column_width, str.c_str());
+                delete dtype_string;
+                break;
+            }
+            break;
             default:
                 assert(0);
         }

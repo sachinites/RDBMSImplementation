@@ -85,6 +85,7 @@ typedef enum sql_dtype_{
     SQL_INT,
     SQL_DOUBLE,
     SQL_IPV4_ADDR,
+    SQL_INTERVAL,
     SQL_DTYPE_MAX
 
 } sql_dtype_t;
@@ -104,6 +105,7 @@ typedef enum sql_ident_type_ {
     SQL_STRING_VALUE,
     SQL_DOUBLE_VALUE,
     SQL_IPV4_ADDR_VALUE,
+    SQL_INTERVAL_VALUE,
     SQL_IDNT_TYPE_MAX
 
 } sql_identifier_type_t;
@@ -155,6 +157,7 @@ sql_valid_dtype (int dtype) {
         case SQL_INT:
         case SQL_DOUBLE:
         case SQL_IPV4_ADDR:
+        case SQL_INTERVAL:
         return 1;
     }
     return 0;
@@ -172,6 +175,8 @@ sql_dtype_str (sql_dtype_t dtype) {
             return "SQL_DOUBLE";
         case SQL_IPV4_ADDR:
             return "SQL_IPV4_ADDR";
+        case SQL_INTERVAL:
+            return "SQL_INTERVAL";
     }
     return 0;    
 }
@@ -189,6 +194,8 @@ sql_dtype_size (sql_dtype_t dtype) {
         return sizeof(double);
     case SQL_IPV4_ADDR:
         return 4;
+    case SQL_INTERVAL:
+        return 8;
     }
     return 0;
 }

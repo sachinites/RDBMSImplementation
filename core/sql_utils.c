@@ -76,6 +76,20 @@ rdbms_key_comp_fn (BPluskey_t *key_1, BPluskey_t *key_2, key_mdata_t *key_mdata,
                     offset += dsize;
                 }
                 break;
+            case SQL_INTERVAL:
+            {
+                    int *n11 = (int *)(key1 + offset);
+                    int *n12 = (int *)(key1 + offset + sizeof(int));
+                    int *n21 = (int *)(key2 + offset);
+                    int *n22 = (int *)(key2 + offset + sizeof(int));
+                    if (*n11 == *n21 && *n12 == *n22){ 
+                        offset += dsize; 
+                    }
+                    else {
+                        return -1;
+                    }
+            }
+            break;
             default:
                 break;
         }
@@ -126,127 +140,6 @@ sql_construct_table_key_mdata (sql_create_data_t *cdata, int *key_mdata_size) {
 
     *key_mdata_size = j;
     return key_mdata;
-}
-
-void 
-sql_compute_aggregate (sql_agg_fn_t agg_fn, 
-                                        void *src, void *dst, 
-                                        sql_dtype_t dtype, 
-                                        int dype_size, int row_no) {
-
-    switch (agg_fn) {
-
-        case SQL_SUM:
-            {
-                switch (dtype) {
-
-                    case SQL_INT:
-                    {
-                        int *src_int = (int *)src;
-                        int *dst_int = (int *)dst;
-                        *dst_int  += *src_int ;
-                    }
-                    break;
-                    default: ;
-                }
-            }
-            break;
-
-
-        case SQL_AVG:
-        {
-            switch (dtype) {
-                case SQL_INT:
-                {
-                    int *src = (int *)src;
-                    int *dst = (int *)dst;                    
-                    if (row_no == 1) {
-                        *dst  = *src;
-                        break;
-                    }
-                    *dst = ((*dst) * (row_no -1));
-                    *dst += *src;
-                    *dst = *dst / row_no;
-                }
-                break;
-                case SQL_DOUBLE:
-                {
-                    double *src = (double *)src;
-                    double *dst = (double *)dst;                    
-                    if (row_no == 1) {
-                        *dst  = *src;
-                        break;
-                    }
-                    *dst = ((*dst) * (row_no -1));
-                    *dst += *src;
-                    *dst = *dst / row_no;
-                }                
-            }
-        }
-        break;
-
-        case SQL_MAX:
-        {
-                switch (dtype)
-                {
-                case SQL_INT:
-                {
-                        int *src_int = (int *)src;
-                        int *dst_int = (int *)dst;
-                        if (row_no == 1) {
-                            *dst_int = INT32_MIN;
-                        }
-                       if (*dst_int < *src_int) {
-                            *dst_int = *src_int;
-                       }
-                }
-                break;
-                default:;
-                }
-        }
-        break;
-
-
-        case SQL_MIN:
-        {
-                switch (dtype)
-                {
-                case SQL_INT:
-                {
-                        int *src_int = (int *)src;
-                        int *dst_int = (int *)dst;
-                        if (row_no == 1) {
-                            *dst_int = INT32_MAX;
-                        }
-                       if (*dst_int > *src_int) {
-                            *dst_int = *src_int;
-                       }
-                }
-                break;
-                default:;
-                }
-        }
-        break;        
-
-
-        case SQL_COUNT:
-        {
-                switch (dtype)
-                {
-                default:
-                {
-                        int *dst_int = (int *)dst;
-                         (*dst_int)++;
-                }
-                break;
-                }
-        }
-        break;       
-
-
-
-        default: ;
-    }
 }
 
 void 
@@ -319,4 +212,32 @@ sql_get_qp_col_by_name (   qp_col_t **qp_col_array,
     }
 
     return NULL;
+}
+
+bool
+sql_read_interval_values (char *string_fmt,  // "[ a , b]"
+                                            int *a, int *b) {
+
+    int i = 0, j = 0;
+    char dst_buffer[64];
+
+    int string_fmt_len = strlen (string_fmt);
+
+    if (string_fmt_len > sizeof(dst_buffer)) {
+        return false;
+    }
+
+    while (string_fmt[i] != '\0' && i < string_fmt_len)
+    {
+        if (string_fmt[i] == ' ')
+        {
+            i++;
+            continue;
+        }
+        dst_buffer[ j++] = string_fmt[i];
+        i++;
+    }
+    dst_buffer[j] = '\0';
+    sscanf(dst_buffer, "[%d,%d]", a, b);
+    return true;
 }

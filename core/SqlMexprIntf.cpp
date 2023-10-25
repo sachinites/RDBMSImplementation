@@ -44,7 +44,13 @@ postfix_lex_data_array_destroy (lex_data_t **postfix, int size) {
                 delete str_lst_ptr;
             }
             break;
-
+            case MATH_CPP_INTERVAL:
+            {
+                std::list<int32_t> *int_lst_ptr = 
+                     reinterpret_cast<std::list<int32_t > *>(postfix[i]->token_val);
+                delete int_lst_ptr;
+            }
+            break;
             default:
             break;
         }
@@ -212,6 +218,15 @@ sql_column_value_resolution_fn (void *_data_src) {
             dtype_v4->dtype.ipaddr_int= *(uint32_t *)val;
             inet_ntop ( AF_INET, &dtype_v4->dtype.ipaddr_int, ipv4_str, 16);
             dtype_v4->dtype.ip_addr_str = std::string (ipv4_str);
+        }
+        break;
+
+        case SQL_INTERVAL:
+        {
+            dtype =  Dtype::factory (MATH_CPP_INTERVAL);
+            Dtype_INTERVAL *dtype_ival = dynamic_cast <Dtype_INTERVAL *> (dtype);
+            dtype_ival->dtype.lb = *(int *)val;
+            dtype_ival->dtype.ub = *((int *)val + 1 );
         }
         break;
 

@@ -6,7 +6,7 @@
 #include "ParserExport.h"
 #include "SqlParserStruct.h"
 #include "../core/sql_insert_into.h"
-
+#include "../core/sql_utils.h"
 /* CFG 
 
 insert_query_parser -> Q1 | Q2 
@@ -34,7 +34,7 @@ We are supporitng only Q1 method of specifying values
 
 sql_insert_into_data_t idata; 
 
-/* VALUE ->  <integer> | <double> | '<string>' | ipv4-addr */
+/* VALUE ->  <integer> | <double> | '<string>' | ipv4-addr | interval */
 parse_rc_t
 VALUE () {
 
@@ -65,10 +65,17 @@ VALUE () {
             strncpy (idata.sql_values[idata.i].u.str_val, lex_curr_token + 1,  // skip ' or "
                         lex_curr_token_len - 2); 
             break;
+        case SQL_INTERVAL_VALUE:
+            {
+                sql_read_interval_values (lex_curr_token, 
+                    &idata.sql_values[idata.i].u.ival.lb,
+                    &idata.sql_values[idata.i].u.ival.ub);
+                idata.sql_values[idata.i].dtype = SQL_INTERVAL;
+            }
+            break;
         default:
             RETURN_PARSE_ERROR;
     }
-
     RETURN_PARSE_SUCCESS;
 }
 
