@@ -300,7 +300,6 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     if (!rc) return rc;
 
     /* initialize other variables*/
-    qep->limit = 0;
     qep->is_join_started = false;
     qep->is_join_finished = false;
 

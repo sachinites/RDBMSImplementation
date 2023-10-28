@@ -44,6 +44,7 @@ LMT  -> $  |  limit <integer>
 qep_struct_t qep;
 char *L_alias_name = NULL;
 
+static parse_rc_t LMT();
 static parse_rc_t ORDER_BY();
 static parse_rc_t HAVING();
 static parse_rc_t INDTF_LST();
@@ -53,6 +54,34 @@ static parse_rc_t TABS() ;
 static parse_rc_t L() ;
 static parse_rc_t COL();
 static parse_rc_t COLLIST();
+
+
+
+// LMT  -> $  |  limit <integer>
+parse_rc_t
+LMT () {
+
+    parse_init();
+
+    token_code = cyylex();
+
+    if (token_code != SQL_LIMIT) {
+        yyrewind(1);
+        RETURN_PARSE_SUCCESS;
+    }
+
+    token_code = cyylex();
+
+    if (token_code != SQL_INTEGER_VALUE) {
+
+        yyrewind(2);
+        RETURN_PARSE_SUCCESS;
+    }
+
+    qep.limit = atoi(lex_curr_token);
+
+    RETURN_PARSE_SUCCESS;
+}
 
 
 // ORDERBY  -> $  |  order by IDENT C
@@ -440,6 +469,14 @@ select_query_parser () {
     if (err == PARSE_ERR) {
 
         printf ("Error : Parsing Error on ORDER BY Clause\n");
+        RETURN_PARSE_ERROR;        
+    }    
+
+    err = LMT();
+
+    if (err == PARSE_ERR) {
+
+        printf ("Error : Parsing Error on LIMIT Clause\n");
         RETURN_PARSE_ERROR;        
     }    
 

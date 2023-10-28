@@ -551,18 +551,6 @@ sql_get_aggregator (sql_agg_fn_t agg_fn, sql_dtype_t dtype) {
     return aggregator;
 }
 
-Aggregator *
-sql_get_aggregator (sql_agg_fn_t agg_fn, mexprcpp_dtypes_t dtype) {
-
-    if (agg_fn == SQL_AGG_FN_NONE) return NULL;
-    
-    Aggregator *aggregator = Aggregator::factory (
-                    sql_to_mexpr_agg_fn_converter (agg_fn),  // which agg fn we need
-                    dtype); // what is the data type to aggregate
-    
-    return aggregator;
-}
-
 void
 sql_destroy_aggregator (qp_col_t *qp_col) {
 
