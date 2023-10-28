@@ -5,6 +5,7 @@
 #include <memory.h>
 #include <arpa/inet.h>
 #include <list>
+#include <vector>
 #include "../stack/stack.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "qep.h"
@@ -13,6 +14,7 @@
 #include "sql_io.h"
 #include "sql_utils.h"
 #include "sql_group_by.h"
+#include "sql_order_by.h"
 #include "SqlMexprIntf.h"
 #include "../c-hashtable/hashtable.h"
 #include "../c-hashtable/hashtable_itr.h"
@@ -59,6 +61,7 @@ qep_struct_record_table (qep_struct_t *qep_struct, char *table_name) {
 static bool
 sql_query_initialize_orderby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
+    int i;
     qp_col_t *sqp_col;
 
     if (qep->orderby.column_name[0] == '\0') return true;
@@ -82,7 +85,17 @@ sql_query_initialize_orderby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
         return false;
     }
 
-    qep->orderby.linkage_to_sel_column = sqp_col;
+    qep->orderby.orderby_col_select_index = -1;
+
+    for (i = 0; i < qep->select.n; i++) {
+        
+        if (qep->select.sel_colmns[i] != sqp_col) continue;
+        qep->orderby.orderby_col_select_index = i;
+        break;
+    }
+
+    assert (qep->orderby.orderby_col_select_index >= 0);
+
     return true;
 }
 
@@ -437,6 +450,22 @@ qep_deinit (qep_struct_t *qep) {
         qep->join.table_alias = NULL;
     }
 
+    /* Free order by Vector */
+    for (i =0; i < qep->orderby.pVector.size(); i++) {
+
+        std::vector < Dtype *> *cVector = qep->orderby.pVector.at(i);
+        if (!cVector) continue;
+        for (int j = 0; j < cVector->size(); j++) {
+            sql_destroy_Dtype_value_holder (cVector->at(j));
+        }
+        delete cVector;
+        qep->orderby.pVector[i] = NULL;
+    }
+
+     if (qep->orderby.pVector.size()) {
+        qep->orderby.pVector.clear();
+     }
+
 }
 
 
@@ -569,6 +598,7 @@ sql_execute_qep (qep_struct_t *qep) {
     int row_no = 0;
     qp_col_t *qp_col;
     Dtype *computed_value;
+    int  qualified_row_no = 0;
     bool is_aggregation = false;
 
     while (qep_execute_join (qep)) {
@@ -610,7 +640,12 @@ sql_execute_qep (qep_struct_t *qep) {
 
                 if (!qp_col->aggregator) {
                     qp_col->computed_value =  sql_evaluate_exp_tree (qp_col->sql_tree);
-                    qp_col->aggregator = sql_get_aggregator (qp_col);
+                    
+                    qp_col->aggregator = sql_get_aggregator (
+                            qp_col->agg_fn,
+                            mexpr_to_sql_dtype_converter(
+                                    sql_dtype_get_type (qp_col->computed_value)));
+
                     assert (qp_col->aggregator);
                     sql_column_value_aggregate  (qp_col,  qp_col->computed_value);
                     sql_destroy_Dtype_value_holder (qp_col->computed_value);
@@ -629,11 +664,13 @@ sql_execute_qep (qep_struct_t *qep) {
         /* Case 1 :  No Group by Clause, Non-Aggregated Columns */
         if (!qep->groupby.n && !is_aggregation) {
 
+            if (qep_collect_dtypes_for_sorting(qep)) continue;
+
             if (row_no == 1) {
                 sql_print_hdr  (qep->select.sel_colmns, qep->select.n);
             }
 
-            sql_emit_select_output (qep->select.n, qep->select.sel_colmns);
+            sql_emit_select_output (qep, qep->select.n, qep->select.sel_colmns);
 
             if (qep->limit == row_no) {
                 break;
@@ -653,9 +690,26 @@ sql_execute_qep (qep_struct_t *qep) {
     if (!qep->groupby.n && is_aggregation) {
 
         sql_print_hdr(qep->select.sel_colmns, qep->select.n);
-        sql_emit_select_output(qep->select.n, qep->select.sel_colmns);
+        sql_emit_select_output(qep, qep->select.n, qep->select.sel_colmns);
         printf ("(1 rows)\n");
+        return;
     }
+
+    /* Order by*/
+    qep_orderby_sort (qep);
+    qep->orderby.iterator_index = 0;
+    while (qep_order_by_reassign_select_columns (qep)) {
+
+        if ( qep->orderby.iterator_index == 1) {
+            sql_print_hdr(qep->select.sel_colmns, qep->select.n);
+        }
+        sql_emit_select_output(qep, qep->select.n, qep->select.sel_colmns);
+        sql_select_flush_computed_values (qep);
+        if (qep->limit == qep->orderby.iterator_index) {
+            break;
+        }
+    }
+    printf ("(%d rows)\n", row_no);
 }
 
 void 

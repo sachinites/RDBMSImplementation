@@ -4,7 +4,9 @@
 #include "Catalog.h"
 #include "qep.h"
 #include "sql_group_by.h"
+#include "sql_order_by.h"
 #include "sql_io.h"
+#include "sql_utils.h"
 #include "SqlMexprIntf.h"
 #include "../c-hashtable/hashtable.h"
 #include "../c-hashtable/hashtable_itr.h"
@@ -401,28 +403,6 @@ sql_group_by_clause_group_records_phase1 (qep_struct_t *qep) {
 }
 
 static void 
-sql_select_flush_computed_values (qep_struct_t *qep) {
-
-    int i;
-    qp_col_t *sqp_col;
-
-    for (i = 0; i < qep->select.n; i++) {
-
-        sqp_col = qep->select.sel_colmns[i];
-
-        if (sqp_col->computed_value) {
-            sql_destroy_Dtype_value_holder (sqp_col->computed_value);
-            sqp_col->computed_value = NULL;
-        }
-
-        if (sqp_col->aggregator) {
-            sql_destroy_aggregator (sqp_col);
-            sqp_col->aggregator = NULL;
-        }
-    }
-}
-
-static void 
  sql_group_by_compute_aggregation (qep_struct_t *qep) {
 
     int i;
@@ -438,7 +418,8 @@ static void
         if (!sqp_col->aggregator) {
 
             sqp_col->computed_value = sql_evaluate_exp_tree(sqp_col->sql_tree);
-            sqp_col->aggregator = sql_get_aggregator(sqp_col);
+            sqp_col->aggregator = sql_get_aggregator(sqp_col->agg_fn, 
+                mexpr_to_sql_dtype_converter (sqp_col->computed_value->did));
             assert(sqp_col->aggregator);
             sql_column_value_aggregate(sqp_col, sqp_col->computed_value);
             sql_destroy_Dtype_value_holder(sqp_col->computed_value);
@@ -486,7 +467,9 @@ sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) {
         row_no++;
         first_record = NULL;
         
-        if (row_no == 1) {
+        if (row_no == 1 && 
+                qep->orderby.column_name[0] == '\0') {
+
             sql_print_hdr(qep->select.sel_colmns, qep->select.n);
         }
 
@@ -530,15 +513,34 @@ sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) {
             break;
         }
 
-        /* Apply phase 2 HAVING here !*/
-        sql_emit_select_output(qep->select.n, qep->select.sel_colmns);
+        /* Order by*/
+        if (!qep_collect_dtypes_for_sorting(qep)) {
+
+            sql_emit_select_output(qep, qep->select.n, qep->select.sel_colmns);
+            sql_select_flush_computed_values (qep);
+            qualified_row_no++;
+        }
+
+        ht_itr = !(hashtable_iterator_advance(itr) == 0);
+    } while (ht_itr);
+
+    free(itr);
+
+    /* Implementing Order by Sorting*/
+    qep_orderby_sort (qep);
+    qep->orderby.iterator_index = 0;
+    while (qep_order_by_reassign_select_columns (qep)) {
+        if ( qep->orderby.iterator_index == 1) {
+            sql_print_hdr(qep->select.sel_colmns, qep->select.n);
+        }
+        sql_emit_select_output(qep, qep->select.n, qep->select.sel_colmns);
         sql_select_flush_computed_values (qep);
         qualified_row_no++;
+        if (qep->limit == qep->orderby.iterator_index) {
+            break;
+        }
+    }
 
-         ht_itr = !(hashtable_iterator_advance(itr) == 0);
-    } while (ht_itr);
-    
-    free(itr);
     printf ("(%d rows)\n", qualified_row_no);
     qep->joined_row_tmplate = joined_row_backup;
 }

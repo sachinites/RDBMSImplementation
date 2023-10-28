@@ -435,6 +435,14 @@ select_query_parser () {
         RETURN_PARSE_ERROR;        
     }    
 
+    err = ORDER_BY();
+
+    if (err == PARSE_ERR) {
+
+        printf ("Error : Parsing Error on ORDER BY Clause\n");
+        RETURN_PARSE_ERROR;        
+    }    
+
     token_code = cyylex ();
 
     if (token_code !=  PARSER_EOL) {

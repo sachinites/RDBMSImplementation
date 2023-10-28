@@ -540,18 +540,26 @@ sql_destroy_Dtype_value_holder (Dtype *dtype) {
 }
 
 Aggregator *
-sql_get_aggregator (qp_col_t *qp_col) {
+sql_get_aggregator (sql_agg_fn_t agg_fn, sql_dtype_t dtype) {
 
-    if (qp_col->agg_fn == SQL_AGG_FN_NONE) return NULL;
+    if (agg_fn == SQL_AGG_FN_NONE) return NULL;
     
-    /* Column must have got its Ist computed value, so that we know 
-         Dtype of Aggregator we need*/
-    assert (qp_col->computed_value);
-
     Aggregator *aggregator = Aggregator::factory (
-                    sql_to_mexpr_agg_fn_converter (qp_col->agg_fn),  // which agg fn we need
-                    (qp_col->computed_value->did) );  // what is the data type to aggregate
+                    sql_to_mexpr_agg_fn_converter (agg_fn),  // which agg fn we need
+                    sql_to_mexpr_dtype_converter(dtype)); // what is the data type to aggregate
+    
+    return aggregator;
+}
 
+Aggregator *
+sql_get_aggregator (sql_agg_fn_t agg_fn, mexprcpp_dtypes_t dtype) {
+
+    if (agg_fn == SQL_AGG_FN_NONE) return NULL;
+    
+    Aggregator *aggregator = Aggregator::factory (
+                    sql_to_mexpr_agg_fn_converter (agg_fn),  // which agg fn we need
+                    dtype); // what is the data type to aggregate
+    
     return aggregator;
 }
 
@@ -573,6 +581,19 @@ sql_column_get_aggregated_value (qp_col_t *qp_col) {
 
     return qp_col->aggregator->getAggregatedValue();
 }
+
+mexprcpp_dtypes_t
+sql_dtype_get_type (Dtype *dtype ) {
+
+    return dtype->did;
+}
+
+void
+sql_column_set_aggregated_value (qp_col_t *qp_col, Dtype *new_value) {
+
+    qp_col->aggregator->aggregator = new_value;
+}
+
 
 bool 
 sql_tree_validate (sql_exptree_t *tree) {

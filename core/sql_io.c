@@ -54,8 +54,9 @@ sql_print_hdr (qp_col_t **col_list, int n_cols ) {
 }
 
 
-void sql_emit_select_output(int n_col,
-                                              qp_col_t **col_list_head) {
+void sql_emit_select_output(qep_struct_t *qep,
+                                               int n_col,
+                                               qp_col_t **col_list_head) {
 
     int i;
     qp_col_t *qp_col;

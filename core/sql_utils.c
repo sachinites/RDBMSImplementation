@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string>
+#include <vector>
+#include "qep.h"
 #include "sql_const.h"
 #include "Catalog.h"
 #include "sql_utils.h"
@@ -240,4 +242,26 @@ sql_read_interval_values (char *string_fmt,  // "[ a , b]"
     dst_buffer[j] = '\0';
     sscanf(dst_buffer, "[%d,%d]", a, b);
     return true;
+}
+
+void 
+sql_select_flush_computed_values (qep_struct_t *qep) {
+
+    int i;
+    qp_col_t *sqp_col;
+
+    for (i = 0; i < qep->select.n; i++) {
+
+        sqp_col = qep->select.sel_colmns[i];
+
+        if (sqp_col->computed_value) {
+            sql_destroy_Dtype_value_holder (sqp_col->computed_value);
+            sqp_col->computed_value = NULL;
+        }
+
+        if (sqp_col->aggregator) {
+            sql_destroy_aggregator (sqp_col);
+            sqp_col->aggregator = NULL;
+        }
+    }
 }

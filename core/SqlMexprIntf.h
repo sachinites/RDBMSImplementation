@@ -117,7 +117,7 @@ mexprcpp_agg_t
 sql_to_mexpr_agg_fn_converter (sql_agg_fn_t agg_fn) ;
 
 Aggregator *
-sql_get_aggregator (qp_col_t *qp_col);
+sql_get_aggregator (sql_agg_fn_t agg_fn, sql_dtype_t dtype);
 
 void
 sql_destroy_aggregator (qp_col_t *qp_col) ;
@@ -128,10 +128,25 @@ sql_column_value_aggregate (qp_col_t *qp_col, Dtype *new_value);
 Dtype *
 sql_column_get_aggregated_value (qp_col_t *qp_col) ;
 
+mexprcpp_dtypes_t
+sql_dtype_get_type (Dtype *dtype ) ;
+
+void
+sql_column_set_aggregated_value (qp_col_t *qp_col, Dtype *new_value) ;
+
 int 
 sql_dtype_serialize (Dtype *dtype, void *mem);
 
 int
 sql_tree_expand_all_aliases (qep_struct_t *qep, sql_exptree_t *sql_tree);
+
+sql_dtype_t
+mexpr_to_sql_dtype_converter (mexprcpp_dtypes_t dtype) ;
+
+mexprcpp_agg_t 
+sql_to_mexpr_agg_fn_converter (sql_agg_fn_t agg_fn);
+
+mexprcpp_dtypes_t
+sql_to_mexpr_dtype_converter (sql_dtype_t sql_dtype);
 
 #endif 

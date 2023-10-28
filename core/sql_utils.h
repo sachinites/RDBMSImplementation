@@ -8,6 +8,7 @@
 #include "../BPlusTreeLib/BPlusTree.h"
 
 typedef struct sql_create_data_ sql_create_data_t;
+typedef struct qep_struct_ qep_struct_t;
 
 /* HashTable Setup */
 #define HASH_PRIME_CONST    5381
@@ -81,4 +82,7 @@ sql_get_qp_col_by_name (   qp_col_t **qp_col_array,
 bool
 sql_read_interval_values (char *string_fmt,
                                             int *a, int *b);
+void 
+sql_select_flush_computed_values (qep_struct_t *qep);
+
 #endif 
