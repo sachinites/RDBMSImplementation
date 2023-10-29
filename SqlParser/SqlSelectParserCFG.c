@@ -483,8 +483,7 @@ select_query_parser () {
     token_code = cyylex ();
 
     if (token_code !=  PARSER_EOL) {
-         PARSER_LOG_ERR (token_code, PARSER_EOL);
-        printf ("Failed\n");
+        PARSER_LOG_ERR (token_code, PARSER_EOL);
         RETURN_PARSE_ERROR;
     }
 

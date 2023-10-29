@@ -319,7 +319,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
         data_src->table_index = tindex;
         data_src->schema_rec = schema_rec;
         data_src->joined_row = joined_row;
-        opnd_var->InstallOperandProperties (
+        opnd_var->ResolveOperand (
                 sql_to_mexpr_dtype_converter (schema_rec->dtype) , 
                 data_src, 
                 sql_column_value_resolution_fn);
@@ -387,7 +387,7 @@ sql_resolve_exptree_against_table ( std::unordered_map<std::string, std::string>
         data_src->table_index = table_id,
         data_src->schema_rec = schema_rec;
         data_src->joined_row = joined_row;
-        opnd_var->InstallOperandProperties (
+        opnd_var->ResolveOperand (
                         sql_to_mexpr_dtype_converter (schema_rec->dtype), 
                         data_src,
                         sql_column_value_resolution_fn);
@@ -523,7 +523,7 @@ InstallDtypeOperandProperties (MexprNode *node,
                                                     Dtype *(*compute_fn_ptr)(void *)) {
 
     Dtype_VARIABLE *dtype_node = dynamic_cast <Dtype_VARIABLE *> (node);
-    dtype_node->InstallOperandProperties (resolved_did, data_src, compute_fn_ptr);
+    dtype_node->ResolveOperand (resolved_did, data_src, compute_fn_ptr);
 }
 
 uint8_t  
@@ -648,7 +648,7 @@ InstallDtypeOperandProperties (MexprNode *node,
     Dtype_VARIABLE *dtype_var = 
                 dynamic_cast <Dtype_VARIABLE *> (node);
 
-    dtype_var->InstallOperandProperties (
+    dtype_var->ResolveOperand (
                 sql_to_mexpr_dtype_converter (sql_dtype), 
                 data_src,
                 compute_fn_ptr );

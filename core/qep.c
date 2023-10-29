@@ -323,151 +323,6 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     return true;
 }
 
-void 
-qep_deinit (qep_struct_t *qep) {
-
-    int i;
-    qp_col_t *qp_col;
-    struct hashtable_itr *itr;
-    joined_row_t *joined_row;
-    exp_tree_data_src_t *data_src;
-    std::list<joined_row_t *> *record_lst;
-    ht_group_by_record_t *ht_group_by_record;
-
-    if (qep->where.gexptree) {
-        
-        sql_destroy_exp_tree (qep->where.gexptree);
-        qep->where.gexptree = NULL;
-    }
-
-    if (qep->groupby.n) {
-
-        for (i = 0; i < qep->groupby.n; i++) {
-
-            qp_col = qep->groupby.col_list[i];
-
-            if (qp_col->sql_tree) {
-                sql_destroy_exp_tree (qp_col->sql_tree );
-                qp_col->sql_tree = NULL;
-                if (qp_col->computed_value) {
-                    sql_destroy_Dtype_value_holder (qp_col->computed_value);
-                    qp_col->computed_value = NULL;
-                }
-                else if (qp_col->aggregator){
-                    sql_destroy_aggregator (qp_col);
-                }
-            }
-            free(qp_col);
-        }
-
-        if (qep->groupby.ht) {
-
-            itr = hashtable_iterator(qep->groupby.ht);
-
-            do {
-
-                ht_group_by_record =  (ht_group_by_record_t *)hashtable_iterator_value (itr);
-                record_lst = ht_group_by_record->record_lst;
-
-                while (!record_lst->empty()) {
-
-                    joined_row = record_lst->front();
-                    record_lst->pop_front();
-                    free(joined_row->rec_array);
-                    free(joined_row); 
-                }
-                delete  record_lst;
-                ht_group_by_record->record_lst = NULL;
-
-            } while (hashtable_iterator_advance(itr));
-
-            free(itr);
-            hashtable_destroy(qep->groupby.ht, 1);
-            qep->groupby.ht = NULL;
-        }
-    }
-
-    if (qep->having.gexptree_phase1) {
-        sql_destroy_exp_tree (qep->having.gexptree_phase1);
-        qep->having.gexptree_phase1 = NULL;
-    }
-
-    if (qep->having.gexptree_phase2) {
-        sql_destroy_exp_tree (qep->having.gexptree_phase2);
-        qep->having.gexptree_phase2 = NULL;
-    }
-
-    if (qep->select.n) {
-
-        for (i = 0; i < qep->select.n; i++) {
-
-            qp_col = qep->select.sel_colmns[i];
-            if (qp_col->sql_tree) {
-                 sql_destroy_exp_tree (qp_col->sql_tree);
-                qp_col->sql_tree = NULL;
-            }
-
-            if (qp_col->computed_value) {
-                sql_destroy_Dtype_value_holder(qp_col->computed_value);
-                qp_col->computed_value = NULL;
-            }
-            else if (qp_col->aggregator){
-                sql_destroy_aggregator (qp_col);
-            }
-            free(qp_col);            
-        }
-    }
-
-    free (qep->titer);
-    qep->titer = NULL;
-
-    if (qep->joined_row_tmplate) {
-        free (qep->joined_row_tmplate->rec_array);
-        free(qep->joined_row_tmplate->schema_table_array);
-        free(qep->joined_row_tmplate->table_id_array);
-        free(qep->joined_row_tmplate);
-    }
-
-    /* Free Data Srcs*/
-    if (qep->data_src_lst) {
-
-        while (!qep->data_src_lst->empty()) {
-
-            data_src = qep->data_src_lst->front();
-            qep->data_src_lst->pop_front();
-            free(data_src);
-        }
-        delete qep->data_src_lst;
-        qep->data_src_lst = NULL;
-    }
-
-    /* Free Alias Hashmap*/
-    if (qep->join.table_alias) {
-
-        qep->join.table_alias->clear();
-        delete qep->join.table_alias;
-        qep->join.table_alias = NULL;
-    }
-
-    /* Free order by Vector */
-    for (i =0; i < qep->orderby.pVector.size(); i++) {
-
-        std::vector < Dtype *> *cVector = qep->orderby.pVector.at(i);
-        if (!cVector) continue;
-        for (int j = 0; j < cVector->size(); j++) {
-            sql_destroy_Dtype_value_holder (cVector->at(j));
-        }
-        delete cVector;
-        qep->orderby.pVector[i] = NULL;
-    }
-
-     if (qep->orderby.pVector.size()) {
-        qep->orderby.pVector.clear();
-     }
-
-}
-
-
 static void
 table_iterators_first (qep_struct_t *qep_struct, 
                                  table_iterators_t *titer, 
@@ -723,4 +578,148 @@ sql_process_select_query (qep_struct_t *qep) {
     }
 
     sql_execute_qep (qep);
+}
+
+void 
+qep_deinit (qep_struct_t *qep) {
+
+    int i;
+    qp_col_t *qp_col;
+    struct hashtable_itr *itr;
+    joined_row_t *joined_row;
+    exp_tree_data_src_t *data_src;
+    std::list<joined_row_t *> *record_lst;
+    ht_group_by_record_t *ht_group_by_record;
+
+    if (qep->where.gexptree) {
+        
+        sql_destroy_exp_tree (qep->where.gexptree);
+        qep->where.gexptree = NULL;
+    }
+
+    if (qep->groupby.n) {
+
+        for (i = 0; i < qep->groupby.n; i++) {
+
+            qp_col = qep->groupby.col_list[i];
+
+            if (qp_col->sql_tree) {
+                sql_destroy_exp_tree (qp_col->sql_tree );
+                qp_col->sql_tree = NULL;
+                if (qp_col->computed_value) {
+                    sql_destroy_Dtype_value_holder (qp_col->computed_value);
+                    qp_col->computed_value = NULL;
+                }
+                else if (qp_col->aggregator){
+                    sql_destroy_aggregator (qp_col);
+                }
+            }
+            free(qp_col);
+        }
+
+        if (qep->groupby.ht) {
+
+            itr = hashtable_iterator(qep->groupby.ht);
+
+            do {
+
+                ht_group_by_record =  (ht_group_by_record_t *)hashtable_iterator_value (itr);
+                record_lst = ht_group_by_record->record_lst;
+
+                while (!record_lst->empty()) {
+
+                    joined_row = record_lst->front();
+                    record_lst->pop_front();
+                    free(joined_row->rec_array);
+                    free(joined_row); 
+                }
+                delete  record_lst;
+                ht_group_by_record->record_lst = NULL;
+
+            } while (hashtable_iterator_advance(itr));
+
+            free(itr);
+            hashtable_destroy(qep->groupby.ht, 1);
+            qep->groupby.ht = NULL;
+        }
+    }
+
+    if (qep->having.gexptree_phase1) {
+        sql_destroy_exp_tree (qep->having.gexptree_phase1);
+        qep->having.gexptree_phase1 = NULL;
+    }
+
+    if (qep->having.gexptree_phase2) {
+        sql_destroy_exp_tree (qep->having.gexptree_phase2);
+        qep->having.gexptree_phase2 = NULL;
+    }
+
+    if (qep->select.n) {
+
+        for (i = 0; i < qep->select.n; i++) {
+
+            qp_col = qep->select.sel_colmns[i];
+            if (qp_col->sql_tree) {
+                 sql_destroy_exp_tree (qp_col->sql_tree);
+                qp_col->sql_tree = NULL;
+            }
+
+            if (qp_col->computed_value) {
+                sql_destroy_Dtype_value_holder(qp_col->computed_value);
+                qp_col->computed_value = NULL;
+            }
+            else if (qp_col->aggregator){
+                sql_destroy_aggregator (qp_col);
+            }
+            free(qp_col);            
+        }
+    }
+
+    free (qep->titer);
+    qep->titer = NULL;
+
+    if (qep->joined_row_tmplate) {
+        free (qep->joined_row_tmplate->rec_array);
+        free(qep->joined_row_tmplate->schema_table_array);
+        free(qep->joined_row_tmplate->table_id_array);
+        free(qep->joined_row_tmplate);
+    }
+
+    /* Free Data Srcs*/
+    if (qep->data_src_lst) {
+
+        while (!qep->data_src_lst->empty()) {
+
+            data_src = qep->data_src_lst->front();
+            qep->data_src_lst->pop_front();
+            free(data_src);
+        }
+        delete qep->data_src_lst;
+        qep->data_src_lst = NULL;
+    }
+
+    /* Free Alias Hashmap*/
+    if (qep->join.table_alias) {
+
+        qep->join.table_alias->clear();
+        delete qep->join.table_alias;
+        qep->join.table_alias = NULL;
+    }
+
+    /* Free order by Vector */
+    for (i =0; i < qep->orderby.pVector.size(); i++) {
+
+        std::vector < Dtype *> *cVector = qep->orderby.pVector.at(i);
+        if (!cVector) continue;
+        for (int j = 0; j < cVector->size(); j++) {
+            sql_destroy_Dtype_value_holder (cVector->at(j));
+        }
+        delete cVector;
+        qep->orderby.pVector[i] = NULL;
+    }
+
+     if (qep->orderby.pVector.size()) {
+        qep->orderby.pVector.clear();
+     }
+
 }
