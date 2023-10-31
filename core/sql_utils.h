@@ -77,7 +77,7 @@ sql_get_qp_col_by_name (   qp_col_t **qp_col_array,
                                                         bool is_alias);
 
 #define QP_COL_NAME(qp_col_t_ptr) \
-    ((char *)sql_get_opnd_variable_name (sql_tree_get_root (gqp_col->sql_tree)).c_str())
+    ((char *)sql_get_opnd_variable_name (sql_tree_get_root (qp_col_t_ptr->sql_tree)).c_str())
 
 bool
 sql_read_interval_values (char *string_fmt,

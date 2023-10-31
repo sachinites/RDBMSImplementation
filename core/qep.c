@@ -63,15 +63,31 @@ sql_query_initialize_orderby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
     int i;
     qp_col_t *sqp_col;
+    char table_name_out [SQL_TABLE_NAME_MAX_SIZE];
+    char lone_col_name [SQL_COLUMN_NAME_MAX_SIZE];
 
     if (qep->orderby.column_name[0] == '\0') return true;
 
+    /* Has User specified order by column name as Alias name ?*/
     sqp_col = sql_get_qp_col_by_name (qep->select.sel_colmns,
                                                                 qep->select.n,
                                                                 qep->orderby.column_name,
                                                                 true);
 
     if (!sqp_col) {
+
+        parser_split_table_column_name (
+                        qep->join.table_alias,
+                        tcatalog,
+                        qep->orderby.column_name,
+                        table_name_out, lone_col_name);
+
+        snprintf (qep->orderby.column_name, 
+                    sizeof (qep->orderby.column_name),
+                    "%s.%s", 
+                    table_name_out[0] == '\0' ? \
+                    qep->join.tables[0].table_name : table_name_out,
+                    lone_col_name);
 
         sqp_col = sql_get_qp_col_by_name (qep->select.sel_colmns,
                                                                     qep->select.n,
@@ -175,20 +191,14 @@ qep_resolve_select_asterisk (qep_struct_t *qep) {
             qp_col = (qp_col_t *)calloc (1, sizeof (qp_col_t));
             qp_col->agg_fn = SQL_AGG_FN_NONE;
             qp_col->alias_name[0] = '\0';
+            qp_col->alias_provided_by_user = false;
             /* Will allocate at the time of computation in select query*/
             qp_col->computed_value = NULL;
-
-            if (qep->join.table_cnt > 1) {
-                memset (opnd_name, 0, sizeof (opnd_name));
-                snprintf (opnd_name, sizeof(opnd_name), "%s.%s", 
-                    ctable_val->table_name, (char *)lnode->data);
-                qp_col->sql_tree = sql_create_exp_tree_for_one_operand (opnd_name);
-                strncpy (qp_col->alias_name, opnd_name, sizeof (qp_col->alias_name));
-            }
-            else {
-                qp_col->sql_tree = sql_create_exp_tree_for_one_operand ((char *)lnode->data);
-                strncpy (qp_col->alias_name, (char *)lnode->data, sizeof (qp_col->alias_name));
-            }
+            memset(opnd_name, 0, sizeof(opnd_name));
+            snprintf(opnd_name, sizeof(opnd_name), "%s.%s",
+                     ctable_val->table_name, (char *)lnode->data);
+            qp_col->sql_tree = sql_create_exp_tree_for_one_operand(opnd_name);
+            strncpy(qp_col->alias_name, opnd_name, sizeof(qp_col->alias_name));
             qep->select.sel_colmns[qep->select.n++] = qp_col;
 
         } ITERATE_GLTHREAD_END (col_list_head, curr);
@@ -202,6 +212,8 @@ sql_query_initialize_select_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
     int i;
     qp_col_t *qp_col;
+    char table_name_out [SQL_TABLE_NAME_MAX_SIZE];
+    char lone_col_name [SQL_COLUMN_NAME_MAX_SIZE];
 
     if (qep->select.n == 0) {
 
@@ -222,12 +234,21 @@ sql_query_initialize_select_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                 if (sql_is_single_operand_expression_tree (qp_col->sql_tree)
                         && qp_col->alias_name[0] == '\0') {
 
-                     strncpy(qp_col->alias_name,  
-                        sql_get_opnd_variable_name(sql_tree_get_root (qp_col->sql_tree)).c_str(), 
-                        sizeof (qp_col->alias_name));
+                    parser_split_table_column_name (
+                            qep->join.table_alias,
+                            tcatalog,
+                            QP_COL_NAME(qp_col),
+                            table_name_out, lone_col_name);
+
+                    snprintf (qp_col->alias_name,  sizeof (qp_col->alias_name),
+                        "%s.%s", 
+                        table_name_out[0] == '\0' ? \
+                        qep->join.tables[0].table_name : table_name_out,
+                        lone_col_name);
                 }
             }
     }
+
     /* Now Resolve Expressression Trees for all select columns*/
     for (i = 0; i < qep->select.n; i++) {
 
