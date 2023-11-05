@@ -16,7 +16,7 @@ qep_collect_dtypes_for_sorting (qep_struct_t *qep) {
 
     if (qep->orderby.column_name[0] == '\0') return false;
 
-    cVector = new std::vector<Dtype *>;
+    cVector = new std::vector<Dtype *>();
 
     for (i = 0; i < qep->select.n; i++) {
 

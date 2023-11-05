@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "sql_const.h"
 #include "rdbms_struct.h"
+#include "qep.h"
 #include "Catalog.h"
 #include "sql_io.h"
 #include "../BPlusTreeLib/BPlusTree.h"
@@ -14,6 +15,9 @@
 
 #define SCREEN_WIDTH    80
 #define COLUMN_WIDTH   20
+
+extern BPlusTree_t TableCatalogDef;
+
 
 static void 
 print_line(int num_columns, int column_width) {
@@ -27,13 +31,18 @@ print_line(int num_columns, int column_width) {
 }
 
 void 
-sql_print_hdr (qp_col_t **col_list, int n_cols ) {
+sql_print_hdr (qep_struct_t *qep, qp_col_t **col_list, int n_cols ) {
 
     int i;
     qp_col_t *col;
     int num_columns = n_cols;
 
+    char table_name[SQL_TABLE_NAME_MAX_SIZE];
+    char column_name[SQL_COLUMN_NAME_MAX_SIZE];
+    char composite_col_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
+
     int column_width = COLUMN_WIDTH; // Default column width
+    
     if (num_columns > 0) {
         column_width = SCREEN_WIDTH / num_columns; // Adjust column width based on available space
     }
@@ -41,10 +50,23 @@ sql_print_hdr (qp_col_t **col_list, int n_cols ) {
     // Print the top line
     print_line(num_columns, column_width);
 
-    // Print the header row with column names
     for (i = 0; i < n_cols; i++) {
+
         col = col_list[i];
-        printf("%-*s|", column_width, col->alias_name);
+
+        if (qep->join.table_cnt > 1) {
+        
+            printf("%-*s|", column_width, col->alias_name);
+        }
+        else {
+        
+            parser_split_table_column_name (qep->join.table_alias,
+                                                                   &TableCatalogDef, 
+                                                                   col->alias_name,
+                                                                   table_name,
+                                                                   column_name );
+            printf("%-*s|", column_width, column_name);
+        }
     }
 
     printf("\n");

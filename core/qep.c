@@ -542,7 +542,7 @@ sql_execute_qep (qep_struct_t *qep) {
             if (qep_collect_dtypes_for_sorting(qep)) continue;
 
             if (row_no == 1) {
-                sql_print_hdr  (qep->select.sel_colmns, qep->select.n);
+                sql_print_hdr  (qep, qep->select.sel_colmns, qep->select.n);
             }
 
             sql_emit_select_output (qep, qep->select.n, qep->select.sel_colmns);
@@ -564,7 +564,7 @@ sql_execute_qep (qep_struct_t *qep) {
     /* Case 2 :  No Group by Clause,  Aggregated Columns */
     if (!qep->groupby.n && is_aggregation) {
 
-        sql_print_hdr(qep->select.sel_colmns, qep->select.n);
+        sql_print_hdr(qep, qep->select.sel_colmns, qep->select.n);
         sql_emit_select_output(qep, qep->select.n, qep->select.sel_colmns);
         printf ("(1 rows)\n");
         return;
@@ -576,7 +576,7 @@ sql_execute_qep (qep_struct_t *qep) {
     while (qep_order_by_reassign_select_columns (qep)) {
 
         if ( qep->orderby.iterator_index == 1) {
-            sql_print_hdr(qep->select.sel_colmns, qep->select.n);
+            sql_print_hdr(qep, qep->select.sel_colmns, qep->select.n);
         }
         sql_emit_select_output(qep, qep->select.n, qep->select.sel_colmns);
         sql_select_flush_computed_values (qep);

@@ -470,7 +470,7 @@ sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) {
         if (row_no == 1 && 
                 qep->orderby.column_name[0] == '\0') {
 
-            sql_print_hdr(qep->select.sel_colmns, qep->select.n);
+            sql_print_hdr(qep, qep->select.sel_colmns, qep->select.n);
         }
 
         for (std::list<joined_row_t *>::iterator it = record_lst->begin(); 
@@ -531,7 +531,7 @@ sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) {
     qep->orderby.iterator_index = 0;
     while (qep_order_by_reassign_select_columns (qep)) {
         if ( qep->orderby.iterator_index == 1) {
-            sql_print_hdr(qep->select.sel_colmns, qep->select.n);
+            sql_print_hdr(qep, qep->select.sel_colmns, qep->select.n);
         }
         sql_emit_select_output(qep, qep->select.n, qep->select.sel_colmns);
         sql_select_flush_computed_values (qep);

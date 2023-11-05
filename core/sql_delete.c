@@ -4,11 +4,9 @@
 #include <memory.h>
 #include "Catalog.h"
 #include "../BPlusTreeLib/BPlusTree.h"
-#include "../Parsers/Ast.h"
 #include "sql_const.h"
 #include "rdbms_struct.h"
 #include "sql_io.h"
-#include "qplanner.h"
 
 bool 
 sql_validate_delete_query_data (BPlusTree_t *schema_table, ast_node_t *delete_root) {

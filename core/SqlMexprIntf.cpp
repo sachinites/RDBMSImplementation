@@ -321,7 +321,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
         data_src->joined_row = joined_row;
         opnd_var->ResolveOperand (
                 sql_to_mexpr_dtype_converter (schema_rec->dtype) , 
-                data_src, 
+                data_src,   
                 sql_column_value_resolution_fn);
         
    } MexprTree_Iterator_Operands_End;
