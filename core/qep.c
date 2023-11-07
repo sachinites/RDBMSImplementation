@@ -314,12 +314,12 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     rc = sql_query_initialize_having_clause (qep, tcatalog);
     if (!rc) return rc;
 
-    rc = sql_query_initialize_orderby_clause (qep, tcatalog) ;
-    if (!rc) return rc;
-
     rc = sql_query_initialize_select_clause (qep, tcatalog) ;
     if (!rc) return rc;
 
+    rc = sql_query_initialize_orderby_clause (qep, tcatalog) ;
+    if (!rc) return rc;
+    
     /* initialize other variables*/
     qep->is_join_started = false;
     qep->is_join_finished = false;
