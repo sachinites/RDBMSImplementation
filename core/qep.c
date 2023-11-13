@@ -518,8 +518,7 @@ sql_execute_qep (qep_struct_t *qep) {
                     
                     qp_col->aggregator = sql_get_aggregator (
                             qp_col->agg_fn,
-                            mexpr_to_sql_dtype_converter(
-                                    sql_dtype_get_type (qp_col->computed_value)));
+                            sql_dtype_get_type (qp_col->computed_value));
 
                     assert (qp_col->aggregator);
                     sql_column_value_aggregate  (qp_col,  qp_col->computed_value);

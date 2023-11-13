@@ -11,7 +11,6 @@
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "sql_utils.h"
 #include "SqlMexprIntf.h"
-#include "../../MathExpressionParser/Dtype.h"
 
 #define SCREEN_WIDTH    80
 #define COLUMN_WIDTH   20
@@ -81,6 +80,7 @@ void sql_emit_select_output(qep_struct_t *qep,
                                                qp_col_t **col_list_head) {
 
     int i;
+    Dtype *dtype;
     qp_col_t *qp_col;
     int num_columns = n_col;
 
@@ -90,48 +90,49 @@ void sql_emit_select_output(qep_struct_t *qep,
         column_width = SCREEN_WIDTH / num_columns; // Adjust column width based on available space
     }
 
+    dtype_value_t dtype_value;
+
     // Print each row of data
     for (i = 0; i < n_col; i++) {
 
         qp_col = col_list_head[i];
-        Dtype *dtype = (qp_col->agg_fn != SQL_AGG_FN_NONE ) ? \
+        dtype = (qp_col->agg_fn != SQL_AGG_FN_NONE ) ? \
                                     sql_column_get_aggregated_value (qp_col) :  \
                                     qp_col->computed_value;
 
-        switch (dtype->did) {
+        dtype_value = DTYPE_GET_VAUE(dtype);
 
-            case MATH_CPP_STRING:
-                printf("%-*s|", column_width, (dynamic_cast <Dtype_STRING*>(dtype))->dtype.str_val.c_str());
+        switch (dtype_value.dtype) {
+
+            case SQL_STRING:
+                printf("%-*s|", column_width, dtype_value.str_val);
                 break;
 
-            case MATH_CPP_INT:
-                printf("%-*d|", column_width, (dynamic_cast <Dtype_INT *>(dtype))->dtype.int_val);
+            case SQL_INT:
+                printf("%-*d|", column_width, dtype_value.int_val);
                 break;
 
-            case MATH_CPP_DOUBLE:
-                if (mexpr_double_is_integer ( (dynamic_cast <Dtype_DOUBLE *>(dtype))->dtype.d_val)) {
-                    printf("%-*d|", column_width, (int)(dynamic_cast <Dtype_DOUBLE *>(dtype))->dtype.d_val);
+            case SQL_DOUBLE:
+                if (mexpr_double_is_integer ( dtype_value.d_val)) {
+                    printf("%-*f|", column_width, dtype_value.d_val);
                 }
                 else {
-                    printf("%-*f|", column_width, (dynamic_cast <Dtype_DOUBLE *>(dtype))->dtype.d_val);
+                    printf("%-*f|", column_width, dtype_value.d_val);
                 }
                 break;
 
-            case MATH_CPP_BOOL:
+            case SQL_BOOL:
                 assert(0);
                 break;
                 
-            case MATH_CPP_IPV4: {
-                printf("%-*s|", column_width, (dynamic_cast <Dtype_IPv4_addr*>(dtype))->dtype.ip_addr_str.c_str());
+            case SQL_IPV4_ADDR: {
+                printf("%-*s|", column_width,dtype_value.ipv4.ipv4_addr_str);
                 break;
             }
 
-            case MATH_CPP_INTERVAL: 
+            case SQL_INTERVAL: 
             {
-                Dtype_STRING *dtype_string = dtype->toString();
-                std::string str = dtype_string->dtype.str_val;
-                printf("%-*s|", column_width, str.c_str());
-                delete dtype_string;
+                printf("%-*s|", column_width, dtype_value.interval.interval_str);
                 break;
             }
             break;

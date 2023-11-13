@@ -570,10 +570,10 @@ sql_column_get_aggregated_value (qp_col_t *qp_col) {
     return qp_col->aggregator->getAggregatedValue();
 }
 
-mexprcpp_dtypes_t
+sql_dtype_t
 sql_dtype_get_type (Dtype *dtype ) {
 
-    return dtype->did;
+    return mexpr_to_sql_dtype_converter(dtype->did);
 }
 
 void
@@ -653,4 +653,63 @@ InstallDtypeOperandProperties (MexprNode *node,
                 data_src,
                 compute_fn_ptr );
 
+}
+
+dtype_value_t 
+DTYPE_GET_VAUE(Dtype *dtype_ptr)   {
+
+    dtype_value_t  dtype_value;
+
+    dtype_value.dtype = sql_dtype_get_type (dtype_ptr);
+
+    switch (sql_dtype_get_type (dtype_ptr)) {
+
+        case SQL_INT: 
+           dtype_value.int_val =  (dynamic_cast <Dtype_INT *>(dtype_ptr))->dtype.int_val;
+           break;
+
+        case SQL_STRING:
+            dtype_value.str_val = (dynamic_cast <Dtype_STRING *>(dtype_ptr))->dtype.str_val.c_str();
+            break;
+
+        case SQL_DOUBLE:
+            dtype_value.d_val = (dynamic_cast <Dtype_DOUBLE *>(dtype_ptr))->dtype.d_val;
+            break;
+
+        case SQL_BOOL:
+            dtype_value.b_val = (dynamic_cast <Dtype_BOOL *>(dtype_ptr))->dtype.b_val;
+            break;
+
+        case SQL_IPV4_ADDR:
+            dtype_value.ipv4.ipv4_addr_str = (dynamic_cast <Dtype_IPv4_addr *>(dtype_ptr))->dtype.ip_addr_str.c_str();
+            dtype_value.ipv4.ipv4_addr_int = (dynamic_cast <Dtype_IPv4_addr *>(dtype_ptr))->dtype.ipaddr_int;
+            break;
+
+        case SQL_INTERVAL:
+        {
+             Dtype_STRING *dtype_str;
+             dtype_str = (dynamic_cast <Dtype_INTERVAL *>(dtype_ptr))->toString();
+             dtype_value.interval.interval_str = dtype_str->dtype.str_val.c_str();
+             dtype_value.interval.lb = (dynamic_cast <Dtype_INTERVAL *>(dtype_ptr))->dtype.lb;
+             dtype_value.interval.ub = (dynamic_cast <Dtype_INTERVAL *>(dtype_ptr))->dtype.ub;
+        }
+        break;
+
+        default:
+            assert(0);
+    }
+    return dtype_value;
+}
+
+
+Dtype *
+Dtype_copy (Dtype *dtype) {
+
+    return dynamic_cast<Dtype *> (dtype->clone());
+}
+
+bool 
+Dtype_less_than_operator (Dtype *dtype1, Dtype *dtype2) {
+
+    return *dtype1 < *dtype2;
 }
