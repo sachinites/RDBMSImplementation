@@ -516,16 +516,6 @@ sql_tree_get_root (sql_exptree_t *tree) {
     return tree->tree->root;
 }
 
-void 
-InstallDtypeOperandProperties (MexprNode *node, 
-                                                    mexprcpp_dtypes_t resolved_did,
-                                                    void *data_src, 
-                                                    Dtype *(*compute_fn_ptr)(void *)) {
-
-    Dtype_VARIABLE *dtype_node = dynamic_cast <Dtype_VARIABLE *> (node);
-    dtype_node->ResolveOperand (resolved_did, data_src, compute_fn_ptr);
-}
-
 uint8_t  
 sql_tree_remove_unresolve_operands(sql_exptree_t *sql_exptree) {
 
@@ -656,42 +646,42 @@ InstallDtypeOperandProperties (MexprNode *node,
 }
 
 dtype_value_t 
-DTYPE_GET_VAUE(Dtype *dtype_ptr)   {
+DTYPE_GET_VAUE(Dtype *dtype)   {
 
     dtype_value_t  dtype_value;
 
-    dtype_value.dtype = sql_dtype_get_type (dtype_ptr);
+    dtype_value.dtype = sql_dtype_get_type (dtype);
 
-    switch (sql_dtype_get_type (dtype_ptr)) {
+    switch (sql_dtype_get_type (dtype)) {
 
         case SQL_INT: 
-           dtype_value.int_val =  (dynamic_cast <Dtype_INT *>(dtype_ptr))->dtype.int_val;
+           dtype_value.u.int_val =  (dynamic_cast <Dtype_INT *>(dtype))->dtype.int_val;
            break;
 
         case SQL_STRING:
-            dtype_value.str_val = (dynamic_cast <Dtype_STRING *>(dtype_ptr))->dtype.str_val.c_str();
+            dtype_value.u.str_val = (dynamic_cast <Dtype_STRING *>(dtype))->dtype.str_val.c_str();
             break;
 
         case SQL_DOUBLE:
-            dtype_value.d_val = (dynamic_cast <Dtype_DOUBLE *>(dtype_ptr))->dtype.d_val;
+            dtype_value.u.d_val = (dynamic_cast <Dtype_DOUBLE *>(dtype))->dtype.d_val;
             break;
 
         case SQL_BOOL:
-            dtype_value.b_val = (dynamic_cast <Dtype_BOOL *>(dtype_ptr))->dtype.b_val;
+            dtype_value.u.b_val = (dynamic_cast <Dtype_BOOL *>(dtype))->dtype.b_val;
             break;
 
         case SQL_IPV4_ADDR:
-            dtype_value.ipv4.ipv4_addr_str = (dynamic_cast <Dtype_IPv4_addr *>(dtype_ptr))->dtype.ip_addr_str.c_str();
-            dtype_value.ipv4.ipv4_addr_int = (dynamic_cast <Dtype_IPv4_addr *>(dtype_ptr))->dtype.ipaddr_int;
+            dtype_value.u.ipv4.ipv4_addr_str = (dynamic_cast <Dtype_IPv4_addr *>(dtype))->dtype.ip_addr_str.c_str();
+            dtype_value.u.ipv4.ipv4_addr_int = (dynamic_cast <Dtype_IPv4_addr *>(dtype))->dtype.ipaddr_int;
             break;
 
         case SQL_INTERVAL:
         {
              Dtype_STRING *dtype_str;
-             dtype_str = (dynamic_cast <Dtype_INTERVAL *>(dtype_ptr))->toString();
-             dtype_value.interval.interval_str = dtype_str->dtype.str_val.c_str();
-             dtype_value.interval.lb = (dynamic_cast <Dtype_INTERVAL *>(dtype_ptr))->dtype.lb;
-             dtype_value.interval.ub = (dynamic_cast <Dtype_INTERVAL *>(dtype_ptr))->dtype.ub;
+             dtype_str = (dynamic_cast <Dtype_INTERVAL *>(dtype))->toString();
+             dtype_value.u.interval.interval_str = dtype_str->dtype.str_val.c_str();
+             dtype_value.u.interval.lb = (dynamic_cast <Dtype_INTERVAL *>(dtype))->dtype.lb;
+             dtype_value.u.interval.ub = (dynamic_cast <Dtype_INTERVAL *>(dtype))->dtype.ub;
         }
         break;
 

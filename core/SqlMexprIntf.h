@@ -150,28 +150,30 @@ sql_destroy_Dtype_value_holder (Dtype *dtype);
 sql_dtype_t
 sql_dtype_get_type (Dtype *dtype ) ;
 
-typedef union dtype_value_ {
+typedef struct dtype_value_ {
 
     sql_dtype_t dtype;
 
-    int int_val;
-    double d_val;
-    bool b_val;
-    const char *str_val;
-    struct {
-        const char *ipv4_addr_str;
-        uint32_t ipv4_addr_int;
-    } ipv4;
-    struct {
-        int lb;
-        int ub;
-        const char *interval_str;
-    } interval;
-
+    union {
+        int int_val;
+        double d_val;
+        bool b_val;
+        const char *str_val;
+        struct {
+            const char *ipv4_addr_str;
+            uint32_t ipv4_addr_int;
+        } ipv4;
+        struct {
+            int lb;
+            int ub;
+            const char *interval_str;
+        } interval;
+    } u;
+    
 } dtype_value_t;
 
 dtype_value_t 
-DTYPE_GET_VAUE(Dtype *dtype_ptr) ;
+DTYPE_GET_VAUE(Dtype *dtype) ;
 
 Dtype *
 Dtype_copy (Dtype *dtype) ;

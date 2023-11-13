@@ -352,7 +352,7 @@ sql_group_by_clause_group_records_phase1 (qep_struct_t *qep) {
             fixed size 4 B hashcode of the strings to store as key in HT. Hashtable
             can store keys of fixed size only*/
 	        dtype_value = DTYPE_GET_VAUE(dtype);
-            string_hash = hashfromkey ((void *)dtype_value.str_val);
+            string_hash = hashfromkey ((void *)dtype_value.u.str_val);
             memcpy ((void *) (ht_key + ht_key_size), &string_hash, sizeof (string_hash));
             ht_key_size +=  sizeof (string_hash);
             sql_destroy_Dtype_value_holder(dtype);

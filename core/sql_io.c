@@ -105,37 +105,34 @@ void sql_emit_select_output(qep_struct_t *qep,
         switch (dtype_value.dtype) {
 
             case SQL_STRING:
-                printf("%-*s|", column_width, dtype_value.str_val);
+                printf("%-*s|", column_width, dtype_value.u.str_val);
                 break;
 
             case SQL_INT:
-                printf("%-*d|", column_width, dtype_value.int_val);
+                printf("%-*d|", column_width, dtype_value.u.int_val);
                 break;
 
             case SQL_DOUBLE:
-                if (mexpr_double_is_integer ( dtype_value.d_val)) {
-                    printf("%-*f|", column_width, dtype_value.d_val);
+                if (mexpr_double_is_integer ( dtype_value.u.d_val)) {
+                    printf("%-*d|", column_width, (int)dtype_value.u.d_val);
                 }
                 else {
-                    printf("%-*f|", column_width, dtype_value.d_val);
+                    printf("%-*f|", column_width, dtype_value.u.d_val);
                 }
                 break;
 
             case SQL_BOOL:
-                assert(0);
+                printf("%-*s|", column_width, dtype_value.u.b_val ? "True" : "False"); 
                 break;
                 
-            case SQL_IPV4_ADDR: {
-                printf("%-*s|", column_width,dtype_value.ipv4.ipv4_addr_str);
+            case SQL_IPV4_ADDR:
+                printf("%-*s|", column_width, dtype_value.u.ipv4.ipv4_addr_str);
                 break;
-            }
 
             case SQL_INTERVAL: 
-            {
-                printf("%-*s|", column_width, dtype_value.interval.interval_str);
+                printf("%-*s|", column_width, dtype_value.u.interval.interval_str);
                 break;
-            }
-            break;
+
             default:
                 assert(0);
         }
