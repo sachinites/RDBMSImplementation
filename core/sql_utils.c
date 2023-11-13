@@ -206,7 +206,7 @@ sql_get_qp_col_by_name (   qp_col_t **qp_col_array,
 
             if (strncmp (
                 name, 
-                sql_get_opnd_variable_name (sql_tree_get_root (qp_col->sql_tree)).c_str(),
+                qp_col->alias_name,
                 SQL_COMPOSITE_COLUMN_NAME_SIZE)) continue;
 
             return qp_col;
