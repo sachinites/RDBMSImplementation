@@ -2,6 +2,8 @@ rm -f dbms.exe
 rm -f *.o
 rm -f ../core/*.o
 rm -f ../BPlusTreeLib/*.o
+rm -f ../uapi/*.o
+rm -f ../uapi/*.exe
 
 g++ -g -c  SqlParserMain.c -o SqlParserMain.o
 g++ -g -c  SqlSelectParserCFG.c -o SqlSelectParserCFG.o
@@ -22,5 +24,8 @@ g++ -g -c  ../gluethread/glthread.c -o ../gluethread/glthread.o
 g++ -g -c ../c-hashtable/hashtable.c -o ../c-hashtable/hashtable.o
 g++ -g -c   ../c-hashtable/hashtable_itr.c -o ../c-hashtable/hashtable_itr.o
 g++ -g -c  ../core/SqlMexprIntf.cpp -o ../core/SqlMexprIntf.o
+g++ -g -c ../uapi/sql_api.cpp -o ../uapi/sql_api.o
+g++ -g -c ../uapi/sql_uapi_test.cpp -o ../uapi/sql_uapi_test.o
+g++ -g ../uapi/sql_api.o ../core/qep.o lex.yy.o SqlSelectParserCFG.o SqlCreateParserCFG.o ../BPlusTreeLib/BPlusTree.o ../core/sql_utils.o ../core/sql_create.o ../core/Catalog.o ../gluethread/glthread.o SqlInsertIntoParserCFG.o ../core/sql_insert_into.o ../c-hashtable/hashtable.o ../c-hashtable/hashtable_itr.o ../core/sql_io.o ../core/SqlMexprIntf.o ../core/sql_group_by.o ../core/sql_order_by.o SqlParserMain.o -o dbms.exe -lfl -lm -L ../../MathExpressionParser/ -lMexp
 
-g++ -g ../core/qep.o lex.yy.o SqlSelectParserCFG.o SqlCreateParserCFG.o SqlParserMain.o ../BPlusTreeLib/BPlusTree.o ../core/sql_utils.o ../core/sql_create.o ../core/Catalog.o ../gluethread/glthread.o SqlInsertIntoParserCFG.o ../core/sql_insert_into.o ../c-hashtable/hashtable.o ../c-hashtable/hashtable_itr.o ../core/sql_io.o ../core/SqlMexprIntf.o ../core/sql_group_by.o ../core/sql_order_by.o -o dbms.exe -lfl -lm -L ../../MathExpressionParser/ -lMexp
+g++ -g ../uapi/sql_api.o ../core/qep.o lex.yy.o SqlSelectParserCFG.o SqlCreateParserCFG.o ../BPlusTreeLib/BPlusTree.o ../core/sql_utils.o ../core/sql_create.o ../core/Catalog.o ../gluethread/glthread.o SqlInsertIntoParserCFG.o ../core/sql_insert_into.o ../c-hashtable/hashtable.o ../c-hashtable/hashtable_itr.o ../core/sql_io.o ../core/SqlMexprIntf.o ../core/sql_group_by.o ../core/sql_order_by.o ../uapi/sql_uapi_test.o -o ../uapi/sql_uapi_test.exe -lfl -lm -L ../../MathExpressionParser/ -lMexp

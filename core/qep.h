@@ -8,6 +8,7 @@
 #include "../SqlParser/SqlParserStruct.h"
 #include "sql_const.h"
 #include "rdbms_struct.h"
+#include "../uapi/sql_api.h"
 
 typedef struct catalog_table_value ctable_val_t ;
 typedef struct schema_rec_ schema_rec_t ;
@@ -93,7 +94,9 @@ typedef struct qep_struct_ {
 
         int n;
         qp_col_t *sel_colmns[SQL_MAX_COLS_IN_SELECT_LIST];
-
+        sql_record_reader_fn_ptr sql_record_reader;
+        void *app_data;
+        
     } select;
 
     struct {

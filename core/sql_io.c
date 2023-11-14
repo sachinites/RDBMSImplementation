@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdint.h>
+#include <vector>
 #include "sql_const.h"
 #include "rdbms_struct.h"
 #include "qep.h"
@@ -43,6 +44,10 @@ sql_print_hdr (qep_struct_t *qep, qp_col_t **col_list, int n_cols ) {
 
     int column_width = COLUMN_WIDTH; // Default column width
     
+    if (qep->select.sql_record_reader) {
+        return;
+    }
+
     if (num_columns > 0) {
         column_width = SCREEN_WIDTH / num_columns; // Adjust column width based on available space
     }
@@ -81,8 +86,27 @@ void sql_emit_select_output(qep_struct_t *qep,
                                                qp_col_t **col_list_head) {
 
     int i;
+    Dtype *dtype;
     qp_col_t *qp_col;
     int num_columns = n_col;
+    std::vector<Dtype *> dtype_vector;
+
+    if (qep->select.sql_record_reader) {
+
+        
+        for (i = 0; i < n_col; i++) {
+            
+            qp_col = col_list_head[i];
+            dtype = (qp_col->agg_fn != SQL_AGG_FN_NONE ) ? \
+                                    sql_column_get_aggregated_value (qp_col) :  \
+                                    qp_col->computed_value;
+            dtype_vector.push_back (dtype);
+        }
+        qep->select.sql_record_reader (qep->select.app_data, &dtype_vector);
+        dtype_vector.clear();
+        return;
+    }
+
 
     int column_width = COLUMN_WIDTH; // Default column width
 
