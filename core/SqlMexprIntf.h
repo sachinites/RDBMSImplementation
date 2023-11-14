@@ -107,9 +107,6 @@ InstallDtypeOperandProperties (MexprNode *node,
                                                     sql_dtype_t sql_dtype,
                                                     void *data_src, Dtype *(*compute_fn_ptr)(void *)) ;
 
-void 
-sql_destroy_Dtype_value_holder (Dtype *dtype);
-
 mexprcpp_dtypes_t
 sql_to_mexpr_dtype_converter (sql_dtype_t sql_dtype) ;
 
@@ -124,12 +121,6 @@ sql_destroy_aggregator (qp_col_t *qp_col) ;
 
 void 
 sql_column_value_aggregate (qp_col_t *qp_col, Dtype *new_value);
-
-Dtype *
-sql_column_get_aggregated_value (qp_col_t *qp_col) ;
-
-mexprcpp_dtypes_t
-sql_dtype_get_type (Dtype *dtype ) ;
 
 void
 sql_column_set_aggregated_value (qp_col_t *qp_col, Dtype *new_value) ;
@@ -148,5 +139,46 @@ sql_to_mexpr_agg_fn_converter (sql_agg_fn_t agg_fn);
 
 mexprcpp_dtypes_t
 sql_to_mexpr_dtype_converter (sql_dtype_t sql_dtype);
+
+/* Dtype */
+Dtype *
+sql_column_get_aggregated_value (qp_col_t *qp_col) ;
+
+void 
+sql_destroy_Dtype_value_holder (Dtype *dtype);
+
+sql_dtype_t
+sql_dtype_get_type (Dtype *dtype ) ;
+
+typedef struct dtype_value_ {
+
+    sql_dtype_t dtype;
+
+    union {
+        int int_val;
+        double d_val;
+        bool b_val;
+        const char *str_val;
+        struct {
+            const char *ipv4_addr_str;
+            uint32_t ipv4_addr_int;
+        } ipv4;
+        struct {
+            int lb;
+            int ub;
+            const char *interval_str;
+        } interval;
+    } u;
+    
+} dtype_value_t;
+
+dtype_value_t 
+DTYPE_GET_VAUE(Dtype *dtype) ;
+
+Dtype *
+Dtype_copy (Dtype *dtype) ;
+
+bool 
+Dtype_less_than_operator (Dtype *dtype1, Dtype *dtype2) ;
 
 #endif 

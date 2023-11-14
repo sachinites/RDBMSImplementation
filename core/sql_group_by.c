@@ -11,7 +11,6 @@
 #include "../c-hashtable/hashtable.h"
 #include "../c-hashtable/hashtable_itr.h"
 #include "sql_utils.h"
-#include "../../MathExpressionParser/Dtype.h"
 
 bool
 sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
@@ -206,7 +205,7 @@ Wrapper_sql_column_get_aggregated_value (void *data_src) {
 
     qp_col_t *sqp_col = (qp_col_t *)data_src;
     Dtype  *res =  sql_column_get_aggregated_value (sqp_col);
-    return dynamic_cast<Dtype *> (res->clone());
+    return Dtype_copy(res);
 }
 
 extern sql_dtype_t
@@ -250,7 +249,7 @@ sql_resolve_exptree_having_phase2 (qep_struct_t *qep,
 
         InstallDtypeOperandProperties (
                     opnd_node, 
-                    mexpr_to_sql_dtype_converter (sql_column_get_aggregated_value (sqp_col)->did),
+                    sql_dtype_get_type(sql_column_get_aggregated_value (sqp_col)),
                     (void *)sqp_col,
                     Wrapper_sql_column_get_aggregated_value);
     }
@@ -331,6 +330,7 @@ sql_group_by_clause_group_records_phase1 (qep_struct_t *qep) {
     qp_col_t *qp_col;
     int ht_key_size = 0;
     joined_row_t *joined_row;
+    dtype_value_t dtype_value;
     unsigned int string_hash = 0;
     bool is_ht_exist = qep->groupby.ht ? true : false;
     ht_group_by_record_t  *ht_group_by_record = NULL;
@@ -347,12 +347,12 @@ sql_group_by_clause_group_records_phase1 (qep_struct_t *qep) {
         qp_col = qep->groupby.col_list[i];
         dtype = sql_evaluate_exp_tree (qp_col->sql_tree);
 
-        if (dtype->did == MATH_CPP_STRING) {
+        if (sql_dtype_get_type (dtype)== SQL_STRING) {
             /* String string are of verying sizes, therefore, we will compute a
             fixed size 4 B hashcode of the strings to store as key in HT. Hashtable
             can store keys of fixed size only*/
-
-            string_hash = hashfromkey ((void *)(dynamic_cast <Dtype_STRING*>(dtype))->dtype.str_val.c_str());
+	        dtype_value = DTYPE_GET_VAUE(dtype);
+            string_hash = hashfromkey ((void *)dtype_value.u.str_val);
             memcpy ((void *) (ht_key + ht_key_size), &string_hash, sizeof (string_hash));
             ht_key_size +=  sizeof (string_hash);
             sql_destroy_Dtype_value_holder(dtype);
@@ -419,7 +419,7 @@ static void
 
             sqp_col->computed_value = sql_evaluate_exp_tree(sqp_col->sql_tree);
             sqp_col->aggregator = sql_get_aggregator(sqp_col->agg_fn, 
-                mexpr_to_sql_dtype_converter (sqp_col->computed_value->did));
+                                                 sql_dtype_get_type (sqp_col->computed_value));
             assert(sqp_col->aggregator);
             sql_column_value_aggregate(sqp_col, sqp_col->computed_value);
             sql_destroy_Dtype_value_holder(sqp_col->computed_value);

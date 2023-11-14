@@ -4,7 +4,6 @@
 #include "qep.h"
 #include "sql_order_by.h"
 #include "SqlMexprIntf.h"
-#include "../../MathExpressionParser/Dtype.h"
 
 bool 
 qep_collect_dtypes_for_sorting (qep_struct_t *qep) {
@@ -63,10 +62,10 @@ class DtypeVectorComparisonFunction {
         Dtype *dtype2 = v2->at(index);
 
         if (qep->orderby.asc) {
-            return *dtype1 < *dtype2;
+            return Dtype_less_than_operator (dtype1, dtype2);
         }
         else {
-            return !(*dtype1 < *dtype2);
+            return !Dtype_less_than_operator (dtype1, dtype2);
         }
 
     }
