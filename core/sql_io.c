@@ -62,14 +62,23 @@ sql_print_hdr (qep_struct_t *qep, qp_col_t **col_list, int n_cols ) {
         
             printf("%-*s|", column_width, col->alias_name);
         }
+
         else {
         
-            parser_split_table_column_name (qep->join.table_alias,
+            /* col->alias_name[0] = '\0' when user has typed an expression without specifying
+                an alias name, eg : select a + b from quad */
+            if (col->alias_name[0] != '\0') {
+
+                parser_split_table_column_name (qep->join.table_alias,
                                                                    &TableCatalogDef, 
                                                                    col->alias_name,
                                                                    table_name,
                                                                    column_name );
-            printf("%-*s|", column_width, column_name);
+                printf("%-*s|", column_width, column_name);
+            }
+            else {
+                printf("%-*s|", column_width, "");
+            }
         }
     }
 
