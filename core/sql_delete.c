@@ -1,30 +1,30 @@
-#include <stdio.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <memory.h>
+#include <string.h>
+#include "sql_delete.h"
 #include "Catalog.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "sql_const.h"
 #include "rdbms_struct.h"
-#include "sql_io.h"
 
-bool 
-sql_validate_delete_query_data (BPlusTree_t *schema_table, ast_node_t *delete_root) {
+extern BPlusTree_t TableCatalogDef;
 
-    return true;
-}
+void
+sql_drop_table (char *table_name) {
 
-void 
-sql_process_delete_query_internal (BPlusTree_t *tcatalog, ast_node_t *delete_root) {
+    BPluskey_t bkey;
+    catalog_table_key_t catalog_table_key;
 
-    bool rc;
-    qep_struct_t qep_struct;
-    memset (&qep_struct, 0, sizeof (qep_struct));
-    rc = qep_struct_init (&qep_struct, tcatalog, delete_root);
-    if (!rc) {
-        qep_deinit (&qep_struct);
+    if (!sql_catalog_table_lookup_by_table_name (&TableCatalogDef, table_name)) {
+        printf ("Error : Table does not exist\n");
         return;
     }
-    qep_execute_delete (&qep_struct);
-    qep_deinit (&qep_struct);
+
+     catalog_table_key.scope = PUBLIC;
+     strncpy (catalog_table_key.entity_name,
+                  table_name,
+                  sizeof (catalog_table_key.entity_name));
+     catalog_table_key.type = TABLE;
+     strncpy (catalog_table_key.owner, "postgres", sizeof (catalog_table_key.owner));
+     bkey.key = (void *)&catalog_table_key;
+     bkey.key_size = sizeof (catalog_table_key_t);
+     BPlusTree_Delete (&TableCatalogDef, &bkey);
 }

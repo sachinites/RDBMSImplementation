@@ -99,7 +99,7 @@ qep_order_by_reassign_select_columns (qep_struct_t *qep) {
     for (i = 0; i < qep->select.n; i++) {
 
         sqp_col = qep->select.sel_colmns[i];
-        
+
         if (sqp_col->agg_fn != SQL_AGG_FN_NONE) {
             
             assert(!sqp_col->aggregator);
