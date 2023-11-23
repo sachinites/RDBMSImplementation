@@ -495,10 +495,8 @@ void BPlusTree_Delete(BPlusTree_t *tree,
 /** Interface: Called to destroy the B+tree */
 void BPlusTree_Destroy(BPlusTree_t *tree) {
 	if (tree->Root == NULL) return;
-	printf("Now destroying B+tree ..\n");
 	Destroy(tree->Root, tree->free_fn);
 	tree->Root = NULL;
-	printf("Done.\n");
 }
 
 /**

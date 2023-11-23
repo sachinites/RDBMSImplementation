@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <time.h>
+#include <string.h>
 #include "ParserExport.h"
 #include "SqlParserStruct.h"
 #include "../core/sql_create.h"
@@ -16,6 +17,7 @@ extern void sql_show_table_catalog (BPlusTree_t *TableCatalog);
 extern sql_create_data_t cdata; 
 extern qep_struct_t qep;
 extern sql_insert_into_data_t idata; 
+void sql_drop_table (char *table_name) ;
 
 int 
 main (int argc, char **argv) {
@@ -73,6 +75,30 @@ main (int argc, char **argv) {
                 }
                 sql_insert_into_data_destroy(&idata);
                 break; 
+
+            case SQL_DELETE_Q:
+
+                {
+                    char *table_name;
+                    token_code = cyylex();
+                    if (strcmp (lex_curr_token, "table")) {
+                        printf ("Error : Unrecognized Input\n");
+                        break;
+                    }
+                    token_code = cyylex();
+                    if (token_code != SQL_IDENTIFIER) {
+                        printf ("Error : Unrecognized Input\n");
+                        break;
+                    }
+                    table_name = lex_curr_token;
+                    token_code = cyylex();
+                    if (token_code != PARSER_EOL) {
+                        printf ("Error : Unrecognized Input\n");
+                        break;
+                    }
+                    sql_drop_table (table_name);
+                    break;
+                }
 
             case SQL_SHOW_DB_TABLES:
                 sql_show_table_catalog (NULL);

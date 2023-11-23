@@ -169,7 +169,7 @@ lex_set_scan_buffer (const char *buffer) {
     return SQL_INSERT_Q;
 }
 
-"delete" {
+"drop" {
     return SQL_DELETE_Q;
 }
 

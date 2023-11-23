@@ -19,9 +19,20 @@ static bool initialized = false;
 static void 
 catalog_table_free_fn (void *ptr) {
 
+    glthread_t *curr;
+    list_node_t *lnode;
     ctable_val_t *ctable_val = (ctable_val_t *)ptr;
+
     BPlusTree_Destroy (ctable_val->schema_table);
     BPlusTree_Destroy (ctable_val->rdbms_table);
+
+    while (!IS_GLTHREAD_LIST_EMPTY (&ctable_val->col_list_head)) {
+        
+        curr = dequeue_glthread_first (&ctable_val->col_list_head);
+        lnode = glue_to_list_node(curr);
+        free(lnode);
+    }
+
     free(ptr);
 }
 
