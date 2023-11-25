@@ -3,7 +3,7 @@
 #include <memory.h>
 #include <assert.h>
 #include "ParserExport.h"
-#include "SqlParserStruct.h"
+#include "SqlEnums.h"
 #include "../core/SqlMexprIntf.h"
 #include "../core/sql_create.h"
 
