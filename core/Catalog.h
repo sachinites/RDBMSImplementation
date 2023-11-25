@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "sql_const.h"
 #include "rdbms_struct.h"
-#include "../SqlParser/SqlParserStruct.h"
+#include "../SqlParser/SqlEnums.h"
 
 typedef struct BPlusTree BPlusTree_t ;
 typedef struct BPluskey BPluskey_t;

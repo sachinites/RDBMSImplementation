@@ -1,1 +1,1 @@
-#include "../SqlParser/SqlParserStruct.h"
+#include "../SqlParser/SqlEnums.h"

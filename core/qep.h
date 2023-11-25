@@ -5,7 +5,7 @@
 #include <vector>
 #include <unordered_map>
 #include "../Tree/libtree.h"
-#include "../SqlParser/SqlParserStruct.h"
+#include "../SqlParser/SqlEnums.h"
 #include "sql_const.h"
 #include "rdbms_struct.h"
 #include "../uapi/sql_api.h"

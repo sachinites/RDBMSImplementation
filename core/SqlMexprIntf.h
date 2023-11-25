@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <string>
 #include <unordered_map>
-#include "../SqlParser/SqlParserStruct.h"
+#include "../SqlParser/SqlEnums.h"
 #include "../../MathExpressionParser/MExprcppEnums.h"
 
 class MexprTree;

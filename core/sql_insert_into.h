@@ -2,7 +2,7 @@
 #define __SQL_INSERT_INTO__
 
 #include <stdbool.h>
-#include "../SqlParser/SqlParserStruct.h"
+#include "../SqlParser/SqlEnums.h"
 
 typedef struct sql_value_ {
 

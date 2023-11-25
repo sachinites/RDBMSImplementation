@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "../SqlParser/SqlParserStruct.h"
+#include "../SqlParser/SqlEnums.h"
 #include "../gluethread/glthread.h"
 #include "sql_const.h"
 #include "../BPlusTreeLib/BPlusTree.h"
