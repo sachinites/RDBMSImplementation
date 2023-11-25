@@ -1,5 +1,5 @@
-#ifndef __SQLPARSER_STRUCT__
-#define __SQLPARSER_STRUCT__
+#ifndef __SQL_ENUMS__
+#define __SQL_ENUMS__
 
 #include "../core/sql_const.h"
 
