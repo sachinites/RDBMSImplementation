@@ -21,7 +21,6 @@ typedef enum sql_query_type_{
     SQL_CREATE_Q,
     SQL_DELETE_Q,
     SQL_INSERT_Q ,
-    SQL_SHOW_CATALOG_Q,
     SQL_UNSUPPORTED_Q
 
 } sql_query_type_t;
@@ -78,8 +77,6 @@ typedef enum sql_dtype_{
     SQL_INT,
     SQL_DOUBLE,
     SQL_BOOL,
-    SQL_IPV4_ADDR,
-    SQL_INTERVAL,
     SQL_DTYPE_MAX
 
 } sql_dtype_t;
@@ -95,9 +92,7 @@ typedef enum sql_ident_type_ {
 
     SQL_INTEGER_VALUE =  SQL_DTYE_ATTR_MAX + 1,
     SQL_STRING_VALUE,
-    SQL_DOUBLE_VALUE,
-    SQL_IPV4_ADDR_VALUE,
-    SQL_INTERVAL_VALUE,
+    SQL_DOUBLE_VALUE,    // where area = 5.7
     SQL_IDNT_TYPE_MAX
 
 } sql_identifier_type_t;
@@ -136,8 +131,7 @@ typedef enum sql_misc_ {
     SQL_COMMA = SQL_ORDER_BY_MAX + 1 ,
     SQL_BRACKET_START,
     SQL_BRACKET_END,
-    SQL_QUOTATION_MARK,
-    SQL_SHOW_DB_TABLES
+    SQL_QUOTATION_MARK
 
 } sql_misc_t;
 
@@ -148,8 +142,6 @@ sql_valid_dtype (int dtype) {
         case SQL_STRING:
         case SQL_INT:
         case SQL_DOUBLE:
-        case SQL_IPV4_ADDR:
-        case SQL_INTERVAL:
         return 1;
     }
     return 0;
@@ -165,10 +157,6 @@ sql_dtype_str (sql_dtype_t dtype) {
             return "SQL_INT";
         case SQL_DOUBLE:
             return "SQL_DOUBLE";
-        case SQL_IPV4_ADDR:
-            return "SQL_IPV4_ADDR";
-        case SQL_INTERVAL:
-            return "SQL_INTERVAL";
     }
     return 0;    
 }
@@ -184,10 +172,6 @@ sql_dtype_size (sql_dtype_t dtype) {
         return 4;
     case SQL_DOUBLE:
         return sizeof(double);
-    case SQL_IPV4_ADDR:
-        return 4;
-    case SQL_INTERVAL:
-        return 8;
     }
     return 0;
 }

@@ -7,6 +7,8 @@
 #include "SqlEnums.h"
 #include "../core/sql_insert_into.h"
 #include "../core/sql_utils.h"
+#include "../core/sql_const.h"
+
 /* CFG 
 
 insert_query_parser -> Q1 | Q2 

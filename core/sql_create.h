@@ -2,6 +2,7 @@
 #define __SQL_CREATE__
 
 #include <stdbool.h>
+#include "sql_const.h"
 #include "../SqlParser/SqlEnums.h"
 
 typedef struct sql_create_data_ {
