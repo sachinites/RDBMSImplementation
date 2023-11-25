@@ -6,6 +6,7 @@
 #include "SqlEnums.h"
 #include "../core/SqlMexprIntf.h"
 #include "../core/sql_create.h"
+#include "../core/sql_const.h"
 
 /* Grammar for Create Query 
 

@@ -4,6 +4,7 @@
 #include <string.h>
 #include "ParserExport.h"
 #include "SqlEnums.h"
+#include "../core/sql_const.h"
 #include "../core/sql_create.h"
 #include "../core/qep.h"
 #include "../core/sql_insert_into.h"
