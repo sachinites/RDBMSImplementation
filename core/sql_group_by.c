@@ -519,6 +519,9 @@ sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) {
             sql_emit_select_output(qep, qep->select.n, qep->select.sel_colmns);
             sql_select_flush_computed_values (qep);
             qualified_row_no++;
+            if (qep->limit == qualified_row_no) {
+                break;
+            }
         }
 
         ht_itr = !(hashtable_iterator_advance(itr) == 0);
