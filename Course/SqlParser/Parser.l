@@ -119,8 +119,237 @@ lex_set_scan_buffer (const char *buffer) {
 
 %%
 
+"select" {
+    return SQL_SELECT_Q;
+}
+
+"create" {
+    return SQL_CREATE_Q;
+}
+
+"insert into" {
+    return SQL_INSERT_Q;
+}
+
+"drop" {
+    return SQL_DELETE_Q;
+}
+
+"varchar" {
+    return SQL_STRING;
+}
+
+"int" {
+    return SQL_INT;
+}
+
+"decimal" {
+    return SQL_DOUBLE;
+}
+
+"primary key" {
+    return SQL_PRIMARY_KEY;
+}
+
+"not null" {
+    return SQL_NOT_NULL;
+}
+
+"max" {
+    return SQL_MAX;
+}
+
+"sum" {
+    return SQL_SUM;
+}
+
+"min" {
+    return SQL_MIN;
+}
+
+"count" {
+    return SQL_COUNT;
+}
+
+"avg" {
+    return SQL_AVG;
+}
+
+"from" {
+    return SQL_FROM;
+}
+
+"where" {
+    return SQL_WHERE;
+}
+
+"group by" {
+    return SQL_GROUP_BY;
+}
+
+"order by" {
+    return SQL_ORDER_BY;
+}
+
+"limit" {
+    return SQL_LIMIT;
+}
+
+"having" {
+    return SQL_HAVING;
+}
+
+"asc" {
+    return SQL_ORDERBY_ASC;
+}
+
+"desc" {
+    return SQL_ORDERBY_DSC;
+}
+
+
+"(" {
+    return SQL_BRACKET_START;
+}
+
+")" {
+    return SQL_BRACKET_END;
+}
+
+"'" {
+    return SQL_QUOTATION_MARK;
+}
+
+"<" {
+    return SQL_LESS_THAN;
+}
+
+">" {
+    return SQL_GREATER_THAN;
+}
+
+"=" {
+    return SQL_EQ;
+}
+
+"!=" {
+    return SQL_NOT_EQ;
+}
+
+"and" {
+    return SQL_AND;
+}
+
+"or" {
+    return SQL_OR;
+}
+
+"as" {
+    return SQL_AS;
+}
+
+"*" {
+    return SQL_MATH_MUL;
+}
+
+"+" {
+    return SQL_MATH_PLUS;
+}
+
+"-" {
+    return SQL_MATH_MINUS;
+}
+
+"/" {
+    return SQL_MATH_DIV;
+}
+
+"in" {
+    return SQL_IN;
+}
+
+"LIKE" {
+    
+    return SQL_LIKE;
+}
+
+"sqrt" {
+    return SQL_MATH_SQRT;
+}
+
+"sqr" {
+    return SQL_MATH_SQR;
+}
+
+"hmax" {
+    return SQL_MATH_MAX;
+}
+
+"hmin" {
+    return SQL_MATH_MIN;
+}
+
+"sin" {
+    return SQL_MATH_SIN;
+}
+
+"pow" {
+    return SQL_MATH_POW;
+}
+
+\n {
+    return PARSER_EOL;
+}
+
+
+"," {
+    return SQL_COMMA;
+}
+
+[ ] { 
+    /* Ignore */
+    process_white_space(1);
+}
+
+[\t] {
+    /*ignore*/
+    process_white_space(4);
+}
+
+0|-?[1-9][0-9]* {
+    return SQL_INTEGER_VALUE;
+}
+
+-?[0-9]*\.[0-9]+ {
+    return SQL_DOUBLE_VALUE;
+}
+
+[a-zA-Z0-9_]+ {
+    return SQL_IDENTIFIER;
+}
+
+[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+ {
+    return SQL_IDENTIFIER_IDENTIFIER;
+}
+
+'[^']*' {
+    // string enclosed within single quotes. This regular expression allows multiple words separated by spaces
+    return SQL_STRING_VALUE;
+}
+
+\"[^"]*\" {
+    // string enclosed within double quotes. This regular expression allows multiple words separated by spaces
+    return SQL_STRING_VALUE;
+}
+
+. {
+    
+}
 
 
 %%
 
+int main (int argc, char **argv) {
 
+    return 0;
+}
