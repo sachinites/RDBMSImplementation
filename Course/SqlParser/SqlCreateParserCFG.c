@@ -189,6 +189,8 @@ create_query_parser () {
     token_code = cyylex ();
     assert (token_code == SQL_CREATE_Q);
 
+    memset (&cdata, 0, sizeof (cdata));
+    
     token_code = cyylex();
 
     if (strcmp (lex_curr_token, "table")) {
