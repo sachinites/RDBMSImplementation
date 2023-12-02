@@ -143,7 +143,7 @@ lex_set_scan_buffer (const char *buffer) {
     return SQL_INT;
 }
 
-"decimal" {
+decimal|double {
     return SQL_DOUBLE;
 }
 
@@ -348,8 +348,3 @@ lex_set_scan_buffer (const char *buffer) {
 
 
 %%
-
-int main (int argc, char **argv) {
-
-    return 0;
-}
