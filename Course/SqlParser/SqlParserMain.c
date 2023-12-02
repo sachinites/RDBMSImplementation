@@ -5,8 +5,10 @@
 
 #include "ParserExport.h"
 #include "SqlEnums.h"
+#include "../core/sql_create.h"
 
 extern parse_rc_t create_query_parser () ;
+extern sql_create_data_t cdata;
 
 int
 main(int argc, char **argv) {
@@ -15,7 +17,7 @@ main(int argc, char **argv) {
 
     while (true) {
 
-        printf ("postgres=#");
+        printf ("postgres=# ");
 
         fgets ((char *)lex_buffer, sizeof(lex_buffer), stdin);
 
@@ -40,8 +42,9 @@ main(int argc, char **argv) {
                 yyrewind(1);
                 err = create_query_parser();
                 if (err == PARSE_SUCCESS) {
-                    /// .... 
+                    sql_process_create_query (&cdata);
                 }
+                 sql_create_data_destroy(&cdata);
             break;
 
             default:

@@ -5,6 +5,8 @@
 
 #include "ParserExport.h"
 #include "SqlEnums.h"
+#include "../core/sql_create.h"
+
 
 /* CFG
     create_query_parser -> create table <identifier> ( COLSLIST )
@@ -15,6 +17,8 @@
 
     DTYPE -> varchar (<number>) | int | double
 */
+
+sql_create_data_t cdata;
 
 //DTYPE -> varchar (<number>) | int | double
 parse_rc_t
@@ -28,6 +32,8 @@ DTYPE() {
 
         case SQL_INT:
         case SQL_DOUBLE:
+            cdata.column_data[cdata.n_cols].dtype = (sql_dtype_t )token_code;
+            cdata.column_data[cdata.n_cols].dtype_len = sql_dtype_size ((sql_dtype_t )token_code);
             RETURN_PARSE_SUCCESS;
         case SQL_STRING:
             token_code = cyylex();
@@ -40,6 +46,8 @@ DTYPE() {
                 PARSER_LOG_ERR(token_code, SQL_INTEGER_VALUE);
                 RETURN_PARSE_ERROR;
             }
+            cdata.column_data[cdata.n_cols].dtype = (sql_dtype_t )token_code;
+            cdata.column_data[cdata.n_cols].dtype_len = atoi(lex_curr_token);
             token_code = cyylex();
             if (token_code != SQL_BRACKET_END) {
                 PARSER_LOG_ERR(token_code, SQL_BRACKET_END);
@@ -63,6 +71,9 @@ COL() {
     int initial_chkp;
     CHECKPOINT (initial_chkp);
 
+    memset(&cdata.column_data[cdata.n_cols], 0, 
+        sizeof (cdata.column_data[0]));
+
     // COL -> <identifier> DTYPE primary key 
 
     do {
@@ -70,6 +81,9 @@ COL() {
         token_code = cyylex();
 
         if (token_code != SQL_IDENTIFIER) break;
+
+        strncpy (cdata.column_data[cdata.n_cols].col_name, lex_curr_token, 
+            SQL_COLUMN_NAME_MAX_SIZE);
 
         err = DTYPE();
 
@@ -79,11 +93,18 @@ COL() {
 
         if (token_code != SQL_PRIMARY_KEY) break;
 
+        cdata.column_data[cdata.n_cols].is_primary_key = true;
+        cdata.n_cols++;
+
         RETURN_PARSE_SUCCESS;
 
     } while (0);
 
     RESTORE_CHKP(initial_chkp);
+
+    memset(&cdata.column_data[cdata.n_cols], 0, 
+        sizeof (cdata.column_data[0]));
+
 
       // COL -> <identifier> DTYPE
 
@@ -96,14 +117,19 @@ COL() {
             RETURN_PARSE_ERROR;
         }
 
+        strncpy (cdata.column_data[cdata.n_cols].col_name, lex_curr_token, 
+            SQL_COLUMN_NAME_MAX_SIZE);
+
         err = DTYPE();
 
         if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
+        cdata.n_cols++;
         RETURN_PARSE_SUCCESS;
 
       } while (0);
 
+    cdata.n_cols++;
     RETURN_PARSE_SUCCESS;
 }
 
@@ -177,6 +203,8 @@ create_query_parser () {
         PARSER_LOG_ERR(token_code, SQL_IDENTIFIER);
         RETURN_PARSE_ERROR;        
     }
+
+    strncpy(cdata.table_name, lex_curr_token, SQL_TABLE_NAME_MAX_SIZE);
 
     token_code = cyylex();
 

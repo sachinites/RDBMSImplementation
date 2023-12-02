@@ -1,0 +1,9 @@
+#ifndef __SQL_CONST__
+#define __SQL_CONST__
+
+#define SQL_TABLE_NAME_MAX_SIZE 64
+#define SQL_COLUMN_NAME_MAX_SIZE 64
+#define SQL_MAX_COLUMNS_SUPPORTED_PER_TABLE 32
+
+
+#endif 
