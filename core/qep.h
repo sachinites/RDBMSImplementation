@@ -149,4 +149,8 @@ sql_execute_qep (qep_struct_t *qep) ;
 bool
 qep_execute_join (qep_struct_t *qep_struct);
 
+void 
+table_iterators_init (qep_struct_t *qep,
+                                table_iterators_t **_titer);
+
 #endif 
