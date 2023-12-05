@@ -50,6 +50,8 @@ typedef struct table_iterators_ {
 
 typedef struct qep_struct_ {
     
+    sql_query_type_t query_type;
+
     struct {
 
         int table_cnt;
@@ -133,7 +135,7 @@ typedef struct qep_struct_ {
 
 
 void
-sql_execute_qep (qep_struct_t *qep);
+sql_process_select_query (qep_struct_t *qep);
 
 void 
 qep_deinit (qep_struct_t *qep);
@@ -142,6 +144,9 @@ bool
 qep_struct_record_table (qep_struct_t *qep,  char *table_name);
 
 void 
-sql_process_select_query (qep_struct_t *qep) ;
+sql_execute_qep (qep_struct_t *qep) ;
+
+bool
+qep_execute_join (qep_struct_t *qep_struct);
 
 #endif 
