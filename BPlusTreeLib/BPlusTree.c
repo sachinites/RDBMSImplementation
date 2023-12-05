@@ -352,7 +352,6 @@ void Destroy(BPlusTreeNode* Cur, BPlusTree_value_free_fn free_fn) {
 		for (i = 0; i < Cur->key_num; i++)
 			Destroy(Cur->child[i], free_fn);
 	}
-	free(Cur->key->key);
 	free(Cur);
 }
 
