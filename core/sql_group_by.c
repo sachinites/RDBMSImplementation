@@ -382,8 +382,10 @@ sql_group_by_clause_group_records_phase1 (qep_struct_t *qep) {
     /* Create a new joined_row to be inserted into HT*/
     joined_row = (joined_row_t *)calloc (1, sizeof (joined_row_t));
     memcpy (joined_row, qep->joined_row_tmplate, sizeof (joined_row_t));
+    joined_row->key_array = (BPluskey_t **) calloc (joined_row->size,  sizeof (BPluskey_t *));
     joined_row->rec_array = (void **)calloc (joined_row->size, sizeof (void *));
     for (i = 0; i < joined_row->size; i++) {
+        joined_row->key_array[i] =  qep->joined_row_tmplate->key_array[i];
         joined_row->rec_array[i] = qep->joined_row_tmplate->rec_array[i];
     }
 
