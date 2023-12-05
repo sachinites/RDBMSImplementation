@@ -23,15 +23,18 @@ extern BPlusTree_t TableCatalogDef;
 extern void 
 sql_process_delete_query (qep_struct_t *qep);
 
-static void 
+void 
 table_iterators_init (qep_struct_t *qep,
                                 table_iterators_t **_titer) {
 
     int i;
 
-    (*_titer) = (table_iterators_t *)calloc (1, 
+    if (*_titer == NULL) {
+
+        (*_titer) = (table_iterators_t *)calloc (1, 
                         sizeof (table_iterators_t) + 
                         (sizeof (table_iter_data_t) * qep->join.table_cnt));
+    }
     
     table_iterators_t *titer = (*_titer);
 

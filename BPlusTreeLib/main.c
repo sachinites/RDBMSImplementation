@@ -115,7 +115,7 @@ main (int argc, char **argv) {
 			BPlusTree_value_format_fn_ipv4_addr,
 			4, free);
 
-    static key_mdata_t key_mdata[] = {  {SQL_IPV4_ADDR, 1} };
+    static key_mdata_t key_mdata[] = {  {SQL_IPV4_ADDR, 4} };
     tree.key_mdata = key_mdata;
     tree.key_mdata_size = 1;
 

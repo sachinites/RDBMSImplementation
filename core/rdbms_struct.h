@@ -17,7 +17,7 @@ class Aggregator;
 
 typedef struct  key_mdata_ {
 
-    sql_dtype_t dtype;
+    uint16_t dtype;
     int size;
     
 } key_mdata_t ;

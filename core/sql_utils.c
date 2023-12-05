@@ -21,7 +21,7 @@ rdbms_key_comp_fn (BPluskey_t *key_1, BPluskey_t *key_2, key_mdata_t *key_mdata,
     int dsize;
     int offset = 0;
 
-    sql_dtype_t dtype;
+    int dtype;
 
     if (!key_1 || !key_1->key || !key_1->key_size) return 1;
     if (!key_2 || !key_2->key || !key_2->key_size) return -1;
