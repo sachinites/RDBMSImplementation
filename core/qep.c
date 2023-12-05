@@ -673,6 +673,7 @@ qep_deinit (qep_struct_t *qep) {
 
                     joined_row = record_lst->front();
                     record_lst->pop_front();
+                    free(joined_row->key_array);
                     free(joined_row->rec_array);
                     free(joined_row); 
                 }
