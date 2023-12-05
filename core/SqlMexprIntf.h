@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <string>
 #include <unordered_map>
+#include <list>
 #include "../SqlParser/SqlEnums.h"
 #include "../../MathExpressionParser/MExprcppEnums.h"
 
@@ -18,6 +19,7 @@ typedef struct BPlusTree BPlusTree_t ;
 typedef struct joined_row_ joined_row_t;
 typedef struct qep_struct_ qep_struct_t;
 typedef struct qp_col_ qp_col_t;
+typedef struct exp_tree_data_src_ exp_tree_data_src_t ;
 
 typedef struct sql_exptree_ {
 
@@ -42,7 +44,8 @@ sql_resolve_exptree_against_table (std::unordered_map<std::string, std::string> 
                                                          BPlusTree_t *tcatalog,
                                                          sql_exptree_t *sql_exptree, 
                                                          ctable_val_t * ctable_val, 
-                                                         int table_id, joined_row_t **joined_row);
+                                                         int table_id, joined_row_t **joined_row,
+                                                         std::list<exp_tree_data_src_t *> *data_src_lst);
                                                          
 bool 
 sql_evaluate_conditional_exp_tree (sql_exptree_t *sql_exptree);

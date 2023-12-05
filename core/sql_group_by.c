@@ -114,7 +114,7 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                                                                                 gqp_col->sql_tree, 
                                                                                 ctable_val, 
                                                                                 tindex,
-                                                                                &qep->joined_row_tmplate);                
+                                                                                &qep->joined_row_tmplate, qep->data_src_lst);                
                 if (!rc) {
 
                     printf ("Error : Group by column %s could not be resolved against table %s\n",

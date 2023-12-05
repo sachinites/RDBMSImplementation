@@ -43,7 +43,7 @@ LMT  -> $  |  limit <integer>
 
 
 qep_struct_t qep;
-char *L_alias_name = NULL;
+static char *L_alias_name = NULL;
 
 static parse_rc_t LMT();
 static parse_rc_t ORDER_BY();
@@ -411,7 +411,8 @@ select_query_parser () {
     parse_init();
 
     memset (&qep, 0, sizeof (qep));
-
+    qep.query_type = SQL_SELECT_Q;
+    
     /* consume 'select' keyword */
     token_code = cyylex ();
     assert (token_code == SQL_SELECT_Q);

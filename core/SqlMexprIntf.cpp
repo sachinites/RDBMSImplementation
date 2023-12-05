@@ -314,7 +314,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
                 sql_get_opnd_variable_name(node).c_str(), ctable_val->table_name);
             return false;
         }
-        data_src = (exp_tree_data_src_t *)calloc(1, sizeof(exp_tree_data_src_t));
+        data_src = (exp_tree_data_src_t *)calloc(1, sizeof(exp_tree_data_src_t)); 
         qep->data_src_lst->push_back (data_src);
         data_src->table_index = tindex;
         data_src->schema_rec = schema_rec;
@@ -333,11 +333,12 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
 
 bool 
 sql_resolve_exptree_against_table ( std::unordered_map<std::string, std::string> *map,
-                                                            BPlusTree_t *tcatalog,
+                                                           BPlusTree_t *tcatalog,
                                                            sql_exptree_t *sql_exptree, 
-                                                           ctable_val_t * ctable_val, 
+                                                           ctable_val_t *ctable_val, 
                                                            int table_id, 
-                                                           joined_row_t **joined_row) {
+                                                           joined_row_t **joined_row,
+                                                           std::list<exp_tree_data_src_t *> *data_src_lst) {
 
     BPluskey_t bpkey;
     MexprNode *node;
@@ -384,6 +385,7 @@ sql_resolve_exptree_against_table ( std::unordered_map<std::string, std::string>
                 continue;
         }
         data_src = (exp_tree_data_src_t *)calloc(1, sizeof(exp_tree_data_src_t));
+        data_src_lst->push_back(data_src);
         data_src->table_index = table_id,
         data_src->schema_rec = schema_rec;
         data_src->joined_row = joined_row;
