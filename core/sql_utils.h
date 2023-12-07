@@ -85,4 +85,7 @@ sql_read_interval_values (char *string_fmt,
 void 
 sql_select_flush_computed_values (qep_struct_t *qep);
 
+bool 
+sql_is_dtype_compatible (sql_dtype_t expected_dtype, sql_dtype_t computed_dtype) ;
+
 #endif 

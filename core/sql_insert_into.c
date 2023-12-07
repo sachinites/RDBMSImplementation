@@ -6,6 +6,7 @@
 #include <string.h>
 #include <string>
 #include <assert.h>
+#include "sql_utils.h"
 #include "sql_insert_into.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "Catalog.h"
@@ -78,7 +79,7 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
         bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
         rec = (schema_rec_t *) BPlusTree_Query_Key (schema_table, &bpkey);
 
-        if (rec->dtype != idata->sql_values[i].dtype) {
+        if (!sql_is_dtype_compatible (rec->dtype, idata->sql_values[i].dtype)) {
 
             printf ("Error : %dth Data Type Mis-Match, Expexted %s, Provided %s for col name %s\n", 
                         i, sql_dtype_str (rec->dtype),  

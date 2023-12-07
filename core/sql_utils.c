@@ -171,7 +171,7 @@ parser_split_table_column_name ( std::unordered_map<std::string, std::string> *m
     }
     else {
         /* str1 should be table alias name */
-        std::string table_name = (*map)[std::string (str1)];
+        std::string table_name = map ? (*map)[std::string (str1)] : "";
         strncpy (table_name_out, table_name.c_str(), SQL_TABLE_NAME_MAX_SIZE);
     }
     strncpy (col_name_out, str2, SQL_COLUMN_NAME_MAX_SIZE);
@@ -264,4 +264,13 @@ sql_select_flush_computed_values (qep_struct_t *qep) {
             sqp_col->aggregator = NULL;
         }
     }
+}
+
+bool 
+sql_is_dtype_compatible (sql_dtype_t expected_dtype, sql_dtype_t computed_dtype) {
+
+    if (expected_dtype == computed_dtype) return true;
+    if (expected_dtype == SQL_DOUBLE && computed_dtype == SQL_INT) return true;
+    if (expected_dtype == SQL_INT && computed_dtype == SQL_DOUBLE) return true;
+    return false;  
 }

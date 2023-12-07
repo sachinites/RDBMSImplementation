@@ -173,8 +173,16 @@ lex_set_scan_buffer (const char *buffer) {
     return SQL_DROP_TABLE_Q;
 }
 
+"set" {
+    return SQL_SET;
+}
+
 "delete" {
     return SQL_DELETE_Q;
+}
+
+"update" {
+    return SQL_UPDATE_Q;
 }
 
 "varchar" {
@@ -185,7 +193,7 @@ lex_set_scan_buffer (const char *buffer) {
     return SQL_INT;
 }
 
-"decimal" {
+decimal|double {
     return SQL_DOUBLE;
 }
 

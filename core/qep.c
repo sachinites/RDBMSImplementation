@@ -14,6 +14,7 @@
 #include "sql_io.h"
 #include "sql_utils.h"
 #include "sql_group_by.h"
+#include "sql_update.h"
 #include "sql_order_by.h"
 #include "SqlMexprIntf.h"
 #include "../c-hashtable/hashtable.h"
@@ -326,6 +327,9 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     rc = sql_query_initialize_orderby_clause (qep, tcatalog) ;
     if (!rc) return rc;
     
+    rc = sql_query_initialize_update_query (qep, tcatalog);
+    if (!rc) return rc;
+
     /* initialize other variables*/
     qep->is_join_started = false;
     qep->is_join_finished = false;
@@ -619,6 +623,9 @@ sql_execute_qep (qep_struct_t *qep) {
             break;
         case SQL_DELETE_Q:
             sql_process_delete_query (qep);
+            break;
+        case SQL_UPDATE_Q:
+            sql_process_update_query (qep);
             break;
         default:
             printf ("Error : Could not identify Query type\n");

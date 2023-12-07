@@ -14,6 +14,7 @@ extern parse_rc_t select_query_parser () ;
 extern parse_rc_t create_query_parser () ;
 extern parse_rc_t insert_into_query_parser () ;
 extern parse_rc_t delete_query_parser () ;
+extern parse_rc_t update_query_parser () ;
 
 extern void sql_show_table_catalog (BPlusTree_t *TableCatalog);
 
@@ -111,6 +112,14 @@ main (int argc, char **argv) {
                 qep_deinit (&qep);
             break;
 
+            case SQL_UPDATE_Q:
+                yyrewind(1);
+                err = update_query_parser();
+                if (err == PARSE_SUCCESS) {
+                    sql_execute_qep (&qep);
+                }
+                qep_deinit (&qep);
+                break;
 
             case SQL_SHOW_DB_TABLES:
                 sql_show_table_catalog (NULL);
