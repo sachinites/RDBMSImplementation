@@ -84,7 +84,7 @@ sql_update_record (void *record, schema_rec_t *schema_rec, dtype_value_t dtype_v
             break;
 
         case SQL_IPV4_ADDR:
-            memcpy ((char *)record + offset, &dtype_value.u.ipv4, size);
+            memcpy ((char *)record + offset, &dtype_value.u.ipv4.ipv4_addr_int, size);
             break;
 
         case SQL_INTERVAL:
