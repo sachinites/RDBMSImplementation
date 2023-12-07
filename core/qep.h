@@ -103,6 +103,19 @@ typedef struct qep_struct_ {
 
     struct {
 
+        int n;
+        struct {
+
+            char col_name[SQL_COLUMN_NAME_MAX_SIZE]; // Read from parser
+            schema_rec_t *schema_rec;   /* Schema record of this column*/
+            sql_exptree_t *value_exptree;   /* Expression Tree of the value expression for this column, init by the parser*/
+
+        } upd_colmns[SQL_MAX_COLS_IN_UPDATE_LIST];
+
+    } update;
+
+    struct {
+
         bool distinct;
         qp_col_t *col;
 
