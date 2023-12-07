@@ -98,12 +98,6 @@ COL_ASSIGN() {
 
     qep.update.upd_colmns[qep.update.n].value_exptree = sql_create_exp_tree_compute();
 
-    if (!qep.update.upd_colmns[qep.update.n].value_exptree) {
-        printf ("Error : Could not build Update Column Value Expression Tree for Column %s\n", 
-                    qep.update.upd_colmns[qep.update.n].col_name);
-        RETURN_PARSE_ERROR;
-    }
-
     RETURN_PARSE_SUCCESS;
 }
 
@@ -144,7 +138,14 @@ COL_ASSIGN_LIST() {
     err = COL_ASSIGN();
 
     if (err == PARSE_ERR) {
-        RETURN_PARSE_ERROR;
+
+        if (!qep.update.upd_colmns[qep.update.n].value_exptree) {
+            
+            printf ("Error : Could not build Update Column Value Expression Tree for Column %s\n", 
+                        qep.update.upd_colmns[qep.update.n].col_name);
+            RETURN_PARSE_ERROR;
+        }
+
     }
 
     qep.update.n++;
