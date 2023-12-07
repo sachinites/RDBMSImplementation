@@ -732,6 +732,16 @@ qep_deinit (qep_struct_t *qep) {
     free (qep->titer);
     qep->titer = NULL;
 
+    /* Free update query resources*/
+    if (qep->update.n) {
+
+        for (i = 0; i < qep->update.n; i++) {
+            sql_destroy_exp_tree (qep->update.upd_colmns[i].value_exptree);
+            qep->update.upd_colmns[i].value_exptree = NULL;
+        }
+        qep->update.n = 0;
+    }
+
     if (qep->joined_row_tmplate) {
         free (qep->joined_row_tmplate->key_array);
         free (qep->joined_row_tmplate->rec_array);
