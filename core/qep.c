@@ -736,8 +736,10 @@ qep_deinit (qep_struct_t *qep) {
     if (qep->update.n) {
 
         for (i = 0; i < qep->update.n; i++) {
-            sql_destroy_exp_tree (qep->update.upd_colmns[i].value_exptree);
-            qep->update.upd_colmns[i].value_exptree = NULL;
+            if (qep->update.upd_colmns[i].value_exptree) {
+                sql_destroy_exp_tree (qep->update.upd_colmns[i].value_exptree);
+                qep->update.upd_colmns[i].value_exptree = NULL;
+            }
         }
         qep->update.n = 0;
     }
