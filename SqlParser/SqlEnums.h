@@ -21,6 +21,7 @@ typedef enum sql_query_type_{
     SQL_CREATE_Q,
     SQL_DELETE_Q,
     SQL_INSERT_Q ,
+    SQL_DROP_TABLE_Q,
     SQL_SHOW_CATALOG_Q,
     SQL_UNSUPPORTED_Q
 
@@ -49,6 +50,7 @@ typedef enum sql_keywords_ {
     SQL_NOT_NULL,
     SQL_SELECT,
     SQL_AS,
+    SQL_SET,
     SQL_KEYWORD_MAX
     
 } sql_keywords_t;

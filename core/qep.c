@@ -14,22 +14,28 @@
 #include "sql_io.h"
 #include "sql_utils.h"
 #include "sql_group_by.h"
+#include "sql_update.h"
 #include "sql_order_by.h"
 #include "SqlMexprIntf.h"
 #include "../c-hashtable/hashtable.h"
 #include "../c-hashtable/hashtable_itr.h"
 
 extern BPlusTree_t TableCatalogDef;
+extern void 
+sql_process_delete_query (qep_struct_t *qep);
 
-static void 
+void 
 table_iterators_init (qep_struct_t *qep,
                                 table_iterators_t **_titer) {
 
     int i;
 
-    (*_titer) = (table_iterators_t *)calloc (1, 
+    if (*_titer == NULL) {
+
+        (*_titer) = (table_iterators_t *)calloc (1, 
                         sizeof (table_iterators_t) + 
                         (sizeof (table_iter_data_t) * qep->join.table_cnt));
+    }
     
     table_iterators_t *titer = (*_titer);
 
@@ -148,7 +154,8 @@ sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                         tcatalog,
                         qep->where.exptree_per_table[i],
                         qep->join.tables[i].ctable_val, i, 
-                        &qep->joined_row_tmplate)) {
+                        &qep->joined_row_tmplate,
+                        qep->data_src_lst)) {
 
             printf("Error : Failed to resolve per table Where Expression Tree\n");
             return false;
@@ -320,6 +327,9 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     rc = sql_query_initialize_orderby_clause (qep, tcatalog) ;
     if (!rc) return rc;
     
+    rc = sql_query_initialize_update_query (qep, tcatalog);
+    if (!rc) return rc;
+
     /* initialize other variables*/
     qep->is_join_started = false;
     qep->is_join_finished = false;
@@ -330,6 +340,7 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     /* Initialize Joined Row*/
     joined_row_t *joined_row_tmplate = qep->joined_row_tmplate;
     joined_row_tmplate->size = qep->join.table_cnt;
+    joined_row_tmplate->key_array = (BPluskey_t **) calloc (qep->join.table_cnt, sizeof (BPluskey_t *));
     joined_row_tmplate->rec_array = (void **) calloc (qep->join.table_cnt, sizeof (void *));
     joined_row_tmplate->schema_table_array = (BPlusTree_t **)
         calloc (qep->join.table_cnt, sizeof (BPlusTree_t *));
@@ -351,6 +362,7 @@ table_iterators_first (qep_struct_t *qep_struct,
 
         bool rc;
         void *rec = NULL;
+        BPluskey_t *bp_key;
 
         if (table_id < 0) return;
 
@@ -359,7 +371,8 @@ table_iterators_first (qep_struct_t *qep_struct,
             rec = BPlusTree_get_next_record(
                         titer->table_iter_data[table_id].ctable_val->rdbms_table,
                         &titer->table_iter_data[table_id].bpnode,
-                        &titer->table_iter_data[table_id].index);
+                        &titer->table_iter_data[table_id].index,
+                        &bp_key);
 
             /* No need to scan further*/
             if (!rec) {
@@ -367,6 +380,7 @@ table_iterators_first (qep_struct_t *qep_struct,
                 return;
             }
 
+            qep_struct->joined_row_tmplate->key_array[table_id] = bp_key;
             qep_struct->joined_row_tmplate->rec_array[table_id] = rec;
 
             rc = sql_evaluate_conditional_exp_tree (
@@ -384,6 +398,7 @@ table_iterators_next (qep_struct_t *qep_struct,
 
     bool rc;
     void *rec = NULL;
+    BPluskey_t *bp_key;
 
     if (table_id < 0) return ;
 
@@ -392,10 +407,12 @@ table_iterators_next (qep_struct_t *qep_struct,
         rec = BPlusTree_get_next_record(
                     titer->table_iter_data[table_id].ctable_val->rdbms_table,
                     &titer->table_iter_data[table_id].bpnode,
-                    &titer->table_iter_data[table_id].index);
+                    &titer->table_iter_data[table_id].index,
+                    &bp_key);
 
         if (!rec) break;
 
+        qep_struct->joined_row_tmplate->key_array[table_id] = bp_key;
         qep_struct->joined_row_tmplate->rec_array[table_id] = rec;
 
         rc = sql_evaluate_conditional_exp_tree (
@@ -408,6 +425,7 @@ table_iterators_next (qep_struct_t *qep_struct,
             return;
     }
     else {
+        qep_struct->joined_row_tmplate->key_array[table_id] = NULL;
         qep_struct->joined_row_tmplate->rec_array[table_id] = NULL;
         table_iterators_next(qep_struct, titer, table_id - 1);
 
@@ -424,10 +442,12 @@ table_iterators_next (qep_struct_t *qep_struct,
             rec = BPlusTree_get_next_record(
                             titer->table_iter_data[table_id].ctable_val->rdbms_table,
                             &titer->table_iter_data[table_id].bpnode,
-                            &titer->table_iter_data[table_id].index);
+                            &titer->table_iter_data[table_id].index,
+                            &bp_key);
 
             if (!rec) break;
 
+            qep_struct->joined_row_tmplate->key_array[table_id] = bp_key;
             qep_struct->joined_row_tmplate->rec_array[table_id] = rec;
 
             rc = sql_evaluate_conditional_exp_tree (
@@ -435,11 +455,12 @@ table_iterators_next (qep_struct_t *qep_struct,
 
         } while (!(rc) && titer->table_iter_data[table_id].bpnode);
 
+        qep_struct->joined_row_tmplate->key_array[table_id] = bp_key;
         qep_struct->joined_row_tmplate->rec_array[table_id] = rec;
     }
 }
 
-static bool
+bool
 qep_execute_join (qep_struct_t *qep_struct) {
 
    if (!qep_struct->is_join_started) {
@@ -467,7 +488,7 @@ qep_execute_join_predicate (qep_struct_t *qep_struct, joined_row_t *joined_row) 
 
 
 void 
-sql_execute_qep (qep_struct_t *qep) {
+sql_process_select_query (qep_struct_t *qep) {
 
     int i;
     int row_no = 0;
@@ -587,9 +608,7 @@ sql_execute_qep (qep_struct_t *qep) {
 }
 
 void 
-sql_process_select_query (qep_struct_t *qep) {
-
-    int i;
+sql_execute_qep (qep_struct_t *qep) {
 
     if (!sql_query_init_execution_plan (qep, &TableCatalogDef)) {
 
@@ -597,7 +616,21 @@ sql_process_select_query (qep_struct_t *qep) {
         return;
     }
 
-    sql_execute_qep (qep);
+    switch (qep->query_type) {
+
+        case SQL_SELECT_Q:
+            sql_process_select_query (qep);
+            break;
+        case SQL_DELETE_Q:
+            sql_process_delete_query (qep);
+            break;
+        case SQL_UPDATE_Q:
+            sql_process_update_query (qep);
+            break;
+        default:
+            printf ("Error : Could not identify Query type\n");
+            break;
+    }
 }
 
 void 
@@ -650,6 +683,7 @@ qep_deinit (qep_struct_t *qep) {
 
                     joined_row = record_lst->front();
                     record_lst->pop_front();
+                    free(joined_row->key_array);
                     free(joined_row->rec_array);
                     free(joined_row); 
                 }
@@ -698,7 +732,20 @@ qep_deinit (qep_struct_t *qep) {
     free (qep->titer);
     qep->titer = NULL;
 
+    /* Free update query resources*/
+    if (qep->update.n) {
+
+        for (i = 0; i < qep->update.n; i++) {
+            if (qep->update.upd_colmns[i].value_exptree) {
+                sql_destroy_exp_tree (qep->update.upd_colmns[i].value_exptree);
+                qep->update.upd_colmns[i].value_exptree = NULL;
+            }
+        }
+        qep->update.n = 0;
+    }
+
     if (qep->joined_row_tmplate) {
+        free (qep->joined_row_tmplate->key_array);
         free (qep->joined_row_tmplate->rec_array);
         free(qep->joined_row_tmplate->schema_table_array);
         free(qep->joined_row_tmplate->table_id_array);

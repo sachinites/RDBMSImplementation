@@ -37,10 +37,6 @@ equalkeys(void *k1, void *k2)
     return (0 == memcmp(k1,k2, len1));
 }
 
-int
-BPlusTree_key_format_fn_default (BPluskey_t *key, unsigned char *obuff, int buff_size) ;
-int
-BPlusTree_value_format_fn_default (void *value, unsigned char *obuff, int buff_size);
 
 key_mdata_t *
 sql_construct_table_key_mdata (sql_create_data_t *cdata, int *key_mdata_size);
@@ -80,5 +76,8 @@ sql_read_interval_values (char *string_fmt,
                                             int *a, int *b);
 void 
 sql_select_flush_computed_values (qep_struct_t *qep);
+
+bool 
+sql_is_dtype_compatible (sql_dtype_t expected_dtype, sql_dtype_t computed_dtype) ;
 
 #endif 

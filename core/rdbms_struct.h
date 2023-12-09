@@ -41,6 +41,7 @@ typedef struct joined_row_ {
     // table_cnt when where is enforced on Joined Row
     int size;  
     BPlusTree_t **schema_table_array;
+    BPluskey_t **key_array;
     void **rec_array;
     int *table_id_array;    
 

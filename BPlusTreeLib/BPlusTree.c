@@ -355,7 +355,6 @@ void Destroy(BPlusTreeNode* Cur, BPlusTree_value_free_fn free_fn) {
 		for (i = 0; i < Cur->key_num; i++)
 			Destroy(Cur->child[i], free_fn);
 	}
-	free(Cur->key->key);
 	free(Cur);
 }
 
@@ -467,7 +466,7 @@ bool BPlusTree_Modify(BPlusTree_t *tree,
 }
 
 /** Interface: delete value on the given key */
-void BPlusTree_Delete(BPlusTree_t *tree,
+bool BPlusTree_Delete(BPlusTree_t *tree,
 			 BPluskey_t *key) {
 
 	unsigned char key_output_buffer [128];
@@ -475,8 +474,8 @@ void BPlusTree_Delete(BPlusTree_t *tree,
 
 	BPlusTreeNode* Leaf = Find(tree, key, false);
 	int i = Binary_Search(tree, Leaf, key);
-	if (tree->comp_fn (&Leaf->key[i], key, tree->key_mdata, tree->key_mdata_size) != 0) return; // don't have this key
-	if (tree->key_fmt_fn && tree->value_fmt_fn) {
+	if (tree->comp_fn (&Leaf->key[i], key, tree->key_mdata, tree->key_mdata_size) != 0) return false; // don't have this key
+	if (0 && tree->key_fmt_fn && tree->value_fmt_fn) {
 		tree->key_fmt_fn (key, key_output_buffer , sizeof (key_output_buffer ));
 		tree->value_fmt_fn ((void *)Leaf->child[i], value_output_buffer, sizeof (value_output_buffer) );
 		printf("Delete: key = %s, original value = %s\n", 
@@ -486,6 +485,7 @@ void BPlusTree_Delete(BPlusTree_t *tree,
 	void *key_to_free = Leaf->key[i].key;
    	Delete(tree, Leaf, key); 
 	free(key_to_free);
+	return true;
 }
 
 /** Interface: Called to destroy the B+tree */
@@ -504,10 +504,14 @@ void BPlusTree_SetMaxChildNumber(BPlusTree_t *tree, int number) {
 }
 
 void *
-BPlusTree_get_next_record (BPlusTree_t *bptree, BPlusTreeNode **bnode, int *index) {
+BPlusTree_get_next_record (BPlusTree_t *bptree, 
+												BPlusTreeNode **bnode, int *index,
+												BPluskey_t **bpkey_out) {
 
 	BPluskey_t *_key;
 	void* _rec;
+
+	*bpkey_out = NULL;
 
 	if (!bptree || !bptree->Root) return NULL;
 
@@ -518,6 +522,7 @@ BPlusTree_get_next_record (BPlusTree_t *bptree, BPlusTreeNode **bnode, int *inde
 
 			*index = 0;
 			*bnode = _bnode;
+			*bpkey_out = _key;
 			return _bnode->child[*index];
 
 		}  BPTREE_ITERATE_ALL_RECORDS_END(bptree, _key, _rec)
@@ -529,6 +534,7 @@ BPlusTree_get_next_record (BPlusTree_t *bptree, BPlusTreeNode **bnode, int *inde
 	/* Subsequent fetch*/
 	(*index)++;
 	if (*index < (*bnode)->key_num) {
+		*bpkey_out = &((*bnode)->key[*index]);
 		return (*bnode)->child[*index];
 	}
 
@@ -536,6 +542,7 @@ BPlusTree_get_next_record (BPlusTree_t *bptree, BPlusTreeNode **bnode, int *inde
 	*bnode = (*bnode)->next;
 
 	if (*bnode) {
+		*bpkey_out = &((*bnode)->key[*index]);
 		return (*bnode)->child[*index];
 	}
 

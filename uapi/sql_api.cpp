@@ -28,6 +28,6 @@ sql_select_exec (std::string sql_select_query,
     Parser_stack_reset();
     qep.select.app_data = app_data;
     qep.select.sql_record_reader = sql_record_reader;
-    sql_process_select_query (&qep);
+    sql_execute_qep (&qep);
     qep_deinit(&qep);
 }

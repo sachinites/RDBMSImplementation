@@ -75,7 +75,7 @@ extern bool  BPlusTree_Modify(
 			 BPlusTree_t *,
 			 BPluskey_t * key, void* value);
 
-extern void BPlusTree_Delete(
+extern bool BPlusTree_Delete(
 			 BPlusTree_t *,
 			 BPluskey_t *);
 
@@ -108,7 +108,7 @@ extern void BPlusTree_Delete(
 		}}
 
 void *
-BPlusTree_get_next_record (BPlusTree_t *, BPlusTreeNode **, int *);
+BPlusTree_get_next_record (BPlusTree_t *, BPlusTreeNode **, int *, BPluskey_t **);
 
 #endif
 

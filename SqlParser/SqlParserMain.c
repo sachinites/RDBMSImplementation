@@ -6,19 +6,21 @@
 #include "SqlEnums.h"
 #include "../core/sql_const.h"
 #include "../core/sql_create.h"
+#include "../core/sql_delete.h"
 #include "../core/qep.h"
 #include "../core/sql_insert_into.h"
 
 extern parse_rc_t select_query_parser () ;
 extern parse_rc_t create_query_parser () ;
 extern parse_rc_t insert_into_query_parser () ;
+extern parse_rc_t delete_query_parser () ;
+extern parse_rc_t update_query_parser () ;
 
 extern void sql_show_table_catalog (BPlusTree_t *TableCatalog);
 
 extern sql_create_data_t cdata; 
 extern qep_struct_t qep;
 extern sql_insert_into_data_t idata; 
-void sql_drop_table (char *table_name) ;
 
 int 
 main (int argc, char **argv) {
@@ -52,7 +54,7 @@ main (int argc, char **argv) {
                 yyrewind(1);
                 err = select_query_parser ();
                 if (err == PARSE_SUCCESS) {
-                    sql_process_select_query (&qep);
+                    sql_execute_qep (&qep);
                 }
                 qep_deinit (&qep);
                 break;
@@ -77,7 +79,7 @@ main (int argc, char **argv) {
                 sql_insert_into_data_destroy(&idata);
                 break; 
 
-            case SQL_DELETE_Q:
+            case SQL_DROP_TABLE_Q:
 
                 {
                     char *table_name;
@@ -100,6 +102,24 @@ main (int argc, char **argv) {
                     sql_drop_table (table_name);
                     break;
                 }
+
+            case SQL_DELETE_Q:
+                yyrewind(1);
+                err = delete_query_parser();
+                if (err == PARSE_SUCCESS) {
+                    sql_execute_qep (&qep);
+                }
+                qep_deinit (&qep);
+            break;
+
+            case SQL_UPDATE_Q:
+                yyrewind(1);
+                err = update_query_parser();
+                if (err == PARSE_SUCCESS) {
+                    sql_execute_qep (&qep);
+                }
+                qep_deinit (&qep);
+                break;
 
             case SQL_SHOW_DB_TABLES:
                 sql_show_table_catalog (NULL);

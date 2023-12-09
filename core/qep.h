@@ -50,6 +50,8 @@ typedef struct table_iterators_ {
 
 typedef struct qep_struct_ {
     
+    sql_query_type_t query_type;
+
     struct {
 
         int table_cnt;
@@ -101,6 +103,19 @@ typedef struct qep_struct_ {
 
     struct {
 
+        int n;
+        struct {
+
+            char col_name[SQL_COLUMN_NAME_MAX_SIZE]; // Read from parser
+            schema_rec_t *schema_rec;   /* Schema record of this column*/
+            sql_exptree_t *value_exptree;   /* Expression Tree of the value expression for this column, init by the parser*/
+
+        } upd_colmns[SQL_MAX_COLS_IN_UPDATE_LIST];
+
+    } update;
+
+    struct {
+
         bool distinct;
         qp_col_t *col;
 
@@ -133,7 +148,7 @@ typedef struct qep_struct_ {
 
 
 void
-sql_execute_qep (qep_struct_t *qep);
+sql_process_select_query (qep_struct_t *qep);
 
 void 
 qep_deinit (qep_struct_t *qep);
@@ -142,6 +157,13 @@ bool
 qep_struct_record_table (qep_struct_t *qep,  char *table_name);
 
 void 
-sql_process_select_query (qep_struct_t *qep) ;
+sql_execute_qep (qep_struct_t *qep) ;
+
+bool
+qep_execute_join (qep_struct_t *qep_struct);
+
+void 
+table_iterators_init (qep_struct_t *qep,
+                                table_iterators_t **_titer);
 
 #endif 
