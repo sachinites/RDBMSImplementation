@@ -19,10 +19,11 @@ void BPlusTree_init (BPlusTree_t *tree,
 							BPlusTree_key_format_fn key_fmt_fn,
 							BPlusTree_value_format_fn value_fmt_fn,
 							uint16_t MaxChildNumber, // not used
-							BPlusTree_value_free_fn free_fn
+							BPlusTree_value_free_fn free_fn,
+							key_mdata_t *key_mdata,
+							int key_mdata_units
 							) {
 
-	BPlusTree_Destroy(tree);
 	tree->Root = New_BPlusTreeNode();
 	tree->Root->isRoot = true;
 	tree->Root->isLeaf = true;
@@ -31,6 +32,8 @@ void BPlusTree_init (BPlusTree_t *tree,
 	tree->value_fmt_fn = value_fmt_fn;
 	tree->MaxChildNumber = MAX_CHILD_NUMBER;
 	tree->free_fn = free_fn;
+	tree->key_mdata = key_mdata;
+	tree->key_mdata_size = key_mdata_units;
 }
 
 /** Binary search to find the biggest child l that Cur->key[l] <= key */
@@ -448,7 +451,7 @@ void BPlusTree_Query_Range(
 }
 
 /** Interface: modify value on the given key */
-void BPlusTree_Modify(BPlusTree_t *tree,
+bool BPlusTree_Modify(BPlusTree_t *tree,
 			 BPluskey_t * key, void* value) {
 
 	unsigned char key_output_buffer [128];
@@ -457,17 +460,10 @@ void BPlusTree_Modify(BPlusTree_t *tree,
 
 	BPlusTreeNode* Leaf = Find(tree, key, false);
 	int i = Binary_Search(tree, Leaf, key);
-	if (tree->comp_fn (&Leaf->key[i], key, tree->key_mdata, tree->key_mdata_size) != 0) return; // don't have this key
-
-	tree->key_fmt_fn (key, key_output_buffer, sizeof(key_output_buffer) );
-	tree->value_fmt_fn ( (void *) Leaf->child[i] , orig_value_output_buffer, sizeof (orig_value_output_buffer));
-	tree->value_fmt_fn ( (void *) value , new_value_output_buffer, sizeof (new_value_output_buffer));	
-	printf("Modify: key = %s, original value = %s, new value = %s\n", 
-		key_output_buffer,
-		orig_value_output_buffer,
-		new_value_output_buffer);
+	if (tree->comp_fn (&Leaf->key[i], key, tree->key_mdata, tree->key_mdata_size) != 0) return false; // don't have this key
 	free(Leaf->child[i]);
 	Leaf->child[i] = value;
+	return true;
 }
 
 /** Interface: delete value on the given key */

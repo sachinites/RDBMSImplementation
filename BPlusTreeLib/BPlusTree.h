@@ -9,7 +9,12 @@
 * This is downloaded from https://github.com/parachvte/B-Plus-Tree
 */
 
-typedef struct key_mdata_ key_mdata_t ;
+typedef struct  key_mdata_ {
+
+    int dtype;
+    int size;
+    
+} key_mdata_t ;
 
 typedef struct BPluskey {
 
@@ -51,7 +56,10 @@ extern void BPlusTree_init (BPlusTree_t *,
 							BPlusTree_key_com_fn, 
 							BPlusTree_key_format_fn,
 							BPlusTree_value_format_fn, uint16_t MaxChildNumber,
-							BPlusTree_value_free_fn free_fn);
+							BPlusTree_value_free_fn free_fn,
+							key_mdata_t *key_mdata,
+							int key_mdata_units
+							);
 
 extern void BPlusTree_SetMaxChildNumber(BPlusTree_t *, int);
 extern void BPlusTree_Destroy(BPlusTree_t *);
@@ -63,7 +71,7 @@ extern void* BPlusTree_Query_Key(BPlusTree_t *tree,
 extern void BPlusTree_Query_Range(BPlusTree_t *, 
 								BPluskey_t *, BPluskey_t *);
 
-extern void  BPlusTree_Modify(
+extern bool  BPlusTree_Modify(
 			 BPlusTree_t *,
 			 BPluskey_t * key, void* value);
 
@@ -103,3 +111,4 @@ void *
 BPlusTree_get_next_record (BPlusTree_t *, BPlusTreeNode **, int *);
 
 #endif
+

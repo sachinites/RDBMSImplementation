@@ -37,10 +37,6 @@ equalkeys(void *k1, void *k2)
     return (0 == memcmp(k1,k2, len1));
 }
 
-
-int 
-rdbms_key_comp_fn (BPluskey_t *key_1, BPluskey_t *key_2, key_mdata_t *key_mdata, int size) ;
-
 int
 BPlusTree_key_format_fn_default (BPluskey_t *key, unsigned char *obuff, int buff_size) ;
 int

@@ -6,207 +6,238 @@
 #include <time.h>
 #include <stdint.h>
 #include "BPlusTree.h"
-#include "../core/rdbms_struct.h"
 
-unsigned char *
-tcp_ip_covert_ip_n_to_p(uint32_t ip_addr, 
-                                        unsigned char* output_buffer){
+typedef enum dtype_{
+	
+	DTYPE_STRING,
+	DTYPE_INT,
+	DTYPE_DOUBLE
 
-    memset(output_buffer, 0, 16);
-    ip_addr = htonl(ip_addr);
-    inet_ntop(AF_INET, &ip_addr, (char *)output_buffer, 16);
-    output_buffer[15] = '\0';
-    return output_buffer;
+} dtype_t;	
+
+static
+int bplus_tree_key_comp_fn( BPluskey_t *key_1, 
+												BPluskey_t *key_2, 
+												key_mdata_t *key_mdata, int size) {
+
+    int i , rc;
+    int dsize;
+    int offset = 0;
+
+    dtype_t dtype;
+
+    if (!key_1 || !key_1->key || !key_1->key_size) return 1;
+    if (!key_2 || !key_2->key || !key_2->key_size) return -1;
+
+    char *key1 = (char *)key_1->key;
+    char *key2 = (char *)key_2->key;
+
+    for (i = 0; i < size ; i++) {
+
+        dtype = (dtype_t)(key_mdata)[0].dtype;
+        dsize = (key_mdata)[0].size;
+
+        switch (dtype) {
+
+            case DTYPE_STRING:
+                rc = strncmp (key1 + offset, key2 + offset, dsize);
+                if (rc < 0) return 1;
+                if (rc > 0) return -1;
+                offset += dsize;
+                break;
+
+            case  DTYPE_INT:
+                {
+                    int *n1 = (int *)(key1 + offset);
+                    int *n2 = (int *)(key2 + offset);
+                    if (*n1 < *n2) return 1;
+                    if (*n1 > *n2) return -1;
+                    offset += dsize;
+                }
+                break;
+
+            case DTYPE_DOUBLE:
+              {
+                    double *n1 = (double *)(key1 + offset);
+                    double*n2 = (double *)(key2 + offset);
+                    if (*n1 < *n2) return 1;
+                    if (*n1 > *n2) return -1;
+                    offset += dsize;
+                }
+                break;
+
+            default:
+                break;
+        }
+    }
+    return 0;
 }
-
-uint32_t
-tcp_ip_covert_ip_p_to_n(unsigned char * ip_addr){
-
-    uint32_t binary_prefix = 0;
-    inet_pton(AF_INET, (const char *)ip_addr, &binary_prefix);
-    binary_prefix = htonl(binary_prefix);
-    return binary_prefix;
-}
-
-static int8_t 
-BplusTree_key_comp_fn_ip_addr (BPluskey_t *key1, BPluskey_t *key2, key_mdata_t *key_mdata, int size) {
-
-	if (!key1->key && key2->key) return 1;
-	if (key1->key && !key2->key) return -1;
-
-	uint32_t key1_ipaddr;
-	inet_pton (AF_INET, (const char *)key1->key, &key1_ipaddr);
-	key1_ipaddr = htonl (key1_ipaddr);
-
-	uint32_t key2_ipaddr;
-	inet_pton (AF_INET, (const char *)key2->key, &key2_ipaddr);
-	key2_ipaddr = htonl (key2_ipaddr);
-
-	return key2_ipaddr - key1_ipaddr;
-}
-
-static int8_t 
-BplusTree_key_comp_fn_default (BPluskey_t *key1, BPluskey_t *key2, key_mdata_t *key_mdata, int size) {
-
-	if (!key1->key && key2->key) return 1;
-	if (key1->key && !key2->key) return -1;
-
-	assert (key1->key_size == key2->key_size);
-
-	int rc = memcmp (key1->key, key2->key, key1->key_size);
-	if (rc < 0) return 1;
-	if (rc > 0 ) return -1;
-	return 0;
-}
-
-static int
-BPlusTree_key_format_fn_default (BPluskey_t *key, unsigned char *obuff, int buff_size) {
-
-	assert (key->key_size <= buff_size);
-	memset (obuff, 0, buff_size);
-	memcpy (obuff, key->key, key->key_size);
-	return  key->key_size;
-}
-
-static int
-BPlusTree_key_format_fn_ipv4_addr (BPluskey_t *key, unsigned char *obuff, int buff_size) {
-
-	assert (key->key_size <= buff_size);
-	memset (obuff, 0, buff_size);
-	inet_ntop (AF_INET, key->key, obuff, buff_size);
-	return  16;
-}
-
-
-static int
-BPlusTree_value_format_fn_default (void *value, unsigned char *obuff, int buff_size) {
-
-	memset (obuff, 0, buff_size);
-	strncpy ( (char *)obuff, (char *)value, buff_size);
-	return 0;
-}
-
-static int
-BPlusTree_value_format_fn_ipv4_addr (void *value, unsigned char *obuff, int buff_size) {
-	memset (obuff, 0, buff_size);
-	inet_ntop (AF_INET, value, obuff, buff_size);
-	return  16;
-}
-
-
-extern int 
-rdbms_key_comp_fn (BPluskey_t *key_1, BPluskey_t *key_2, key_mdata_t *key_mdata, int size) ;
 
 int 
 main (int argc, char **argv) {
 
 	int len;
 	int choice;
-	uint32_t ip_addr_n;
-	char *val_buff ;
-	BPluskey_t bkey;
-	unsigned char key[64];
-	unsigned char value[128];
+	char discard_buff[2];
 	BPlusTree_t tree;
 	memset (&tree, 0, sizeof (tree));
+
+    static key_mdata_t key_mdata[] = {  {DTYPE_STRING, 32} };
+
 	BPlusTree_init (&tree, 
-			rdbms_key_comp_fn,
-			BPlusTree_key_format_fn_ipv4_addr, 
-			BPlusTree_value_format_fn_ipv4_addr,
-			4, free);
+			bplus_tree_key_comp_fn,
+			0, 0,
+			4, free,
+			key_mdata,
+			(int) (sizeof(key_mdata) / sizeof (key_mdata[0])));
 
-    static key_mdata_t key_mdata[] = {  {SQL_IPV4_ADDR, 1} };
-    tree.key_mdata = key_mdata;
-    tree.key_mdata_size = 1;
-
+	/* Lets insert records in B+ Tree as follows : 
+		<country name>    |     <capital city name>
+		where country name is a key and capital city name is a record 
+	*/
 	while (1) {
 
 		printf ("1. Insert\n");
 		printf ("2. Delete\n");
 		printf ("3. Update\n");
-		printf ("4. Range\n");
-		printf ("5. Read\n");
-		printf ("6. Destroy\n");
+		printf ("4. Read\n");
+		printf ("5. Destroy\n");
+		printf ("6. Iterate over all Records\n");
+		printf ("7. exit\n");
 
 		scanf ("%d", &choice);
-		fgets ( (char *)key, sizeof(key), stdin);
+
+		// read \n and discard it
+		fgets ( (char *)discard_buff, sizeof(discard_buff), stdin);
 		fflush (stdin);
 
 		switch (choice) {
 
 			case 1:
+			{
+				BPluskey_t bpkey;
+				/* Take a new key buffer from heap, because this buffer will
+					going to be cache by B+ Tree internally */
+				char *key_buffer = (char *)calloc (1, 32);
+				/* Setup the key*/
+				bpkey.key = (void *)key_buffer;
+				bpkey.key_size = 32;
+				/* Take Key Input from the user*/
 				printf ("Insert Key : ");
-				memset (key, 0, sizeof (key));
-				fgets ( (char *)key, sizeof(key), stdin);
-				key[strcspn(key, "\n")] = '\0';
+				fgets ( key_buffer, bpkey.key_size, stdin);
+				 // Remove trailing newline
+				key_buffer[strcspn(key_buffer, "\n")] = '\0';
+				/* Setup the value*/
+				/* Take a new value buffer from heap, because this buffer will
+					going to be cache by B+ Tree internally */				
+				char *value_buffer = (char *)calloc (1, 32);
+				/* Take Value Input from the user*/
 				printf ("Insert Value : ");
-				memset (value, 0, sizeof (value));
-				fgets ( (char *)value, sizeof(value), stdin);
-				value[strcspn(value, "\n")] = '\0';
-				len =  4; //strlen ( (const char *)key);
-				bkey.key = (char *)calloc (1, len);
-				inet_pton (AF_INET, (const char *)key, (void *)bkey.key);
-				bkey.key_size = len;
-				len = 4; //strlen ( (const char *)value);
-				val_buff = (char *)calloc (1, len);
-				inet_pton (AF_INET, (const char *)value, (void *)val_buff );
-				BPlusTree_Insert (&tree, &bkey, (void *)val_buff);
-				break;
+				fgets ( value_buffer, 32, stdin);
+				 // Remove trailing newline
+				value_buffer[strcspn(value_buffer, "\n")] = '\0';
+				/* Insert the key value pair in the B+ Tree*/
+				BPlusTree_Insert (&tree, &bpkey, (void *)value_buffer);
+				// Nothing to free anything 
+			}
+			break;
+
 			case 2:
 				{
-				printf ("Insert Key : ");
-				memset (key, 0, sizeof (key));
-				fgets ( (char *)key, sizeof(key), stdin);
-				key[strcspn(key, "\n")] = '\0';
-				len =  4; //strlen ( (const char *)key);
-				inet_pton (AF_INET, (const char *)key, (void *)&ip_addr_n);
-				bkey.key = &ip_addr_n;
-				bkey.key_size = len;
-				BPlusTree_Delete (&tree, &bkey);
-				break;
+					BPluskey_t bpkey;
+					char key_buffer[32];
+					/* Setup the key*/
+					bpkey.key = (void *)key_buffer;
+					bpkey.key_size = sizeof (key_buffer);
+					/* Take Key Input from the user*/
+					printf ("Delete Key ? : ");
+					fgets ( key_buffer, bpkey.key_size, stdin);
+					// Remove trailing newline
+					key_buffer[strcspn(key_buffer, "\n")] = '\0';
+					/* Delete the record for this key */
+					BPlusTree_Delete (&tree, &bpkey);
 				}
-			case 4:
-				{
-				// Query on a range [l, r]
-				double start_time, end_time;
-				uint32_t ip_addr1, ip_addr2;
-				printf ("Insert Key1 : ");
-				memset (key, 0, sizeof (key));
-				fgets ( (char *)key, sizeof(key), stdin);
-				key[strcspn(key, "\n")] = '\0';
-				len =  4; //strlen ( (const char *)key);
-				inet_pton (AF_INET, (const char *)key, (void *)&ip_addr1);
-				bkey.key = &ip_addr1;
-				bkey.key_size = len;
-
-				printf ("Insert key2 : ");
-				BPluskey_t bkey2;
-				memset (key, 0, sizeof (key));
-				fgets ( (char *)key, sizeof(key), stdin);
-				key[strcspn(key, "\n")] = '\0';
-				len =  4; //strlen ( (const char *)key);
-				inet_pton (AF_INET, (const char *)key, (void *)&ip_addr2);
-				bkey2.key = &ip_addr2;
-				bkey2.key_size = len;
-
-				start_time = clock();
-				BPlusTree_Query_Range(&tree, &bkey, &bkey2);
-				end_time = clock();
-				printf("Query on a range, costs %lf s\n", (end_time - start_time) / CLOCKS_PER_SEC);
 				break;
+			
+			case 3:
+			{
+				BPluskey_t bpkey;
+				char key_buffer[32];
+				/* Setup the key*/
+				bpkey.key = (void *)key_buffer;
+				bpkey.key_size = sizeof(key_buffer);
+				/* Take Key Input from the user*/
+				printf ("Insert Key for Update ? : ");
+				fgets ( key_buffer, bpkey.key_size, stdin);
+				 // Remove trailing newline
+				key_buffer[strcspn(key_buffer, "\n")] = '\0';
+				char *old_val_buff = (char *)BPlusTree_Query_Key(&tree, &bpkey);
+				if (!old_val_buff) {
+					printf ("Key not found\n");
+					scanf("\n");
+					break;
+				}
+				printf ("Old Value = %s\n", (char *)old_val_buff);
+				/* Take Value Input from the user*/
+				char *new_val_buff = (char *)calloc (1, 32);
+				printf ("Insert new Value ? : ");
+				fgets (new_val_buff, 32, stdin);
+				 // Remove trailing newline
+				new_val_buff[strcspn(new_val_buff, "\n")] = '\0';	
+
+				/* It will free the old record value and put the new one*/
+				BPlusTree_Modify (&tree, &bpkey, (void *)new_val_buff);
 			}
+			break;
+
+		case 4:
+			{
+				BPluskey_t bpkey;
+				char key_buffer[32];
+				/* Setup the key*/
+				bpkey.key = (void *)key_buffer;
+				bpkey.key_size = sizeof(key_buffer);
+				/* Take Key Input from the user*/
+				printf ("Insert Key for Read ? : ");
+				fgets ( key_buffer, bpkey.key_size, stdin);
+				 // Remove trailing newline
+				key_buffer[strcspn(key_buffer, "\n")] = '\0';
+				char *val_buff = (char *)BPlusTree_Query_Key(&tree, &bpkey);
+				if (!val_buff) {
+					printf ("Key not found\n");
+					scanf("\n");
+					break;
+				}
+				printf ("Value = %s\n", (char *)val_buff);
+			}
+			break;
+
 		case 5:
-				printf ("Insert Query Key : ");
-				memset (key, 0, sizeof (key));
-				fgets ( (char *)key, sizeof(key), stdin);
-				key[strcspn(key, "\n")] = '\0';
-				len = 4; // strlen ( (const char *)key);
-				inet_pton (AF_INET, (const char *)key, (void *)&ip_addr_n);
-				bkey.key = &ip_addr_n;
-				bkey.key_size = len;
-				BPlusTree_Query_Key(&tree, &bkey);
-				break;
-		}
+			{
+				BPlusTree_Destroy (&tree);
+				printf ("Successfully Destroyed the B+ Tree\n");
+			}
+			break;
+
+		case 6:
+			{
+				BPluskey_t *bpkey; 
+				void *rec;
+
+				BPTREE_ITERATE_ALL_RECORDS_BEGIN((&tree), bpkey, rec) {
+
+					printf ("Key = %s, Value = %s\n", (char *)bpkey->key, (char *)rec);
+
+				} BPTREE_ITERATE_ALL_RECORDS_END((&tree), bpkey, rec) ;
+	
+			}
+			break;
+
+		deault:
+			exit(0);
+
+		} // switch ends 
+	
 	}
 	
 	return 0;

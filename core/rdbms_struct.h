@@ -15,13 +15,6 @@ typedef struct sql_exptree_ sql_exptree_t;
 class Dtype;
 class Aggregator;
 
-typedef struct  key_mdata_ {
-
-    sql_dtype_t dtype;
-    int size;
-    
-} key_mdata_t ;
-
 typedef struct list_node_ {
 
     void *data;

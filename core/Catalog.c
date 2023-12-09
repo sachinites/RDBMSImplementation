@@ -13,6 +13,10 @@
 
 /* Global Default Catalog Table, one per Database */
 BPlusTree_t TableCatalogDef;
+
+extern  int 
+rdbms_key_comp_fn (BPluskey_t *key_1, BPluskey_t *key_2, key_mdata_t *key_mdata, int size);
+
 static bool initialized = false;
 
 /* A fn used to free the 'value' of catalog table*/
@@ -56,24 +60,23 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) 
         catalog_table = &TableCatalogDef;
     }
 
-    if (!initialized) {
-        /* If this is the first table we are creating in a default DB, then initialize the catalog table. Catalog table is the collection of all tables in single DB along with their schema details*/
-        BPlusTree_init(catalog_table,
-                       rdbms_key_comp_fn,
-                       BPlusTree_key_format_fn_default,
-                       NULL,
-                       SQL_BTREE_MAX_CHILDREN_CATALOG_TABLE, 
-                       catalog_table_free_fn);
-
-        static key_mdata_t key_mdata[] = {  
+    static key_mdata_t key_mdata1[] = {  
                 {SQL_INT,  4},
                 {SQL_STRING, SQL_TABLE_NAME_MAX_SIZE} ,
                 {SQL_INT, 4},
                 {SQL_STRING, 32} ,
             };
 
-        catalog_table->key_mdata = key_mdata;
-        catalog_table->key_mdata_size = sizeof(key_mdata) / sizeof (key_mdata[0]);
+    if (!initialized) {
+        /* If this is the first table we are creating in a default DB, then initialize the catalog table. Catalog table is the collection of all tables in single DB along with their schema details*/
+        BPlusTree_init(catalog_table,
+                       rdbms_key_comp_fn,
+                       NULL,
+                       NULL,
+                       SQL_BTREE_MAX_CHILDREN_CATALOG_TABLE, 
+                       catalog_table_free_fn,
+                       key_mdata1, sizeof(key_mdata1) / sizeof (key_mdata1[0]));
+
         initialized = true;
     }
 
@@ -102,18 +105,17 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) 
      }
 
     /* Now create a Schema table for this new table. Schema table stores all the attributes and details of a RDBMS table. Every RDBMS table has a schema table*/
+    
+    static key_mdata_t key_mdata2[] = {{SQL_STRING, SQL_COLUMN_NAME_MAX_SIZE}};
 
     BPlusTree_t *schema_table = (BPlusTree_t *)calloc (1, sizeof (BPlusTree_t));
     BPlusTree_init (schema_table, 
                                rdbms_key_comp_fn,
-                               BPlusTree_key_format_fn_default , 
+                               NULL, 
                                NULL, 
                                SQL_BTREE_MAX_CHILDREN_SCHEMA_TABLE, 
-                               schema_table_record_free);
-
-    static key_mdata_t key_mdata[] = {{SQL_STRING, SQL_COLUMN_NAME_MAX_SIZE}};
-    schema_table->key_mdata = key_mdata;
-    schema_table->key_mdata_size = 1;
+                               schema_table_record_free,
+                               key_mdata2, sizeof(key_mdata2) / sizeof (key_mdata2[0]));
 
     /* Schema table has been created, now insert records in it. Each record is of the type : 
        key::  <column name>   value :: <catalog_rec_t >  */
@@ -145,23 +147,22 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) 
 
     /* Now make the actual rdbms table to hold records */
     BPlusTree_t *table = (BPlusTree_t *)calloc (1, sizeof (BPlusTree_t));
-    BPlusTree_init (table, 
-                               rdbms_key_comp_fn,
-                               NULL, NULL, 
-                               SQL_BTREE_MAX_CHILDREN_RDBMS_TABLE, free);
 
     /* Construct key meta data for this Table Schema*/
-    int key_mdata_size2;
-    key_mdata_t *key_mdata2 = sql_construct_table_key_mdata (cdata, &key_mdata_size2);
+    int key_mdata_size3;
+    key_mdata_t *key_mdata3 = sql_construct_table_key_mdata (cdata, &key_mdata_size3);
 
-    if (!key_mdata2) {
+    if (!key_mdata3) {
         BPlusTree_Destroy (table);
         printf ("Error : Table Must have atleast one primary key\n");
         return false;
     }
 
-    table->key_mdata = key_mdata2;
-    table->key_mdata_size = key_mdata_size2;
+    BPlusTree_init (table, 
+                               rdbms_key_comp_fn,
+                               NULL, NULL, 
+                               SQL_BTREE_MAX_CHILDREN_RDBMS_TABLE, free,
+                               key_mdata3, key_mdata_size3);
 
     /* Now store the Schema Table and RDBMS table as VALUE of the catalog table*/
     ctable_val->schema_table = schema_table;
