@@ -22,6 +22,8 @@ g++ -g -c  ../core/sql_io.c -o ../core/sql_io.o
 g++ -g -c  ../core/sql_group_by.c -o ../core/sql_group_by.o
 g++ -g -c  ../core/sql_order_by.c -o ../core/sql_order_by.o
 g++ -g -c  -fpermissive ../BPlusTreeLib/BPlusTree.c -o ../BPlusTreeLib/BPlusTree.o
+g++ -g -c  -fpermissive ../BPlusTreeLib/BPlusTreeCompFn.c -o ../BPlusTreeLib/BPlusTreeCompFn.o
+g++ -g -c  -fpermissive ../BPlusTreeLib/main.c -o ../BPlusTreeLib/main.o
 g++ -g -c  ../core/Catalog.c -o ../core/Catalog.o
 g++ -g -c  ../gluethread/glthread.c -o ../gluethread/glthread.o
 g++ -g -c ../c-hashtable/hashtable.c -o ../c-hashtable/hashtable.o
@@ -30,6 +32,8 @@ g++ -g -c  ../core/SqlMexprIntf.cpp -o ../core/SqlMexprIntf.o
 g++ -g -c ../uapi/sql_api.cpp -o ../uapi/sql_api.o
 g++ -g -c ../uapi/sql_uapi_test.cpp -o ../uapi/sql_uapi_test.o
 g++ -g -c ../core/sql_delete.c -o ../core/sql_delete.o
-g++ -g ../uapi/sql_api.o ../core/qep.o lex.yy.o SqlSelectParserCFG.o SqlUpdateParserCFG.o SqlDeleteParserCFG.o SqlCreateParserCFG.o ../BPlusTreeLib/BPlusTree.o ../core/sql_utils.o ../core/sql_create.o ../core/sql_update.o ../core/Catalog.o ../gluethread/glthread.o SqlInsertIntoParserCFG.o ../core/sql_insert_into.o ../core/sql_delete.o ../c-hashtable/hashtable.o ../c-hashtable/hashtable_itr.o ../core/sql_io.o ../core/SqlMexprIntf.o ../core/sql_group_by.o ../core/sql_order_by.o SqlParserMain.o -o dbms.exe -lfl -lm -L ../../MathExpressionParser/ -lMexp
+g++ -g ../uapi/sql_api.o ../core/qep.o lex.yy.o SqlSelectParserCFG.o SqlDeleteParserCFG.o SqlUpdateParserCFG.o SqlCreateParserCFG.o ../BPlusTreeLib/BPlusTree.o ../BPlusTreeLib/BPlusTreeCompFn.o ../core/sql_utils.o ../core/sql_create.o ../core/Catalog.o ../gluethread/glthread.o SqlInsertIntoParserCFG.o ../core/sql_insert_into.o ../core/sql_delete.o ../core/sql_update.o  ../c-hashtable/hashtable.o ../c-hashtable/hashtable_itr.o ../core/sql_io.o ../core/SqlMexprIntf.o ../core/sql_group_by.o ../core/sql_order_by.o SqlParserMain.o -o dbms.exe -lfl -lm -L ../../MathExpressionParser/ -lMexp
 
-g++ -g ../uapi/sql_api.o ../core/qep.o lex.yy.o SqlSelectParserCFG.o SqlCreateParserCFG.o SqlUpdateParserCFG.o ../BPlusTreeLib/BPlusTree.o ../core/sql_utils.o ../core/sql_create.o ../core/sql_update.o ../core/sql_delete.o ../core/Catalog.o ../gluethread/glthread.o SqlInsertIntoParserCFG.o ../core/sql_insert_into.o ../c-hashtable/hashtable.o ../c-hashtable/hashtable_itr.o ../core/sql_io.o ../core/SqlMexprIntf.o  ../core/sql_group_by.o ../core/sql_order_by.o ../uapi/sql_uapi_test.o -o ../uapi/sql_uapi_test.exe -lfl -lm -L ../../MathExpressionParser/ -lMexp
+g++ -g ../BPlusTreeLib/BPlusTree.o ../BPlusTreeLib/BPlusTreeCompFn.o ../BPlusTreeLib/main.o -o ../BPlusTreeLib/BPlusTree.exe
+
+g++ -g ../uapi/sql_api.o ../core/qep.o lex.yy.o SqlSelectParserCFG.o SqlDeleteParserCFG.o SqlUpdateParserCFG.o SqlCreateParserCFG.o ../BPlusTreeLib/BPlusTree.o ../BPlusTreeLib/BPlusTreeCompFn.o ../core/sql_utils.o ../core/sql_create.o ../core/Catalog.o ../gluethread/glthread.o SqlInsertIntoParserCFG.o ../core/sql_insert_into.o ../c-hashtable/hashtable.o ../c-hashtable/hashtable_itr.o ../core/sql_io.o ../core/SqlMexprIntf.o  ../core/sql_group_by.o ../core/sql_update.o  ../core/sql_delete.o ../core/sql_order_by.o ../uapi/sql_uapi_test.o -o ../uapi/sql_uapi_test.exe -lfl -lm -L ../../MathExpressionParser/ -lMexp
