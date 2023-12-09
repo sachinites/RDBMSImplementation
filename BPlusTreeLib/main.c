@@ -86,8 +86,10 @@ main (int argc, char **argv) {
 
 	BPlusTree_init (&tree, 
 			bplus_tree_key_comp_fn,
-			0, 0,
-			4, free,
+			0,
+			0,
+			4, 
+			0,
 			key_mdata,
 			(int) (sizeof(key_mdata) / sizeof (key_mdata[0])));
 

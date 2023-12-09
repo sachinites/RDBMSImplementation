@@ -119,7 +119,6 @@ lex_set_scan_buffer (const char *buffer) {
 
 %%
 
-<<<<<<< HEAD
 "select" {
     return SQL_SELECT_Q;
 }
@@ -349,10 +348,3 @@ decimal|double {
 
 
 %%
-=======
-
-
-%%
-
-
->>>>>>> DCB
