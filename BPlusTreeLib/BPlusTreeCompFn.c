@@ -30,8 +30,8 @@ rdbms_key_comp_fn (BPluskey_t *key_1, BPluskey_t *key_2, key_mdata_t *key_mdata,
 
     for (i = 0; i < size ; i++) {
 
-        dtype = (sql_dtype_t)(key_mdata)[0].dtype;
-        dsize = (key_mdata)[0].size;
+        dtype = (sql_dtype_t)(key_mdata)[i].dtype;
+        dsize = (key_mdata)[i].size;
 
         switch (dtype) {
 
