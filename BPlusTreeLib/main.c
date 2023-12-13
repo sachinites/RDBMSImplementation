@@ -1,11 +1,10 @@
 #include <stdio.h>
-#include <arpa/inet.h>
 #include <assert.h>
 #include <memory.h>
 #include <stdlib.h>
-#include <time.h>
 #include <stdint.h>
 #include "BPlusTree.h"
+
 
 typedef enum dtype_{
 	
@@ -34,8 +33,8 @@ int bplus_tree_key_comp_fn( BPluskey_t *key_1,
 
     for (i = 0; i < size ; i++) {
 
-        dtype = (dtype_t)(key_mdata)[0].dtype;
-        dsize = (key_mdata)[0].size;
+        dtype = (dtype_t)(key_mdata)[i].dtype;
+        dsize = (key_mdata)[i].size;
 
         switch (dtype) {
 
@@ -235,7 +234,7 @@ main (int argc, char **argv) {
 			}
 			break;
 
-		deault:
+		default:
 			exit(0);
 
 		} // switch ends 
