@@ -177,12 +177,9 @@ sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 static bool 
 qep_resolve_select_asterisk (qep_struct_t *qep) {
 
-    int i;
-    glthread_t *curr;
+    int i, j;
     qp_col_t *qp_col;    
-    list_node_t *lnode;
     ctable_val_t *ctable_val;
-    glthread_t *col_list_head;
     char opnd_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
 
     if (qep->select.n ) return true;
@@ -190,11 +187,10 @@ qep_resolve_select_asterisk (qep_struct_t *qep) {
     for (i = 0; i < qep->join.table_cnt; i++) {
 
         ctable_val = qep->join.tables[i].ctable_val;
-        col_list_head = &ctable_val->col_list_head;
+        j = 0;
+        
+        while (ctable_val->column_lst[j][0] != '\0') {
 
-        ITERATE_GLTHREAD_BEGIN (col_list_head, curr) {
-
-            lnode = glue_to_list_node (curr);
             qp_col = (qp_col_t *)calloc (1, sizeof (qp_col_t));
             qp_col->agg_fn = SQL_AGG_FN_NONE;
             qp_col->alias_name[0] = '\0';
@@ -203,12 +199,12 @@ qep_resolve_select_asterisk (qep_struct_t *qep) {
             qp_col->computed_value = NULL;
             memset(opnd_name, 0, sizeof(opnd_name));
             snprintf(opnd_name, sizeof(opnd_name), "%s.%s",
-                     ctable_val->table_name, (char *)lnode->data);
+                     ctable_val->table_name, ctable_val->column_lst[j]);
             qp_col->sql_tree = sql_create_exp_tree_for_one_operand(opnd_name);
             strncpy(qp_col->alias_name, opnd_name, sizeof(qp_col->alias_name));
             qep->select.sel_colmns[qep->select.n++] = qp_col;
-
-        } ITERATE_GLTHREAD_END (col_list_head, curr);
+            j++;
+        }
     }
 
     return true;

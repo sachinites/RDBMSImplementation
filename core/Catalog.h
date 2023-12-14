@@ -52,17 +52,18 @@ typedef struct catalog_table_value {
     char table_name [SQL_TABLE_NAME_MAX_SIZE];
     BPlusTree_t  *rdbms_table;
     BPlusTree_t  *schema_table;
-    glthread_t col_list_head;
+    /* List of column names in the same order as they appear in create table query*/
+    char column_lst[SQL_MAX_COLUMNS_SUPPORTED_PER_TABLE][SQL_COLUMN_NAME_MAX_SIZE];
     
 } ctable_val_t;
 
 bool 
 Catalog_insert_new_table (BPlusTree_t *catalog, sql_create_data_t *cdata) ;
 
-int
-Catalog_create_schema_table_records ( sql_create_data_t *cdata,
-                                                                 BPluskey_t ***bkeys,
-                                                                 schema_rec_t ***crecords) ;
+void
+Catalog_create_schema_table_records (
+            BPlusTree_t *schema_table,
+            sql_create_data_t *cdata);
 
 void 
 sql_show_table_catalog (BPlusTree_t *TableCatalog) ;
