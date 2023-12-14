@@ -2,7 +2,7 @@
 #include <string.h>
 #include <memory.h>
 #include "../SqlParser/SqlEnums.h"
-#include "BPlusTree.h"
+#include "../BPlusTreeLib/BPlusTree.h"
 
 int 
 rdbms_key_comp_fn (BPluskey_t *key_1, BPluskey_t *key_2, key_mdata_t *key_mdata, int size) {
