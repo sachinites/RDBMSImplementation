@@ -25,7 +25,7 @@ catalog_table_free_fn (void *ptr) {
     ctable_val_t *ctable_val = (ctable_val_t *)ptr;
 
     BPlusTree_Destroy (ctable_val->schema_table);
-    BPlusTree_Destroy (ctable_val->rdbms_table);
+    BPlusTree_Destroy (ctable_val->record_table);
     free(ptr);
 }
 
@@ -40,10 +40,7 @@ bool
 Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) {
 
     int i;
-    list_node_t *lnode;
     BPluskey_t bkey;
-    BPluskey_t **bkeys;
-    schema_rec_t **crecords;
 
     if (!catalog_table) {
         catalog_table = &TableCatalogDef;
@@ -82,7 +79,7 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) 
     ctable_val_t *ctable_val = (ctable_val_t *)calloc (1, sizeof (ctable_val_t));
     strncpy(ctable_val->table_name, cdata->table_name, SQL_TABLE_NAME_MAX_SIZE);
     ctable_val->schema_table = NULL;
-    ctable_val->rdbms_table = NULL;
+    ctable_val->record_table = NULL;
 
      if (!BPlusTree_Insert (catalog_table, &bkey, (void *)ctable_val)) {
 
@@ -120,20 +117,20 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) 
      ctable_val->column_lst[cdata->n_cols][0] = '\0';
 
     /* Now make the actual rdbms table to hold records */
-    BPlusTree_t *rdbms_table = (BPlusTree_t *)calloc (1, sizeof (BPlusTree_t));
+    BPlusTree_t *record_table = (BPlusTree_t *)calloc (1, sizeof (BPlusTree_t));
 
     /* Construct key meta data for this Table Schema*/
     int key_mdata_size3;
     key_mdata_t *key_mdata3 = sql_construct_table_key_mdata (cdata, &key_mdata_size3);
 
     if (!key_mdata3) {
-        BPlusTree_Destroy (rdbms_table);
+        BPlusTree_Destroy (record_table);
         BPlusTree_Destroy (schema_table);
         printf ("Error : Table Must have atleast one primary key\n");
         return false;
     }
 
-    BPlusTree_init (rdbms_table, 
+    BPlusTree_init (record_table, 
                                rdbms_key_comp_fn,
                                NULL, NULL, 
                                SQL_BTREE_MAX_CHILDREN_RDBMS_TABLE, free,
@@ -141,7 +138,7 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) 
 
     /* Now store the Schema Table and RDBMS table as VALUE of the catalog table*/
     ctable_val->schema_table = schema_table;
-    ctable_val->rdbms_table = rdbms_table;
+    ctable_val->record_table = record_table;
 
     printf ("CREATE TABLE\n");
     return true;

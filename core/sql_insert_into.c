@@ -23,8 +23,6 @@ static bool
 sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
 
     int i;
-    glthread_t *curr;
-    list_node_t *lnode;
     BPluskey_t *bpkey_ptr;
     ctable_val_t *ctable_val;
     BPluskey_t bpkey, new_bpkey;

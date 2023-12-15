@@ -10,7 +10,6 @@
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "qep.h"
 #include "Catalog.h"
-#include "../gluethread/glthread.h"
 #include "sql_io.h"
 #include "sql_utils.h"
 #include "sql_group_by.h"
@@ -188,7 +187,7 @@ qep_resolve_select_asterisk (qep_struct_t *qep) {
 
         ctable_val = qep->join.tables[i].ctable_val;
         j = 0;
-        
+
         while (ctable_val->column_lst[j][0] != '\0') {
 
             qp_col = (qp_col_t *)calloc (1, sizeof (qp_col_t));
