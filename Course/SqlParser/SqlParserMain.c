@@ -6,6 +6,7 @@
 #include "ParserExport.h"
 #include "SqlEnums.h"
 #include "../core/sql_create.h"
+#include "../core/sql_delete.h"
 
 extern parse_rc_t create_query_parser () ;
 extern sql_create_data_t cdata;
@@ -46,6 +47,31 @@ main(int argc, char **argv) {
                 }
                  sql_create_data_destroy(&cdata);
             break;
+
+            case SQL_DROP_TABLE_Q:
+            {
+                    char *table_name;
+                    token_code = cyylex();
+                    if (strcmp (lex_curr_token, "table")) {
+                        printf ("Error : Unrecognized Input\n");
+                        break;
+                    }
+                    token_code = cyylex();
+                    if (token_code != SQL_IDENTIFIER) {
+                        printf ("Error : Unrecognized Input\n");
+                        break;
+                    }
+                    table_name = lex_curr_token;
+                    token_code = cyylex();
+                    if (token_code != PARSER_EOL) {
+                        printf ("Error : Unrecognized Input\n");
+                        break;
+                    }
+                    sql_drop_table (table_name);
+                    break;                
+            }
+            break;
+
 
             default:
                 printf ("Error : Unrecognized Input\n");

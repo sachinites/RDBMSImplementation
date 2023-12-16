@@ -21,6 +21,7 @@ typedef enum sql_query_type_{
     SQL_CREATE_Q,
     SQL_DELETE_Q,
     SQL_INSERT_Q ,
+    SQL_DROP_TABLE_Q,
     SQL_UNSUPPORTED_Q
 
 } sql_query_type_t;

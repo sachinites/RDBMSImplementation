@@ -131,8 +131,12 @@ lex_set_scan_buffer (const char *buffer) {
     return SQL_INSERT_Q;
 }
 
-"drop" {
+"delete" {
     return SQL_DELETE_Q;
+}
+
+"drop" {
+    return SQL_DROP_TABLE_Q;
 }
 
 "varchar" {
