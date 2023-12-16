@@ -15,6 +15,7 @@ g++ -g ../BPlusTreeLib/BPlusTree.o ../BPlusTreeLib/main.o -o ../BPlusTreeLib/mai
 #core dir
 g++ -g -c ../core/sql_create.c -o ../core/sql_create.o
 g++ -g -c  -fpermissive ../core/BPlusTreeCompFn.c -o ../core/BPlusTreeCompFn.o
+g++ -g -c ../core/Catalog.c -o ../core/Catalog.o
 
 g++ -g lex.yy.o \
             SqlParserMain.o \
@@ -22,4 +23,5 @@ g++ -g lex.yy.o \
             ../core/sql_create.o \
             ../BPlusTreeLib/BPlusTree.o \
             ../core/BPlusTreeCompFn.o \
+            ../core/Catalog.o \
             -o dbms.exe -lfl

@@ -41,7 +41,7 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
     }
 
     BPlusTree_t *schema_table = ctable_val->schema_table;
-    BPlusTree_t *data_table = ctable_val->rdbms_table;
+    BPlusTree_t *data_table = ctable_val->record_table;
 
     void *_rec;
     int key_size = 0;

@@ -13,7 +13,8 @@
 // -1 -  key1 > key2 
 //  0  - key1 = key2
 // 1  - key2 > key 1
-static int 
+
+int 
 rdbms_key_comp_fn ( BPluskey_t *key1, BPluskey_t *key2, key_mdata_t *key_mdata, int key_mdata_size) {
 
     int rc;

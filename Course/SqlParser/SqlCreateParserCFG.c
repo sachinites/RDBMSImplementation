@@ -154,7 +154,11 @@ COLSLIST() {
 
         token_code = cyylex();
 
-        if (token_code != SQL_COMMA) break;
+        if (token_code != SQL_COMMA) {
+
+            cdata.n_cols--;
+            break;
+        }
 
         err = COLSLIST();
 

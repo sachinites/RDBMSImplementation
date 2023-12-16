@@ -60,7 +60,7 @@ sql_process_delete_query (qep_struct_t *qep) {
 
         bpkey = key_lst.front();
         key_lst.pop_front();
-        if (BPlusTree_Delete (qep->join.tables[0].ctable_val->rdbms_table, bpkey)) {
+        if (BPlusTree_Delete (qep->join.tables[0].ctable_val->record_table, bpkey)) {
             inc_count++;
         }
         free(bpkey->key);
@@ -127,7 +127,7 @@ sql_process_delete_query (qep_struct_t *qep) {
 
             bpkey = key_lst.front();
             key_lst.pop_front();
-            if (BPlusTree_Delete (qep->join.tables[0].ctable_val->rdbms_table, bpkey)) {
+            if (BPlusTree_Delete (qep->join.tables[0].ctable_val->record_table, bpkey)) {
                 inc_count++;
             }
             free(bpkey->key);

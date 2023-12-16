@@ -364,7 +364,7 @@ table_iterators_first (qep_struct_t *qep_struct,
         do
         {
             rec = BPlusTree_get_next_record(
-                        titer->table_iter_data[table_id].ctable_val->rdbms_table,
+                        titer->table_iter_data[table_id].ctable_val->record_table,
                         &titer->table_iter_data[table_id].bpnode,
                         &titer->table_iter_data[table_id].index,
                         &bp_key);
@@ -400,7 +400,7 @@ table_iterators_next (qep_struct_t *qep_struct,
     do
     {
         rec = BPlusTree_get_next_record(
-                    titer->table_iter_data[table_id].ctable_val->rdbms_table,
+                    titer->table_iter_data[table_id].ctable_val->record_table,
                     &titer->table_iter_data[table_id].bpnode,
                     &titer->table_iter_data[table_id].index,
                     &bp_key);
@@ -435,7 +435,7 @@ table_iterators_next (qep_struct_t *qep_struct,
 
         do {
             rec = BPlusTree_get_next_record(
-                            titer->table_iter_data[table_id].ctable_val->rdbms_table,
+                            titer->table_iter_data[table_id].ctable_val->record_table,
                             &titer->table_iter_data[table_id].bpnode,
                             &titer->table_iter_data[table_id].index,
                             &bp_key);
