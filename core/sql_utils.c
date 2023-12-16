@@ -14,34 +14,6 @@
 #include "sql_create.h"
 #include "SqlMexprIntf.h"
 
-key_mdata_t *
-sql_construct_table_key_mdata (sql_create_data_t *cdata, int *key_mdata_size) {
-
-    int i, j;
-    bool primary_key_set = false;
-
-    key_mdata_t *key_mdata = (key_mdata_t *)calloc
-         (SQL_MAX_PRIMARY_KEYS_SUPPORTED, sizeof (key_mdata_t));
-
-    for (i = 0, j = 0; i < cdata->n_cols; i++) {
-
-        if (cdata->column_data[i].is_primary_key) {
-            key_mdata[j].dtype = cdata->column_data[i].dtype;
-            key_mdata[j].size = cdata->column_data[i].dtype_len;
-            primary_key_set = true;
-            j++;
-        }
-    }
-
-    if (!primary_key_set ) {
-        free(key_mdata);
-        key_mdata = NULL;
-    }
-
-    *key_mdata_size = j;
-    return key_mdata;
-}
-
 void 
 parser_split_table_column_name ( std::unordered_map<std::string, std::string> *map,
                                                         BPlusTree_t *tcatalog,

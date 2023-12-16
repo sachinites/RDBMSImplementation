@@ -31,7 +31,7 @@ void BPlusTree_init (BPlusTree_t *tree,
 	tree->key_fmt_fn = key_fmt_fn;
 	tree->value_fmt_fn = value_fmt_fn;
 	tree->MaxChildNumber = MAX_CHILD_NUMBER;
-	tree->free_fn = free_fn;
+	tree->free_fn = free_fn ? free_fn : free;
 	tree->key_mdata = key_mdata;
 	tree->key_mdata_size = key_mdata_units;
 }

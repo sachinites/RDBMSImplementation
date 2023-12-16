@@ -24,14 +24,13 @@ typedef struct sql_create_data_ {
 
 }  sql_create_data_t; 
 
-
-void 
-sql_create_data_destroy (sql_create_data_t *cdata) ;
-
  void 
  sql_process_create_query (sql_create_data_t *cdata) ;
 
+ void 
+sql_create_data_destroy (sql_create_data_t *cdata) ;
+
 key_mdata_t *
-sql_construct_table_key_mdata (sql_create_data_t *cdata, int *key_mdata_size) ;
+sql_construct_table_key_mdata (sql_create_data_t *cdata, int *key_mdata_size);
 
 #endif 

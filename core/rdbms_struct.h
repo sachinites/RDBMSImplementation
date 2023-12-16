@@ -4,7 +4,6 @@
 #include <string>
 
 #include "../SqlParser/SqlEnums.h"
-#include "../gluethread/glthread.h"
 #include "sql_const.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 
@@ -14,14 +13,6 @@ typedef struct sql_exptree_ sql_exptree_t;
 
 class Dtype;
 class Aggregator;
-
-typedef struct list_node_ {
-
-    void *data;
-    glthread_t glue;
-
-} list_node_t;
-GLTHREAD_TO_STRUCT (glue_to_list_node, list_node_t, glue);
 
 typedef struct qp_col_ {
 

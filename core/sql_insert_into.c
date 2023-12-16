@@ -23,8 +23,6 @@ static bool
 sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
 
     int i;
-    glthread_t *curr;
-    list_node_t *lnode;
     BPluskey_t *bpkey_ptr;
     ctable_val_t *ctable_val;
     BPluskey_t bpkey, new_bpkey;
@@ -43,8 +41,7 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
     }
 
     BPlusTree_t *schema_table = ctable_val->schema_table;
-    BPlusTree_t *data_table = ctable_val->rdbms_table;
-    glthread_t *col_list_head = &ctable_val->col_list_head;
+    BPlusTree_t *data_table = ctable_val->record_table;
 
     void *_rec;
     int key_size = 0;
@@ -71,11 +68,12 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
 
     /* Now fill the key content*/
     i = 0;
-    /* We need to iterate in the same order in which columns exist in a table*/
-    ITERATE_GLTHREAD_BEGIN (col_list_head, curr) {
 
-        lnode = glue_to_list_node(curr);
-        bpkey.key = lnode->data;
+    /* We need to iterate in the same order in which columns 
+         were specified by the user in create table query */
+    while (ctable_val->column_lst[i][0] != '\0') {
+
+        bpkey.key = (void *)ctable_val->column_lst[i];
         bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
         rec = (schema_rec_t *) BPlusTree_Query_Key (schema_table, &bpkey);
 
@@ -165,7 +163,7 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
                     assert(0);
                 }
                 i++;
-    } ITERATE_GLTHREAD_END  (col_list_head, curr);
+    } 
 
     /* Check for Duplication */
     if (BPlusTree_Query_Key (data_table, &new_bpkey)) {
