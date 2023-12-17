@@ -174,3 +174,58 @@ Catalog_insert_new_table (BPlusTree_t *catalog, sql_create_data_t *cdata) {
     printf ("CREATE TABLE\n");
     return true;
 }
+
+void 
+Schema_table_print (BPlusTree_t *schema_table) {
+
+    void *rec;
+    BPluskey_t *bpkey;
+    schema_rec_t *schema_rec;
+
+    BPTREE_ITERATE_ALL_RECORDS_BEGIN(schema_table, bpkey, rec) {
+        
+        schema_rec = (schema_rec_t *)rec;
+
+        printf ("Column Name : %s  Dtype = %d  Dtype Len = %d  Is_Primary_key = %s  offset = %d\n",
+            (char *)bpkey->key, 
+            schema_rec->dtype, 
+            schema_rec->dtype_size, 
+            schema_rec->is_primary_key ? "Y" : "N" , 
+            schema_rec->offset); 
+
+    } BPTREE_ITERATE_ALL_RECORDS_END(schema_table, bpkey, rec);
+
+}
+
+void 
+Catalog_table_print (BPlusTree_t *catalog) {
+
+    int i = 0;
+    void *rec;
+    BPluskey_t *bpkey;
+    ctable_val_t *ctable_val;
+    BPlusTree_t *schema_table;
+
+    BPTREE_ITERATE_ALL_RECORDS_BEGIN(catalog, bpkey, rec) {
+
+        printf ("Record Table Name = %s\n", (char *)bpkey->key);
+        ctable_val = (ctable_val_t *)rec;
+
+        printf ("Schema Table : \n");
+        Schema_table_print (ctable_val->schema_table);
+
+        printf ("Record Table Ptr : %p\n", ctable_val->record_table);
+
+        printf ("Column List : \n");
+
+        i = 0;
+        while (ctable_val->column_lst[i][0] != '\0') {
+
+            printf ("%s ", ctable_val->column_lst[i]);
+            i++;
+        }
+
+        printf ("\n======\n");
+        
+    } BPTREE_ITERATE_ALL_RECORDS_END(catalog, bpkey, rec);
+}

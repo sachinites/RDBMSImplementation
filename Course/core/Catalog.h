@@ -34,4 +34,7 @@ typedef struct catalog_table_value {
 bool 
 Catalog_insert_new_table (BPlusTree_t *catalog, sql_create_data_t *cdata) ;
 
+void 
+Catalog_table_print (BPlusTree_t *catalog);
+
 #endif 
