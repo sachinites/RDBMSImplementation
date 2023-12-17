@@ -64,8 +64,6 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                     printf ("Error : Group by Column %s could not be resolved\n", sqp_col->alias_name);
                     return false;
                 }
-
-                sqp_col->link_to_groupby_col = gqp_col;
             }
 
             else {
@@ -124,12 +122,6 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
                 sqp_col = sql_get_qp_col_by_name ( qep->select.sel_colmns, qep->select.n, 
                                                                             QP_COL_NAME(gqp_col), false);
-
-                if (sqp_col) {
-
-                    sqp_col->link_to_groupby_col = gqp_col;
-                }
-
             }
         }
 

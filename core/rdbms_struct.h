@@ -21,7 +21,6 @@ typedef struct qp_col_ {
     Dtype* computed_value;
     Aggregator *aggregator;
     bool alias_provided_by_user;
-    struct qp_col_ *link_to_groupby_col;
     char alias_name[SQL_ALIAS_NAME_LEN];
     
 }qp_col_t;

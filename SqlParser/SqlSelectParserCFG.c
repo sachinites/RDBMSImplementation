@@ -163,7 +163,6 @@ INDTF_LST() {
     qp_col->aggregator = NULL;
     qp_col->alias_provided_by_user = false;
     qp_col->computed_value = NULL;
-    qp_col->link_to_groupby_col = NULL;
     qp_col->sql_tree = exp_tree;
     qep.groupby.col_list[qep.groupby.n++] = qp_col;
 
