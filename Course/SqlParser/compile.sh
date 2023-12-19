@@ -9,6 +9,7 @@ lex Parser.l
 g++ -g -c lex.yy.c -o lex.yy.o
 g++ -g -c  SqlParserMain.c -o SqlParserMain.o
 g++ -g -c  SqlCreateParserCFG.c -o SqlCreateParserCFG.o
+g++ -g -c  SqlInsertIntoParserCFG.c -o SqlInsertIntoParserCFG.o
 
 #B+ Tree Library
 g++ -g -c  -fpermissive ../BPlusTreeLib/BPlusTree.c -o ../BPlusTreeLib/BPlusTree.o
@@ -25,6 +26,7 @@ g++ -g -c ../core/sql_delete.c -o ../core/sql_delete.o
 g++ -g lex.yy.o \
             SqlParserMain.o \
             SqlCreateParserCFG.o \
+            SqlInsertIntoParserCFG.o \
             ../core/sql_create.o \
             ../BPlusTreeLib/BPlusTree.o \
             ../core/BPlusTreeCompFn.o \

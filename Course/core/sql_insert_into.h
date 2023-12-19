@@ -11,14 +11,9 @@ typedef struct sql_value_ {
 
     union {
 
-        char str_val[SQL_STRING_MAX_VAUE_LEN];
+        char str_val[SQL_STRING_MAX_VALUE_LEN];
         int int_val;
         double d_val;
-        char ipv4_addr_str[16];
-        struct {
-            int lb;
-            int ub;
-        } ival;
     } u;
 } sql_value_t;
 
@@ -31,11 +26,5 @@ typedef struct sql_insert_into_data_ {
 
 } sql_insert_into_data_t;
 
-
-void
- sql_process_insert_query (sql_insert_into_data_t *idata);
-
-void
- sql_insert_into_data_destroy(sql_insert_into_data_t *idata);
 
 #endif 
