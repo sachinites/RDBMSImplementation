@@ -27,4 +27,7 @@ typedef struct sql_insert_into_data_ {
 } sql_insert_into_data_t;
 
 
+void
+sql_process_insert_query (sql_insert_into_data_t *idata);
+
 #endif 

@@ -55,6 +55,7 @@ VALUE () {
         default:
             RETURN_PARSE_ERROR;
     }
+    idata.n++;
     RETURN_PARSE_SUCCESS;
 }
 
@@ -68,6 +69,7 @@ VALUES() {
     parse_init();
 
     int initial_chkp;
+    CHECKPOINT(initial_chkp);
 
     // VALUES -> VALUE , VALUES
     do {

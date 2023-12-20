@@ -21,6 +21,7 @@ g++ -g -c ../core/sql_create.c -o ../core/sql_create.o
 g++ -g -c  -fpermissive ../core/BPlusTreeCompFn.c -o ../core/BPlusTreeCompFn.o
 g++ -g -c ../core/Catalog.c -o ../core/Catalog.o
 g++ -g -c ../core/sql_delete.c -o ../core/sql_delete.o
+g++ -g -c ../core/sql_insert_into.c -o ../core/sql_insert_into.o
 
 #Create an Executable
 g++ -g lex.yy.o \
@@ -32,4 +33,5 @@ g++ -g lex.yy.o \
             ../core/BPlusTreeCompFn.o \
             ../core/Catalog.o \
              ../core/sql_delete.o \
+             ../core/sql_insert_into.o \
             -o dbms.exe -lfl

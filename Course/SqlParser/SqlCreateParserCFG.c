@@ -46,7 +46,7 @@ DTYPE() {
                 PARSER_LOG_ERR(token_code, SQL_INTEGER_VALUE);
                 RETURN_PARSE_ERROR;
             }
-            cdata.column_data[cdata.n_cols].dtype = (sql_dtype_t )token_code;
+            cdata.column_data[cdata.n_cols].dtype = (sql_dtype_t )SQL_STRING;
             cdata.column_data[cdata.n_cols].dtype_len = atoi(lex_curr_token);
             token_code = cyylex();
             if (token_code != SQL_BRACKET_END) {
