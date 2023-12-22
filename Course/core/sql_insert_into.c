@@ -206,7 +206,6 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
 
     /* Step 7 : print Success Msg, and return true */
     printf ("INSERT 0 1\n");
-    sql_print_record(schema_table, record); printf ("\n");
     return true;    
 }
 

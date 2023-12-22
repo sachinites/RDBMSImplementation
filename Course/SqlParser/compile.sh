@@ -34,4 +34,4 @@ g++ -g lex.yy.o \
             ../core/Catalog.o \
              ../core/sql_delete.o \
              ../core/sql_insert_into.o \
-            -o dbms.exe -lfl
+            -o dbms.exe -lfl -L ../../../MathExpressionParser/Course/ -lMexpr
