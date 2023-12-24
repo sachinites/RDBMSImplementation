@@ -8,12 +8,15 @@
 #include "../core/sql_create.h"
 #include "../core/sql_delete.h"
 #include "../core/sql_insert_into.h"
+#include "../core/qep.h"
 
 extern parse_rc_t create_query_parser () ;
 extern parse_rc_t  insert_into_query_parser();
+extern parse_rc_t select_query_parser();
 
 extern sql_create_data_t cdata;
 extern sql_insert_into_data_t idata; 
+extern qep_struct_t qep;
 
 int
 main(int argc, char **argv) {
@@ -38,6 +41,11 @@ main(int argc, char **argv) {
         switch (token_code) {
 
             case SQL_SELECT_Q:
+                yyrewind(1);
+                err = select_query_parser();
+                if (err == PARSE_SUCCESS) {
+                    // backend fn for processing select query
+                }
             break;
 
             case SQL_INSERT_Q:
