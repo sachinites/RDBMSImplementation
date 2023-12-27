@@ -11,6 +11,9 @@ typedef struct sql_exptree_ {
 
 
 sql_exptree_t *
-sql_create_exptree_compute ();
+sql_create_exp_tree_compute ();
+
+void 
+sql_destroy_exp_tree (sql_exptree_t *tree);
 
 #endif 

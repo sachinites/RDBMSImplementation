@@ -51,7 +51,7 @@ Parser_Mexpr_build_math_expression_tree () {
 
 
 sql_exptree_t *
-sql_create_exptree_compute () {
+sql_create_exp_tree_compute () {
 
     sql_exptree_t *sql_exptree = ( sql_exptree_t *) calloc (1, sizeof (sql_exptree_t));
     sql_exptree->tree = Parser_Mexpr_build_math_expression_tree ();
@@ -70,4 +70,11 @@ sql_create_exptree_compute () {
     }
 
     return sql_exptree;
+}
+
+void 
+sql_destroy_exp_tree (sql_exptree_t *tree) {
+
+    tree->tree->destroy(tree->tree->root);
+    free(tree);
 }

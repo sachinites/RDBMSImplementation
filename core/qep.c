@@ -584,7 +584,7 @@ qep_execute_join (qep_struct_t *qep_struct) {
 
    if (!qep_struct->is_join_started) {
 
-        table_iterators_first (qep_struct, qep_struct->titer, qep_struct->join.table_cnt -1);
+        table_iterators_first (qep_struct, qep_struct->titer);
 
         /* We could not get Ist Qualified record from each joined tables*/
         if (qep_struct->is_join_finished) return false;

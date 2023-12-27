@@ -19,26 +19,50 @@ COLLIST -> COL | COL , COLLIST
 
 COL -> < sql_create_exp_tree_compute () >
 
-TABS -> <ident>
+TABS -> <ident> | <ident> , TABS
 
 */
 
-//TABS -> <ident>
+//TABS -> <ident> | <ident> , TABS
 static parse_rc_t
 TABS() {
 
     parse_init();
+    int initial_chkp;
 
+    CHECKPOINT(initial_chkp);
+
+    //TABS -> <ident> , TABS
+    do {
+
+        token_code = cyylex();
+
+        if (token_code != SQL_IDENTIFIER) break;
+
+        token_code = cyylex();
+
+        if (token_code != SQL_COMMA) break;
+
+        strncpy (qep.join.tables[qep.join.table_cnt].table_name, 
+            lex_curr_token, SQL_TABLE_NAME_MAX_SIZE);
+        qep.join.table_cnt++;
+
+        err = TABS();
+
+        if (err == PARSE_ERR) break;
+
+    } while (0);
+
+    RESTORE_CHKP(initial_chkp);
+
+    //TABS -> <ident>
     token_code = cyylex();
 
-    if (token_code != SQL_IDENTIFIER) {
-        PARSER_LOG_ERR(token_code, SQL_IDENTIFIER);
-        RETURN_PARSE_ERROR;
-    }
-
-    qep.join.table_cnt = 1;
+    if (token_code != SQL_IDENTIFIER) RETURN_PARSE_ERROR;
     
-    strncpy (qep.join.tables->table_name, lex_curr_token, SQL_TABLE_NAME_MAX_SIZE);
+    strncpy (qep.join.tables[qep.join.table_cnt].table_name, 
+            lex_curr_token, SQL_TABLE_NAME_MAX_SIZE);
+    qep.join.table_cnt++;
 
     RETURN_PARSE_SUCCESS;
 }

@@ -44,8 +44,9 @@ main(int argc, char **argv) {
                 yyrewind(1);
                 err = select_query_parser();
                 if (err == PARSE_SUCCESS) {
-                    // backend fn for processing select query
+                    sql_execute_qep (&qep);
                 }
+                qep_deinit(&qep);
             break;
 
             case SQL_INSERT_Q:
