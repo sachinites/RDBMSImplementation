@@ -46,6 +46,9 @@ main(int argc, char **argv) {
                 if (err == PARSE_SUCCESS) {
                     sql_execute_qep (&qep);
                 }
+                else {
+                    printf ("Failed : select query parsing\n");
+                }
                 qep_deinit(&qep);
             break;
 

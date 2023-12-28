@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include "qep.h"
 #include "SqlMexprIntf.h"
@@ -26,5 +27,5 @@ qep_deinit (qep_struct_t *qep) {
 void
 sql_execute_qep (qep_struct_t *qep) {
 
-
+    printf ("%s() called ....\n", __FUNCTION__);
 }

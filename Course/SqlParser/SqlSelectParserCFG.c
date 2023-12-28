@@ -51,6 +51,8 @@ TABS() {
 
         if (err == PARSE_ERR) break;
 
+        RETURN_PARSE_SUCCESS;
+        
     } while (0);
 
     RESTORE_CHKP(initial_chkp);
@@ -58,7 +60,10 @@ TABS() {
     //TABS -> <ident>
     token_code = cyylex();
 
-    if (token_code != SQL_IDENTIFIER) RETURN_PARSE_ERROR;
+    if (token_code != SQL_IDENTIFIER) {
+        PARSER_LOG_ERR(token_code, SQL_IDENTIFIER);
+        RETURN_PARSE_ERROR;
+    }
     
     strncpy (qep.join.tables[qep.join.table_cnt].table_name, 
             lex_curr_token, SQL_TABLE_NAME_MAX_SIZE);
@@ -79,7 +84,9 @@ COL() {
 
     qp_col->sql_tree = sql_create_exp_tree_compute ();
 
-    if (!qp_col->sql_tree) RETURN_PARSE_ERROR;   
+    if (!qp_col->sql_tree) {
+        RETURN_PARSE_ERROR;   
+    }
     
     qep.select.n++;
     RETURN_PARSE_SUCCESS;
