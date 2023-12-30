@@ -4,6 +4,7 @@
 #include "qep.h"
 #include "sql_order_by.h"
 #include "SqlMexprIntf.h"
+#include "sql_utils.h"
 
 bool 
 qep_collect_dtypes_for_sorting (qep_struct_t *qep) {
@@ -120,3 +121,60 @@ qep_order_by_reassign_select_columns (qep_struct_t *qep) {
 
     return true;
 }   
+
+bool
+sql_query_initialize_orderby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+
+    int i;
+    qp_col_t *sqp_col;
+    char table_name_out [SQL_TABLE_NAME_MAX_SIZE];
+    char lone_col_name [SQL_COLUMN_NAME_MAX_SIZE];
+
+    if (qep->orderby.column_name[0] == '\0') return true;
+
+    /* Has User specified order by column name as Alias name ?*/
+    sqp_col = sql_get_qp_col_by_name (qep->select.sel_colmns,
+                                                                qep->select.n,
+                                                                qep->orderby.column_name,
+                                                                true);
+
+    if (!sqp_col) {
+
+        parser_split_table_column_name (
+                        qep->join.table_alias,
+                        tcatalog,
+                        qep->orderby.column_name,
+                        table_name_out, lone_col_name);
+
+        snprintf (qep->orderby.column_name, 
+                    sizeof (qep->orderby.column_name),
+                    "%s.%s", 
+                    table_name_out[0] == '\0' ? \
+                    qep->join.tables[0].table_name : table_name_out,
+                    lone_col_name);
+
+        sqp_col = sql_get_qp_col_by_name (qep->select.sel_colmns,
+                                                                    qep->select.n,
+                                                                    qep->orderby.column_name,
+                                                                    false); 
+    }
+
+    if (!sqp_col) {
+
+        printf ("Error : Order by columns is not recognized\n");
+        return false;
+    }
+
+    qep->orderby.orderby_col_select_index = -1;
+
+    for (i = 0; i < qep->select.n; i++) {
+        
+        if (qep->select.sel_colmns[i] != sqp_col) continue;
+        qep->orderby.orderby_col_select_index = i;
+        break;
+    }
+
+    assert (qep->orderby.orderby_col_select_index >= 0);
+
+    return true;
+}

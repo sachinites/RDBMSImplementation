@@ -6,6 +6,7 @@
 #include "rdbms_struct.h"
 #include "SqlMexprIntf.h"
 #include "qep.h"
+#include "sql_join.h"
 
 extern BPlusTree_t TableCatalogDef;
 

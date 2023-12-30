@@ -16,6 +16,8 @@ typedef struct BPlusTree BPlusTree_t;
 typedef  struct hashtable hashtable_t;
 typedef struct stack Stack_t;
 typedef struct sql_exptree_ sql_exptree_t;
+typedef struct table_iterators_  table_iterators_t;
+
 
 typedef enum qp_stage_id {
 
@@ -34,19 +36,6 @@ typedef enum qp_stage_id {
 
 } qp_stage_id_t;
 
-typedef struct table_iter_data_ {
-
-    BPlusTreeNode *bpnode;
-    int index;
-    ctable_val_t *ctable_val;
-} table_iter_data_t;
-
-typedef struct table_iterators_ {
-
-    int table_cnt;
-    table_iter_data_t table_iter_data[0];
-
-} table_iterators_t;
 
 typedef struct qep_struct_ {
     
@@ -159,11 +148,5 @@ qep_struct_record_table (qep_struct_t *qep,  char *table_name);
 void 
 sql_execute_qep (qep_struct_t *qep) ;
 
-bool
-qep_execute_join (qep_struct_t *qep_struct);
-
-void 
-table_iterators_init (qep_struct_t *qep,
-                                table_iterators_t **_titer);
 
 #endif 

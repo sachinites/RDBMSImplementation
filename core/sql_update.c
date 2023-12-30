@@ -5,6 +5,7 @@
 #include "SqlMexprIntf.h"
 #include "sql_utils.h"
 #include "qep.h"
+#include "sql_join.h"
 
 extern BPlusTree_t TableCatalogDef;
 

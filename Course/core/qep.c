@@ -35,7 +35,7 @@ sql_query_initialize_join_clause  (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 }
 
 static bool 
-sql_query_initialize_select_clause  (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+sql_query_initialize_select_column_list  (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
     return true;
 }
@@ -46,7 +46,7 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     int i;
     bool rc;
 
-    rc = sql_query_initialize_select_clause (qep, tcatalog) ;
+    rc = sql_query_initialize_select_column_list (qep, tcatalog) ;
     if (!rc) return rc;
 
     rc = sql_query_initialize_join_clause (qep, tcatalog) ;
