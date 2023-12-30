@@ -3,6 +3,7 @@
 #include <memory.h>
 #include "rdbms_struct.h"
 #include "qep.h"
+#include "../BPlusTreeLib/BPlusTree.h"
 #include "../../MathExpressionParser/Dtype.h"
 #include "SqlMexprIntf.h"
 #include "Catalog.h"

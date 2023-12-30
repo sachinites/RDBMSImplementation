@@ -26,6 +26,8 @@ g++ -g -c ../core/sql_delete.c -o ../core/sql_delete.o
 g++ -g -c ../core/sql_insert_into.c -o ../core/sql_insert_into.o
 g++ -g -c ../core/SqlMexprIntf.cpp -o ../core/SqlMexprIntf.o
 g++ -g -c ../core/qep.c -o ../core/qep.o
+g++ -g -c ../core/sql_select.c -o ../core/sql_select.o
+g++ -g -c ../core/sql_join.c -o ../core/sql_join.o
 
 #Create an Executable
 g++ -g lex.yy.o \
@@ -42,4 +44,6 @@ g++ -g lex.yy.o \
              SqlToMexprEnumMapper.o \
              ../core/SqlMexprIntf.o \
              ../core/qep.o \
+             ../core/sql_select.o \
+             ../core/sql_join.o \
             -o dbms.exe -lfl -L ../../../MathExpressionParser/Course/ -lMexpr
