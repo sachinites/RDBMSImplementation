@@ -2,9 +2,14 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <assert.h>
+#include "sql_const.h"
 #include "SqlMexprIntf.h"
+#include "rdbms_struct.h"
+#include "Catalog.h"
+#include "../BPlusTreeLib/BPlusTree.h"
 #include "../../SqlParser/ParserExport.h"
 #include "../../../MathExpressionParser/MexprTree.h"
+#include "../../../MathExpressionParser/Dtype.h"
 
 parse_rc_t E (); 
 extern lex_data_t **
@@ -77,4 +82,13 @@ sql_destroy_exp_tree (sql_exptree_t *tree) {
 
     tree->tree->destroy(tree->tree->root);
     free(tree);
+}
+
+bool 
+sql_resolve_exptree (BPlusTree_t *tcatalog,
+                                  sql_exptree_t *sql_exptree,
+                                  qep_struct_t *qep,
+                                  joined_row_t **joined_row) {
+
+   return true;
 }
