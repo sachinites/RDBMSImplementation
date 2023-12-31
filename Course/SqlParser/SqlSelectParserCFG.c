@@ -39,12 +39,13 @@ TABS() {
 
         if (token_code != SQL_IDENTIFIER) break;
 
+        strncpy (qep.join.tables[qep.join.table_cnt].table_name, 
+            lex_curr_token, SQL_TABLE_NAME_MAX_SIZE);
+
         token_code = cyylex();
 
         if (token_code != SQL_COMMA) break;
 
-        strncpy (qep.join.tables[qep.join.table_cnt].table_name, 
-            lex_curr_token, SQL_TABLE_NAME_MAX_SIZE);
         qep.join.table_cnt++;
 
         err = TABS();

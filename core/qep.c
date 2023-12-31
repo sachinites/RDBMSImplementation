@@ -64,13 +64,13 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
     qep_create_alias_to_table_name_mapping (qep);
 
+    rc = sql_query_initialize_join_clause (qep, tcatalog);
+    if (!rc) return rc;
+
     /* Before we initialize anything, expand the select * first */
     rc = qep_resolve_select_asterisk (qep);
     if (!rc) return rc;
    
-   rc = sql_query_initialize_join_clause(qep, tcatalog);
-   if (!rc) return rc;
-
    /* The order in which we initializes the below clauses matters. Select
         clause must be initialized in the end because rest of the clauses clones
         expression trees of  select clause. */

@@ -10,15 +10,10 @@ sql_query_initialize_join_clause  (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
     int i;
 
-    BPluskey_t bpkey;
-
-    bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
-
     for (i = 0; i < qep->join.table_cnt; i++) {
 
-        bpkey.key = (void *)qep->join.tables[i].table_name;
-        qep->join.tables[i].ctable_val = (ctable_val_t *)BPlusTree_Query_Key 
-                                                            (tcatalog, &bpkey);
+        qep->join.tables[i].ctable_val = sql_catalog_table_lookup_by_table_name (
+                                                                   tcatalog, qep->join.tables[i].table_name);
 
        if (!qep->join.tables[i].ctable_val) {
             printf ("Error : Could not find table %s\n", qep->join.tables[i].table_name);
@@ -53,54 +48,8 @@ table_iterators_init (qep_struct_t *qep,
     }
 }
 
-#if 1
+
 bool
-table_iterators_first (qep_struct_t *qep_struct, 
-                                 table_iterators_t *titer) {
-
-    int i;
-    bool rc;
-    void *rec;
-    BPluskey_t *bp_key;
-
-    qep_struct->is_join_started = true;
-    qep_struct->is_join_finished = false;
-
-    for (i = 0; i < qep_struct->join.table_cnt; i++) {
-
-        assert (titer->table_iter_data[i].bpnode == NULL);
-        assert(titer->table_iter_data[i].index == 0);
-
-        do {
-
-            rec = BPlusTree_get_next_record(
-                titer->table_iter_data[i].ctable_val->record_table,
-                &titer->table_iter_data[i].bpnode,
-                &titer->table_iter_data[i].index,
-                &bp_key);
-
-            if (!rec) {
-
-                qep_struct->is_join_started = false;
-                qep_struct->is_join_finished = true;
-                return false;
-            }
-
-            qep_struct->joined_row_tmplate->key_array[i] = bp_key;
-            qep_struct->joined_row_tmplate->rec_array[i] = rec;
-
-            rc = sql_evaluate_conditional_exp_tree(
-                qep_struct->where.exptree_per_table[i]);
-
-        } while (!rc);
-    }
-
-    return true;
-}
-
-#else 
-
-static bool
 table_iterators_first (qep_struct_t *qep_struct, 
                                  table_iterators_t *titer ) {
 
@@ -144,77 +93,6 @@ table_iterators_first (qep_struct_t *qep_struct,
     return true;
 }
 
-
-#endif
- 
-#if 0
-static void
-table_iterators_next (qep_struct_t *qep_struct, 
-                                  table_iterators_t *titer, 
-                                  int table_id) {
-
-    bool rc;
-    void *rec = NULL;
-    BPluskey_t *bp_key;
-
-    if (table_id < 0) return ;
-
-    do
-    {
-        rec = BPlusTree_get_next_record(
-                    titer->table_iter_data[table_id].ctable_val->record_table,
-                    &titer->table_iter_data[table_id].bpnode,
-                    &titer->table_iter_data[table_id].index,
-                    &bp_key);
-
-        if (!rec) break;
-
-        qep_struct->joined_row_tmplate->key_array[table_id] = bp_key;
-        qep_struct->joined_row_tmplate->rec_array[table_id] = rec;
-
-        rc = sql_evaluate_conditional_exp_tree (
-                    qep_struct->where.exptree_per_table[table_id]);
-
-    } while (!rc);
-
-    /* If record is found*/
-    if (rec) {
-            return;
-    }
-    else {
-        qep_struct->joined_row_tmplate->key_array[table_id] = NULL;
-        qep_struct->joined_row_tmplate->rec_array[table_id] = NULL;
-        table_iterators_next(qep_struct, titer, table_id - 1);
-
-        /* If We could not find qualified record in the top level table, abort the iteration */
-        if (table_id == 0) {
-            qep_struct->is_join_finished = true;
-            return;
-        }
-
-        /* If secondary table finds that parent table could not find any qualified records, abort the iteration*/
-        if (!qep_struct->joined_row_tmplate->rec_array[table_id - 1]) return;
-
-        do {
-            rec = BPlusTree_get_next_record(
-                            titer->table_iter_data[table_id].ctable_val->record_table,
-                            &titer->table_iter_data[table_id].bpnode,
-                            &titer->table_iter_data[table_id].index,
-                            &bp_key);
-
-            if (!rec) break;
-
-            qep_struct->joined_row_tmplate->key_array[table_id] = bp_key;
-            qep_struct->joined_row_tmplate->rec_array[table_id] = rec;
-
-            rc = sql_evaluate_conditional_exp_tree (
-                    qep_struct->where.exptree_per_table[table_id]);
-
-        } while (!rc);
-    }
-}
-
-#else 
 
 void
 table_iterators_next (qep_struct_t *qep_struct, 
@@ -261,7 +139,10 @@ table_iterators_next (qep_struct_t *qep_struct,
         }
 
         /* If secondary table finds that parent table could not find any qualified records, abort the iteration*/
-        if (!qep_struct->joined_row_tmplate->rec_array[table_id - 1]) return;
+        if (!qep_struct->joined_row_tmplate->rec_array[table_id - 1]) {
+            qep_struct->is_join_finished = true;
+            return;
+        }
 
         /* It is guaranteed that we will find atleast one qualified record*/
         do {
@@ -283,7 +164,6 @@ table_iterators_next (qep_struct_t *qep_struct,
     }
 }
 
-#endif
 
 
 bool

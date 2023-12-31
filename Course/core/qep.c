@@ -32,6 +32,8 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
         joined_row_tmplate->table_id_array[i] = i;
     }
 
+    table_iterators_init (qep, &qep->titer);
+
     return true;
 }
 
@@ -46,7 +48,7 @@ sql_execute_qep (qep_struct_t *qep) {
         return;
     }
 
-    printf ("%s() called ....\n", __FUNCTION__);
+    sql_process_select_query (qep);
 }
 
 
@@ -67,6 +69,9 @@ qep_deinit (qep_struct_t *qep) {
             }           
         }
     }
+
+    free(qep->titer);
+    qep->titer = NULL;
 
     if (qep->joined_row_tmplate) {
         free (qep->joined_row_tmplate->key_array);

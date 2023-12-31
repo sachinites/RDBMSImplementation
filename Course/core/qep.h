@@ -5,28 +5,14 @@ typedef struct catalog_table_value ctable_val_t ;
 typedef struct qp_col_  qp_col_t;
 typedef struct BPlusTreeNode BPlusTreeNode;
 typedef struct joined_row_  joined_row_t;
+typedef struct table_iterators_ table_iterators_t;
 
 #include <stdbool.h>
 
 #include "sql_const.h"
 
-typedef struct table_iter_data_ {
-
-    BPlusTreeNode *bpnode;
-    int index;
-    ctable_val_t *ctable_val;
-} table_iter_data_t;
-
-typedef struct table_iterators_ {
-
-    int table_cnt;
-    table_iter_data_t table_iter_data[0];
-
-} table_iterators_t;
-
 typedef struct qep_struct_
 {
-
     struct
     {
         int table_cnt;
@@ -46,7 +32,6 @@ typedef struct qep_struct_
 
     } select;
 
-    /* other variables*/
     bool is_join_started;
     bool is_join_finished;
     table_iterators_t *titer;

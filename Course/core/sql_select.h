@@ -7,4 +7,7 @@ typedef struct BPlusTree BPlusTree_t ;
 bool
 sql_query_initialize_select_column_list (qep_struct_t *qep, BPlusTree_t *tcatalog);
 
+void
+sql_process_select_query (qep_struct_t *qep) ;
+
 #endif 
