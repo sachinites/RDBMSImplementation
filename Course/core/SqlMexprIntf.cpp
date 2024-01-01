@@ -148,14 +148,28 @@ sql_column_value_resolution_fn (
     return dtype;
 }
 
+static int 
+sql_get_table_index (char *sql_column_name) {
+
+    /* until we support the join operaration fully, we assume all
+    sql column names used by used in select query belong to only
+    one table ( and the only table ) specified in from clause */
+
+    // For now, just return table index of the only table in from clause
+    // which is 0
+    return 0;
+}
+
 bool 
 sql_resolve_exptree (BPlusTree_t *tcatalog,
                                   sql_exptree_t *sql_exptree,
                                   qep_struct_t *qep,
                                   joined_row_t **joined_row) {
 
+    int table_index;
     BPluskey_t bpkey;                                        
     MexprNode *node;
+    const char *opnd_name;
     ctable_val_t *ctable_val;
     schema_rec_t *schema_rec = NULL;
     exp_tree_data_src_t *data_src = NULL;
@@ -164,8 +178,10 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
 
         if (sql_opnd_node_is_resolved (node)) continue;
 
+        opnd_name = sql_get_opnd_variable_name(node).c_str();
+        table_index = sql_get_table_index ( (char *)opnd_name);
         /* Assuming that Join is not supported on select SQL query yet*/
-        ctable_val = qep->join.tables[0].ctable_val;
+        ctable_val = qep->join.tables[table_index].ctable_val;
         bpkey.key = (void *)sql_get_opnd_variable_name(node).c_str();
         bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
         schema_rec =  (schema_rec_t *) BPlusTree_Query_Key (
@@ -180,7 +196,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
 
         data_src = (exp_tree_data_src_t *)calloc(1, sizeof(exp_tree_data_src_t)); 
         qep->data_src_lst->push_back (data_src);
-        data_src->table_index = 0;
+        data_src->table_index = table_index;
         data_src->schema_rec = schema_rec;
         data_src->joined_row = joined_row;        
         InstallDtypeOperandProperties (node, 
