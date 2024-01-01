@@ -1,15 +1,17 @@
 #ifndef __QPLANNER__
 #define __QPLANNER__
 
+#include <stdbool.h>
+#include <list>
+#include <vector>
+#include "sql_const.h"
+
 typedef struct catalog_table_value ctable_val_t ;
 typedef struct qp_col_  qp_col_t;
 typedef struct BPlusTreeNode BPlusTreeNode;
 typedef struct joined_row_  joined_row_t;
 typedef struct table_iterators_ table_iterators_t;
-
-#include <stdbool.h>
-
-#include "sql_const.h"
+typedef struct exp_tree_data_src_ exp_tree_data_src_t;
 
 typedef struct qep_struct_
 {
@@ -37,6 +39,8 @@ typedef struct qep_struct_
     table_iterators_t *titer;
 
     joined_row_t *joined_row_tmplate;
+
+    std::list<exp_tree_data_src_t *> *data_src_lst;
 
 } qep_struct_t;
 

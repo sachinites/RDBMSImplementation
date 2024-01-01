@@ -82,14 +82,18 @@ COL() {
 
     qp_col_t *qp_col = (qp_col_t *)calloc (1, sizeof (qp_col_t));
     qep.select.sel_colmns[qep.select.n] = qp_col;
+    qep.select.n++;
 
     qp_col->sql_tree = sql_create_exp_tree_compute ();
 
     if (!qp_col->sql_tree) {
+
+        free(qp_col);
+        qep.select.n--;
+        qep.select.sel_colmns[qep.select.n] = NULL;
         RETURN_PARSE_ERROR;   
     }
     
-    qep.select.n++;
     RETURN_PARSE_SUCCESS;
 }
 
@@ -112,9 +116,14 @@ static  parse_rc_t
 
         token_code = cyylex();
 
-        if (token_code != SQL_COMMA) break;
-
-        qep.select.n--;
+        if (token_code != SQL_COMMA) {
+            
+            qep.select.n--;
+            sql_destroy_exp_tree(qep.select.sel_colmns[qep.select.n]->sql_tree);
+            free(qep.select.sel_colmns[qep.select.n]);
+            qep.select.sel_colmns[qep.select.n] = NULL;
+            break;
+        }
 
         err = COLLIST();
 

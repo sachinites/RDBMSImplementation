@@ -157,21 +157,6 @@ sql_create_exp_tree_conditional () {
     return sql_exptree;
 }
 
-static void *
-joined_row_search ( int table_id, joined_row_t *joined_row) {
-
-    if (joined_row->size == 1) {
-
-        if (joined_row->table_id_array[0] == table_id) {
-            return  joined_row->rec_array[0];
-        }
-
-        return NULL;
-    }
-
-   return joined_row->rec_array[table_id];
-}
-
 static Dtype *
 sql_column_value_resolution_fn (void *_data_src) {
 
@@ -179,7 +164,8 @@ sql_column_value_resolution_fn (void *_data_src) {
 
     exp_tree_data_src_t *data_src = (exp_tree_data_src_t *)_data_src;
 
-    void *rec = joined_row_search (data_src->table_index, *data_src->joined_row);
+    void *rec = (*data_src->joined_row)->rec_array[data_src->table_index];
+
     if (!rec) return NULL;
 
     void *val = (void *)((char *)rec + data_src->schema_rec->offset);
@@ -191,6 +177,7 @@ sql_column_value_resolution_fn (void *_data_src) {
             dtype =  Dtype::factory (MATH_CPP_STRING);
             Dtype_STRING *dtype_str = dynamic_cast <Dtype_STRING *> (dtype);
             dtype_str->dtype.str_val = std::string ((char *)val);
+            dtype->is_resolved = true;
         }
         break;
 
@@ -199,6 +186,7 @@ sql_column_value_resolution_fn (void *_data_src) {
             dtype =  Dtype::factory (MATH_CPP_INT);
             Dtype_INT *dtype_int = dynamic_cast <Dtype_INT *> (dtype);
             dtype_int->dtype.int_val = *(int *)val;
+            dtype->is_resolved = true;
         }
         break;
 
@@ -207,6 +195,7 @@ sql_column_value_resolution_fn (void *_data_src) {
             dtype =  Dtype::factory (MATH_CPP_DOUBLE);
             Dtype_DOUBLE *dtype_d = dynamic_cast <Dtype_DOUBLE *> (dtype);
             dtype_d->dtype.d_val = *(double *)val;
+            dtype->is_resolved = true;
         }
         break;        
 
@@ -218,6 +207,7 @@ sql_column_value_resolution_fn (void *_data_src) {
             dtype_v4->dtype.ipaddr_int= *(uint32_t *)val;
             inet_ntop ( AF_INET, &dtype_v4->dtype.ipaddr_int, ipv4_str, 16);
             dtype_v4->dtype.ip_addr_str = std::string (ipv4_str);
+            dtype->is_resolved = true;
         }
         break;
 
@@ -227,6 +217,7 @@ sql_column_value_resolution_fn (void *_data_src) {
             Dtype_INTERVAL *dtype_ival = dynamic_cast <Dtype_INTERVAL *> (dtype);
             dtype_ival->dtype.lb = *(int *)val;
             dtype_ival->dtype.ub = *((int *)val + 1 );
+            dtype->is_resolved = true;
         }
         break;
 
@@ -269,16 +260,13 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
     ctable_val_t *ctable_val;
     schema_rec_t *schema_rec = NULL;
     exp_tree_data_src_t *data_src = NULL;
-    Dtype_VARIABLE *opnd_var = NULL;
     char table_name_out [SQL_TABLE_NAME_MAX_SIZE];
     char lone_col_name [SQL_COLUMN_NAME_MAX_SIZE];
 
    MexprTree_Iterator_Operands_Begin (sql_exptree->tree, node) {
 
-        opnd_var = dynamic_cast <Dtype_VARIABLE *> (node);
-
-        if (sql_opnd_node_is_resolved (opnd_var)) continue;
-        if (sql_opnd_node_is_unresolvable (opnd_var)) continue;
+        if (sql_opnd_node_is_resolved (node)) continue;
+        if (sql_opnd_node_is_unresolvable (node)) continue;
         
         parser_split_table_column_name (
                 qep->join.table_alias,
@@ -319,11 +307,9 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
         data_src->table_index = tindex;
         data_src->schema_rec = schema_rec;
         data_src->joined_row = joined_row;
-        opnd_var->ResolveOperand (
-                sql_to_mexpr_dtype_converter (schema_rec->dtype) , 
-                data_src,   
-                sql_column_value_resolution_fn);
-        
+        InstallDtypeOperandProperties (node, schema_rec->dtype,
+                        data_src, sql_column_value_resolution_fn);
+    
    } MexprTree_Iterator_Operands_End;
 
    assert (sql_exptree->tree->validate(sql_exptree->tree->root));

@@ -104,12 +104,6 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     joined_row_tmplate->size = qep->join.table_cnt;
     joined_row_tmplate->key_array = (BPluskey_t **) calloc (qep->join.table_cnt, sizeof (BPluskey_t *));
     joined_row_tmplate->rec_array = (void **) calloc (qep->join.table_cnt, sizeof (void *));
-    joined_row_tmplate->table_id_array = (int *)calloc (qep->join.table_cnt, sizeof (int));
-
-    for (i = 0; i < qep->join.table_cnt; i++) {
-        joined_row_tmplate->table_id_array[i] = i;
-    }    
-
     return true;
 }
 
@@ -254,7 +248,6 @@ qep_deinit (qep_struct_t *qep) {
     if (qep->joined_row_tmplate) {
         free (qep->joined_row_tmplate->key_array);
         free (qep->joined_row_tmplate->rec_array);
-        free(qep->joined_row_tmplate->table_id_array);
         free(qep->joined_row_tmplate);
     }
 

@@ -5,36 +5,50 @@
 #include "rdbms_struct.h"
 #include "qep.h"
 #include "../../BPlusTreeLib/BPlusTree.h"
+#include "SqlMexprIntf.h"
 #include "sql_join.h"
-
+#include "sql_io.h"
 
 bool 
 sql_query_initialize_select_column_list  (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
+    int i;
+
+    for (i = 0; i < qep->select.n; i++) {
+
+        if (!sql_resolve_exptree (tcatalog, 
+                                                qep->select.sel_colmns[i]->sql_tree,
+                                                qep, &qep->joined_row_tmplate)) {
+            
+            printf ("Error : Failed to resolve Expression Tree for %dth select column\n", i);
+            return false;
+        }
+    }    
+
     return true;
 }
-
-static void 
-debug_print_joined_row (joined_row_t *joined_row) {
-
-    int i;
-    void *rec;
-
-    for (i = 0; i < joined_row->size; i++) {
-
-        rec = joined_row->rec_array[i];
-        printf ("%s ", (char *)rec);
-    }
-}
-
 
 void
 sql_process_select_query (qep_struct_t *qep) {
 
+    int i; 
+    qp_col_t *sqp_col;
+
     while (qep_execute_join(qep)) {
 
-        // Access qep->joined_row_template
-        debug_print_joined_row (qep->joined_row_tmplate);
-        printf("\n");
-    }
+        for (i = 0; i < qep->select.n; i++) {
+
+            sqp_col = qep->select.sel_colmns[i];
+
+            if (sqp_col->computed_value ) {
+
+                sql_destroy_Dtype_value_holder (sqp_col->computed_value);
+                sqp_col->computed_value = NULL;
+            }
+            sqp_col->computed_value = sql_evaluate_exp_tree (sqp_col->sql_tree);  
+        }
+
+        sql_emit_select_output (qep, qep->select.n, qep->select.sel_colmns);
+
+    } //  join while loop ends
 }

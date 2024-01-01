@@ -99,7 +99,7 @@ sql_query_initialize_select_column_list (qep_struct_t *qep, BPlusTree_t *tcatalo
 
         sql_tree_expand_all_aliases (qep, qep->select.sel_colmns[i]->sql_tree);
 
-        if (!sql_resolve_exptree (&TableCatalogDef, 
+        if (!sql_resolve_exptree (tcatalog, 
                                                 qep->select.sel_colmns[i]->sql_tree,
                                                 qep, &qep->joined_row_tmplate)) {
             

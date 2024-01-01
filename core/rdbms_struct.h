@@ -32,7 +32,6 @@ typedef struct joined_row_ {
     int size;  
     BPluskey_t **key_array;
     void **rec_array;
-    int *table_id_array;    
 
 } joined_row_t;
 

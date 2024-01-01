@@ -15,22 +15,25 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     int i;
     bool rc;
 
-    rc = sql_query_initialize_select_column_list (qep, tcatalog) ;
-    if (!rc) return rc;
-
-    rc = sql_query_initialize_join_clause (qep, tcatalog) ;
-    if (!rc) return rc;
-
-    /* Initialize Joined Row*/
+    if (qep->join.table_cnt > 1) {
+        printf ("Error : Join is not supported yet\n");
+        return false;
+    }
+    
+    qep->data_src_lst = new std::list<exp_tree_data_src_t *>();
+    
+     /* Initialize Joined Row*/
     qep->joined_row_tmplate = (joined_row_t *)calloc (1, sizeof (joined_row_t));
     joined_row_t *joined_row_tmplate = qep->joined_row_tmplate;
     joined_row_tmplate->size = qep->join.table_cnt;
     joined_row_tmplate->key_array = (BPluskey_t **) calloc (qep->join.table_cnt, sizeof (BPluskey_t *));
     joined_row_tmplate->rec_array = (void **) calloc (qep->join.table_cnt, sizeof (void *));
-    joined_row_tmplate->table_id_array = (int *)calloc (qep->join.table_cnt, sizeof (int));
-    for (i = 0; i < qep->join.table_cnt; i++) {
-        joined_row_tmplate->table_id_array[i] = i;
-    }
+
+    rc = sql_query_initialize_join_clause (qep, tcatalog) ;
+    if (!rc) return rc;
+
+    rc = sql_query_initialize_select_column_list (qep, tcatalog) ;
+    if (!rc) return rc;
 
     table_iterators_init (qep, &qep->titer);
 
@@ -57,7 +60,8 @@ qep_deinit (qep_struct_t *qep) {
 
     int i;
     qp_col_t *qp_col;
-
+    exp_tree_data_src_t *data_src;
+    
     if (qep->select.n) {
 
         for (i = 0; i < qep->select.n; i++) {
@@ -76,9 +80,22 @@ qep_deinit (qep_struct_t *qep) {
     if (qep->joined_row_tmplate) {
         free (qep->joined_row_tmplate->key_array);
         free (qep->joined_row_tmplate->rec_array);
-        free(qep->joined_row_tmplate->table_id_array);
         free(qep->joined_row_tmplate);
     }
+
+    /* Free Data Srcs*/
+    if (qep->data_src_lst) {
+
+        while (!qep->data_src_lst->empty()) {
+
+            data_src = qep->data_src_lst->front();
+            qep->data_src_lst->pop_front();
+            free(data_src);
+        }
+        delete qep->data_src_lst;
+        qep->data_src_lst = NULL;
+    }
+
 }
 
 
