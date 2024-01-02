@@ -3,13 +3,11 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdint.h>
-#include <vector>
 #include "sql_const.h"
 #include "rdbms_struct.h"
 #include "qep.h"
 #include "Catalog.h"
 #include "sql_io.h"
-#include "../BPlusTreeLib/BPlusTree.h"
 #include "SqlMexprIntf.h"
 
 #define SCREEN_WIDTH    80
@@ -34,7 +32,6 @@ void sql_emit_select_output(qep_struct_t *qep,
     Dtype *dtype;
     qp_col_t *qp_col;
     int num_columns = n_col;
-    std::vector<Dtype *> dtype_vector;
 
     int column_width = COLUMN_WIDTH; // Default column width
 
@@ -42,7 +39,7 @@ void sql_emit_select_output(qep_struct_t *qep,
         column_width = SCREEN_WIDTH / num_columns; // Adjust column width based on available space
     }
 
-    print_line(num_columns, COLUMN_WIDTH);
+    print_line(num_columns, column_width);
 
     dtype_value_t dtype_value;
 
