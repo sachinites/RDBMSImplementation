@@ -11,6 +11,7 @@
 #include "../../MathExpressionParser/Dtype.h"
 #include "../../MathExpressionParser/Aggregators.h"
 #include "qep.h"
+#include "sql_name.h"
 
 /* Imports from ExpressionParser*/
 parse_rc_t S (); 
@@ -268,34 +269,30 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
         if (sql_opnd_node_is_resolved (node)) continue;
         if (sql_opnd_node_is_unresolvable (node)) continue;
         
-        parser_split_table_column_name (
-                qep->join.table_alias,
-                tcatalog,
-                (char *)sql_get_opnd_variable_name(node).c_str(), 
-                table_name_out, lone_col_name);
+        sql_get_column_table_names (qep, 
+                    (char *)sql_get_opnd_variable_name(node).c_str(), 
+                    table_name_out,
+                    lone_col_name);
 
-        if (table_name_out[0] == '\0') {
-            tindex = 0;
-            ctable_val = qep->join.tables[0].ctable_val;
+        assert (table_name_out[0] != '\0');
+
+        ctable_val = sql_catalog_table_lookup_by_table_name(tcatalog, table_name_out);
+        if (!ctable_val)
+        {
+            printf("Error : %s(%d) Table %s does not exit\n", __FUNCTION__, __LINE__, table_name_out);
+            return false;
+        }
+        for (i = 0; i < qep->join.table_cnt; i++)
+        {
+            if (ctable_val != qep->join.tables[i].ctable_val)
+                continue;
+            tindex = i;
             bpkey.key = lone_col_name;
             bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
-            schema_rec =  (schema_rec_t *) BPlusTree_Query_Key (ctable_val->schema_table, &bpkey);
+            schema_rec = (schema_rec_t *)BPlusTree_Query_Key(ctable_val->schema_table, &bpkey);
+            break;
         }
-        else {
-            ctable_val =  sql_catalog_table_lookup_by_table_name (tcatalog, table_name_out);
-            if (!ctable_val) {
-                printf ("Error : %s(%d) Table %s does not exit\n", __FUNCTION__, __LINE__, table_name_out);
-                return false;
-            }
-            for (i = 0; i < qep->join.table_cnt; i++) {
-                if (ctable_val != qep->join.tables[i].ctable_val) continue;
-                tindex = i;
-                bpkey.key = lone_col_name;
-                bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
-                schema_rec =  (schema_rec_t *) BPlusTree_Query_Key (ctable_val->schema_table, &bpkey);
-                break;
-            }
-        }
+
         if (!schema_rec) {
             printf("Error : %s(%d) : Column %s could not be found in table %s\n", 
                 __FUNCTION__, __LINE__,
@@ -318,7 +315,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
 }
 
 bool 
-sql_resolve_exptree_against_table ( std::unordered_map<std::string, std::string> *map,
+sql_resolve_exptree_against_table ( qep_struct_t *qep,
                                                            BPlusTree_t *tcatalog,
                                                            sql_exptree_t *sql_exptree, 
                                                            ctable_val_t *ctable_val, 
@@ -341,28 +338,20 @@ sql_resolve_exptree_against_table ( std::unordered_map<std::string, std::string>
         if (sql_opnd_node_is_resolved (opnd_var)) continue;
         if (sql_opnd_node_is_unresolvable (opnd_var)) continue;
 
-        parser_split_table_column_name (
-                map,
-                tcatalog,
-                (char *)sql_get_opnd_variable_name(node).c_str(), 
-                table_name_out, lone_col_name);
+        sql_get_column_table_names (qep, 
+                    (char *)sql_get_opnd_variable_name(node).c_str(), 
+                    table_name_out,
+                    lone_col_name);
 
-        if (table_name_out[0] == '\0') {
-            if (table_id != 0) continue;
-            bpkey.key = lone_col_name;
-            bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
-            schema_rec =  (schema_rec_t *) BPlusTree_Query_Key (ctable_val->schema_table, &bpkey);
+        if (strncmp((const char *)table_name_out,
+                    (const char *)ctable_val->table_name,
+                    SQL_TABLE_NAME_MAX_SIZE)) {
+            continue;
         }
-        else {
-            if (strncmp ( (const char *)table_name_out, 
-                                 (const char *)ctable_val->table_name,
-                                 SQL_TABLE_NAME_MAX_SIZE) ) {
-                continue;
-            }
-            bpkey.key = lone_col_name;
-            bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
-            schema_rec = (schema_rec_t *)BPlusTree_Query_Key(ctable_val->schema_table, &bpkey);
-        }
+        
+        bpkey.key = lone_col_name;
+        bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
+        schema_rec = (schema_rec_t *)BPlusTree_Query_Key(ctable_val->schema_table, &bpkey);
 
         if (!schema_rec) {
                 printf("Info (%s) : Operand %s could not be resolved against table %s\n", 
@@ -387,6 +376,31 @@ sql_resolve_exptree_against_table ( std::unordered_map<std::string, std::string>
    sql_exptree->tree->optimize (sql_exptree->tree->root);
    return true;
 }
+
+void 
+sql_tree_operand_names_to_fqcn (qep_struct_t *qep, sql_exptree_t *sql_tree) {
+
+    char *old_name;
+    MexprNode *node;
+    Dtype_VARIABLE *dvar;
+    char new_name [SQL_FQCN_SIZE];
+    char table_name[SQL_TABLE_NAME_MAX_SIZE];
+    char column_name[SQL_COLUMN_NAME_MAX_SIZE];
+
+     MexprTree_Iterator_Operands_Begin (sql_tree->tree, node) {
+
+        dvar = dynamic_cast<Dtype_VARIABLE *> (node); 
+        old_name = (char *)dvar->dtype.variable_name.c_str();
+        memset (new_name, 0, sizeof (new_name));
+        memset (table_name, 0, sizeof (table_name));
+        memset (column_name, 0, sizeof (column_name));
+        sql_get_column_table_names (qep, old_name, table_name, column_name);
+        snprintf (new_name, sizeof(new_name), "%s.%s", table_name, column_name);
+        dvar->dtype.variable_name.assign(std::string(new_name));
+
+     } MexprTree_Iterator_Operands_End;
+}
+
 
 bool 
 sql_evaluate_conditional_exp_tree (sql_exptree_t *sql_exptree) {

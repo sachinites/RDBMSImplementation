@@ -40,7 +40,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
                                   joined_row_t **joined_row) ;
 
 bool 
-sql_resolve_exptree_against_table (std::unordered_map<std::string, std::string> *map,
+sql_resolve_exptree_against_table (qep_struct_t *qep,
                                                          BPlusTree_t *tcatalog,
                                                          sql_exptree_t *sql_exptree, 
                                                          ctable_val_t * ctable_val, 
@@ -142,6 +142,9 @@ sql_to_mexpr_agg_fn_converter (sql_agg_fn_t agg_fn);
 
 mexprcpp_dtypes_t
 sql_to_mexpr_dtype_converter (sql_dtype_t sql_dtype);
+
+void 
+sql_tree_operand_names_to_fqcn (qep_struct_t *qep, sql_exptree_t *sql_tree);
 
 /* Dtype */
 Dtype *

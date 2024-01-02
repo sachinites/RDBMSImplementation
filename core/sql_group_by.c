@@ -11,6 +11,7 @@
 #include "../c-hashtable/hashtable.h"
 #include "../c-hashtable/hashtable_itr.h"
 #include "sql_utils.h"
+#include "sql_name.h"
 
 bool
 sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
@@ -53,6 +54,7 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                 }
 
                 sql_tree_expand_all_aliases (qep, gqp_col->sql_tree);
+                sql_tree_operand_names_to_fqcn (qep, gqp_col->sql_tree);
 
                 rc =  (sql_resolve_exptree (tcatalog, 
                                                              gqp_col->sql_tree, 
@@ -70,44 +72,38 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                 /* gqp_col could be pure table column name,  which may or may not exist in select list
                     2. The group by column gqp_col is a table column name
                 */
-                
-                parser_split_table_column_name (
-                        qep->join.table_alias,
-                        tcatalog,
+                sql_get_column_table_names (qep, 
                         QP_COL_NAME (gqp_col),
-                        table_name_out, lone_col_name);        
+                        table_name_out, lone_col_name);
                 
                 tindex = -1;
 
-                if (table_name_out[0] == '\0' ) {
-                        
-                    tindex = 0;
-                    ctable_val = qep->join.tables[0].ctable_val;
-                }
-                else {
+                ctable_val = sql_catalog_table_lookup_by_table_name(tcatalog, table_name_out);
 
-                    ctable_val =  sql_catalog_table_lookup_by_table_name (tcatalog, table_name_out);
-
-                    if (!ctable_val) {
-                        printf ("Error : Table name %s do not exist\n", table_name_out);
-                        return false;
-                    }
-
-                    for (j = 0; j < qep->join.table_cnt; j++) {
-
-                        if (ctable_val != qep->join.tables[j].ctable_val) continue;
-                        tindex = j;
-                        break;
-                    }
-
-                    if (tindex == -1) {
-
-                        printf("Error : Table %s is not specified in Join list\n", table_name_out);
-                        return false;
-                    }
+                if (!ctable_val)
+                {
+                    printf("Error : Table name %s do not exist\n", table_name_out);
+                    return false;
                 }
 
-                rc = sql_resolve_exptree_against_table (qep->join.table_alias,
+                for (j = 0; j < qep->join.table_cnt; j++)
+                {
+
+                    if (ctable_val != qep->join.tables[j].ctable_val)
+                        continue;
+                    tindex = j;
+                    break;
+                }
+
+                if (tindex == -1)
+                {
+
+                    printf("Error : Table %s is not specified in Join list\n", table_name_out);
+                    return false;
+                }
+
+                sql_tree_operand_names_to_fqcn (qep, gqp_col->sql_tree);
+                rc = sql_resolve_exptree_against_table (qep,
                                                                                 tcatalog,
                                                                                 gqp_col->sql_tree, 
                                                                                 ctable_val, 
@@ -119,15 +115,13 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                                     QP_COL_NAME(gqp_col), ctable_val->table_name);
                     return false;
                 }
-
-                sqp_col = sql_get_qp_col_by_name ( qep->select.sel_colmns, qep->select.n, 
-                                                                            QP_COL_NAME(gqp_col), false);
             }
         }
 
         // 3. The group by column is an expression */
 
         sql_tree_expand_all_aliases (qep, gqp_col->sql_tree);
+        sql_tree_operand_names_to_fqcn (qep, gqp_col->sql_tree);
 
         rc =  (sql_resolve_exptree (tcatalog, 
                                                     gqp_col->sql_tree, 
@@ -187,6 +181,7 @@ sql_query_initialize_having_clause_phase1 (qep_struct_t *qep, BPlusTree_t *tcata
      }
 
      sql_tree_expand_all_aliases (qep, qep->having.gexptree_phase1);
+     sql_tree_operand_names_to_fqcn (qep, qep->having.gexptree_phase1);
      sql_resolve_exptree (tcatalog, qep->having.gexptree_phase1, qep, &qep->joined_row_tmplate);
      sql_tree_remove_unresolve_operands (qep->having.gexptree_phase1);
     return true;
@@ -308,8 +303,6 @@ sql_query_initialize_having_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     }
 
     return sql_query_initialize_having_clause_phase1 (qep, tcatalog);
-    //if (!rc) return false;
-    //return sql_query_initialize_having_clause_phase2 (qep, tcatalog);
 }
 
 /* This fn setup the hashtable also if it is a first record we are grouping*/

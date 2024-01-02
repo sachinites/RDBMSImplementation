@@ -66,7 +66,7 @@ table_iterators_first (qep_struct_t *qep_struct,
         assert (titer->table_iter_data[i].bpnode == NULL);
         assert(titer->table_iter_data[i].index == 0);
 
-        // do {
+        do {
 
             rec = BPlusTree_get_next_record(
                 titer->table_iter_data[i].ctable_val->record_table,
@@ -84,10 +84,10 @@ table_iterators_first (qep_struct_t *qep_struct,
             qep_struct->joined_row_tmplate->key_array[i] = bp_key;
             qep_struct->joined_row_tmplate->rec_array[i] = rec;
 
-           // rc = sql_evaluate_conditional_exp_tree(
-           //     qep_struct->where.exptree_per_table[i]);
+            rc = sql_evaluate_conditional_exp_tree(
+                qep_struct->where.exptree_per_table[i]);
 
-        //} while (!rc);
+        } while (!rc);
     }
 
     return true;
@@ -118,8 +118,8 @@ table_iterators_next (qep_struct_t *qep_struct,
         qep_struct->joined_row_tmplate->key_array[table_id] = bp_key;
         qep_struct->joined_row_tmplate->rec_array[table_id] = rec;
 
-        //rc = sql_evaluate_conditional_exp_tree (
-        //          qep_struct->where.exptree_per_table[table_id]);
+        rc = sql_evaluate_conditional_exp_tree (
+                  qep_struct->where.exptree_per_table[table_id]);
 
     } while (!rc);
 
@@ -157,8 +157,8 @@ table_iterators_next (qep_struct_t *qep_struct,
             qep_struct->joined_row_tmplate->key_array[table_id] = bp_key;
             qep_struct->joined_row_tmplate->rec_array[table_id] = rec;
 
-            //rc = sql_evaluate_conditional_exp_tree (
-             //       qep_struct->where.exptree_per_table[table_id]);
+            rc = sql_evaluate_conditional_exp_tree (
+                    qep_struct->where.exptree_per_table[table_id]);
 
         } while (!rc);
     }

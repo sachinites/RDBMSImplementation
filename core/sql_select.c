@@ -13,6 +13,7 @@
 #include "sql_order_by.h"
 #include "sql_io.h"
 #include "sql_join.h"
+#include "sql_name.h"
 
 extern BPlusTree_t TableCatalogDef;
 
@@ -22,7 +23,7 @@ qep_resolve_select_asterisk (qep_struct_t *qep) {
     int i, j;
     qp_col_t *qp_col;    
     ctable_val_t *ctable_val;
-    char opnd_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
+    char opnd_name[SQL_FQCN_SIZE];
 
     if (qep->select.n ) return true;
 
@@ -79,17 +80,11 @@ sql_query_initialize_select_column_list (qep_struct_t *qep, BPlusTree_t *tcatalo
                 if (sql_is_single_operand_expression_tree (qp_col->sql_tree)
                         && qp_col->alias_name[0] == '\0') {
 
-                    parser_split_table_column_name (
-                            qep->join.table_alias,
-                            tcatalog,
-                            QP_COL_NAME(qp_col),
+                    sql_get_column_table_names ( qep, QP_COL_NAME(qp_col),
                             table_name_out, lone_col_name);
 
                     snprintf (qp_col->alias_name,  sizeof (qp_col->alias_name),
-                        "%s.%s", 
-                        table_name_out[0] == '\0' ? \
-                        qep->join.tables[0].table_name : table_name_out,
-                        lone_col_name);
+                        "%s.%s",  table_name_out, lone_col_name);
                 }
             }
     }
@@ -98,6 +93,7 @@ sql_query_initialize_select_column_list (qep_struct_t *qep, BPlusTree_t *tcatalo
     for (i = 0; i < qep->select.n; i++) {
 
         sql_tree_expand_all_aliases (qep, qep->select.sel_colmns[i]->sql_tree);
+        sql_tree_operand_names_to_fqcn (qep, qep->select.sel_colmns[i]->sql_tree);
 
         if (!sql_resolve_exptree (tcatalog, 
                                                 qep->select.sel_colmns[i]->sql_tree,

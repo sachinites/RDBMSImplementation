@@ -46,7 +46,7 @@ bool
         qep->update.upd_colmns[i].schema_rec = schema_rec;
 
         rc = sql_resolve_exptree_against_table (
-                qep->join.table_alias, 
+                qep,
                 tcatalog,
                 qep->update.upd_colmns[i].value_exptree,
                 ctable_val,

@@ -113,7 +113,7 @@ typedef struct qep_struct_ {
     struct {
 
         bool asc;
-        char column_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
+        char column_name[SQL_FQCN_SIZE];
         int orderby_col_select_index; // At what index the order by column exist in select column list
         std::vector <std::vector <Dtype *> *> pVector;
         int iterator_index;

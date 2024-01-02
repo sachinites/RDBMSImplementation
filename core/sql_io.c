@@ -12,6 +12,7 @@
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "sql_utils.h"
 #include "SqlMexprIntf.h"
+#include "sql_name.h"
 
 #define SCREEN_WIDTH    80
 #define COLUMN_WIDTH   20
@@ -39,7 +40,7 @@ sql_print_hdr (qep_struct_t *qep, qp_col_t **col_list, int n_cols ) {
 
     char table_name[SQL_TABLE_NAME_MAX_SIZE];
     char column_name[SQL_COLUMN_NAME_MAX_SIZE];
-    char composite_col_name[SQL_COMPOSITE_COLUMN_NAME_SIZE];
+    char composite_col_name[SQL_FQCN_SIZE];
 
     int column_width = COLUMN_WIDTH; // Default column width
     
@@ -69,8 +70,7 @@ sql_print_hdr (qep_struct_t *qep, qp_col_t **col_list, int n_cols ) {
                 an alias name, eg : select a + b from quad */
             if (col->alias_name[0] != '\0') {
 
-                parser_split_table_column_name (qep->join.table_alias,
-                                                                   &TableCatalogDef, 
+                sql_get_column_table_names (qep,
                                                                    col->alias_name,
                                                                    table_name,
                                                                    column_name );

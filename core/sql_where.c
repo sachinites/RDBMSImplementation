@@ -28,6 +28,7 @@ sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     */
 
     sql_tree_expand_all_aliases (qep, qep->where.gexptree);
+    sql_tree_operand_names_to_fqcn (qep, qep->where.gexptree);
 
     for (i = 0; i < qep->join.table_cnt; i++) {
 
@@ -40,7 +41,7 @@ sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
         }
 
         if (!sql_resolve_exptree_against_table(
-                        qep->join.table_alias,
+                        qep,
                         tcatalog,
                         qep->where.exptree_per_table[i],
                         qep->join.tables[i].ctable_val, i, 

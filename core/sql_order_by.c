@@ -5,6 +5,7 @@
 #include "sql_order_by.h"
 #include "SqlMexprIntf.h"
 #include "sql_utils.h"
+#include "sql_name.h"
 
 bool 
 qep_collect_dtypes_for_sorting (qep_struct_t *qep) {
@@ -140,17 +141,14 @@ sql_query_initialize_orderby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
     if (!sqp_col) {
 
-        parser_split_table_column_name (
-                        qep->join.table_alias,
-                        tcatalog,
+        sql_get_column_table_names (qep,
                         qep->orderby.column_name,
                         table_name_out, lone_col_name);
 
         snprintf (qep->orderby.column_name, 
                     sizeof (qep->orderby.column_name),
                     "%s.%s", 
-                    table_name_out[0] == '\0' ? \
-                    qep->join.tables[0].table_name : table_name_out,
+                    table_name_out,
                     lone_col_name);
 
         sqp_col = sql_get_qp_col_by_name (qep->select.sel_colmns,

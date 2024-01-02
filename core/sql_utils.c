@@ -14,39 +14,6 @@
 #include "sql_create.h"
 #include "SqlMexprIntf.h"
 
-void 
-parser_split_table_column_name ( std::unordered_map<std::string, std::string> *map,
-                                                        BPlusTree_t *tcatalog,
-                                                        char *composite_col_name, 
-                                                        char *table_name_out,
-                                                        char *col_name_out) {
-
-    ctable_val_t *ctable_val;
-    const char del[2] = ".";
-    char composite_col_name_dup[SQL_COMPOSITE_COLUMN_NAME_SIZE] = {0};
-
-    strncpy (composite_col_name_dup, composite_col_name, SQL_COMPOSITE_COLUMN_NAME_SIZE);
-    char *str1 = strtok (composite_col_name_dup, del);
-    char *str2 = strtok (NULL, del);
-    if (str2 == NULL) {
-        strncpy (col_name_out, str1, SQL_COLUMN_NAME_MAX_SIZE);
-        table_name_out[0] = '\0';
-        return;
-    }
-
-    ctable_val = sql_catalog_table_lookup_by_table_name (tcatalog, str1);
-
-    if (ctable_val) {
-        strncpy (table_name_out, str1, SQL_TABLE_NAME_MAX_SIZE);
-    }
-    else {
-        /* str1 should be table alias name */
-        std::string table_name = map ? (*map)[std::string (str1)] : "";
-        strncpy (table_name_out, table_name.c_str(), SQL_TABLE_NAME_MAX_SIZE);
-    }
-    strncpy (col_name_out, str2, SQL_COLUMN_NAME_MAX_SIZE);
-}
-
 qp_col_t *
 sql_get_qp_col_by_name (   qp_col_t **qp_col_array, 
                                                         int n, 
@@ -77,7 +44,7 @@ sql_get_qp_col_by_name (   qp_col_t **qp_col_array,
             if (strncmp (
                 name, 
                 qp_col->alias_name,
-                SQL_COMPOSITE_COLUMN_NAME_SIZE)) continue;
+                SQL_FQCN_SIZE)) continue;
 
             return qp_col;
         }

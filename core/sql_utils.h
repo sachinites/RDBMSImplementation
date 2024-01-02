@@ -3,7 +3,6 @@
 
 #include <string.h>
 #include <math.h>
-#include <unordered_map>
 #include "rdbms_struct.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 
@@ -43,14 +42,6 @@ sql_construct_table_key_mdata (sql_create_data_t *cdata, int *key_mdata_size);
                                   
 void *
 sql_get_column_value_from_joined_row (joined_row_t *joined_row, qp_col_t *col);
-
-void 
-parser_split_table_column_name ( std::unordered_map<std::string, std::string> *map,
-                                                         BPlusTree_t *tcatalog,
-                                                        char *composite_col_name, 
-                                                        char *table_name_out,
-                                                        char *col_name_out);
-
 
 static inline bool 
 mexpr_double_is_integer (double d) {
