@@ -71,4 +71,7 @@ sql_select_flush_computed_values (qep_struct_t *qep);
 bool 
 sql_is_dtype_compatible (sql_dtype_t expected_dtype, sql_dtype_t computed_dtype) ;
 
+int 
+sql_get_qep_table_index (qep_struct_t *qep, char *table_name);
+
 #endif 

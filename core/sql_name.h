@@ -2,20 +2,18 @@
 #define __SQL_NAME__
 
 #include <stdbool.h>
-#include <unordered_map>
 
 typedef struct qep_struct_ qep_struct_t;
 
-bool 
-sql_is_name_FQCN ( std::unordered_map<std::string, std::string> *table_alias, 
-                                    char *name) ;
+typedef enum COL_NAME_TYPE_ {
 
-bool 
-sql_is_name_ACN (std::unordered_map<std::string, std::string> *table_alias, 
-                                char *name);
+    SQL_COL_NAME_NOT_KNOWN,
+    SQL_COL_NAME_FQCN,
+    SQL_COL_NAME_ACN,
+    SQL_COL_NAME_LCN
 
-bool 
-sql_is_name_LCN (char *name);
+} sql_col_name_type_t;
+
 
 void 
 sql_get_column_table_names ( qep_struct_t *qep,
@@ -23,9 +21,12 @@ sql_get_column_table_names ( qep_struct_t *qep,
                                                     char *table_name_out,
                                                     char *col_name_out);
 
+sql_col_name_type_t
+sql_col_get_name_type ( qep_struct_t *qep, 
+                                         char *col_name);
+
 void 
 sql_convert_name_to_FQCN (qep_struct_t *qep, 
                                                 char *input_column_name,
                                                 int input_column_name_size);
 #endif 
-

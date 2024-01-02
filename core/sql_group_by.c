@@ -73,34 +73,17 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
                     2. The group by column gqp_col is a table column name
                 */
                 sql_get_column_table_names (qep, 
-                        QP_COL_NAME (gqp_col),
-                        table_name_out, lone_col_name);
+                                QP_COL_NAME (gqp_col),
+                                table_name_out, lone_col_name);
                 
-                tindex = -1;
-
-                ctable_val = sql_catalog_table_lookup_by_table_name(tcatalog, table_name_out);
-
-                if (!ctable_val)
-                {
-                    printf("Error : Table name %s do not exist\n", table_name_out);
-                    return false;
-                }
-
-                for (j = 0; j < qep->join.table_cnt; j++)
-                {
-
-                    if (ctable_val != qep->join.tables[j].ctable_val)
-                        continue;
-                    tindex = j;
-                    break;
-                }
-
-                if (tindex == -1)
-                {
-
+                tindex = sql_get_qep_table_index (qep, table_name_out);
+                
+                if ( tindex < 0 ) {
                     printf("Error : Table %s is not specified in Join list\n", table_name_out);
                     return false;
                 }
+
+                ctable_val = qep->join.tables[tindex].ctable_val;
 
                 sql_tree_operand_names_to_fqcn (qep, gqp_col->sql_tree);
                 rc = sql_resolve_exptree_against_table (qep,

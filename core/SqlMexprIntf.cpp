@@ -276,22 +276,19 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
 
         assert (table_name_out[0] != '\0');
 
-        ctable_val = sql_catalog_table_lookup_by_table_name(tcatalog, table_name_out);
-        if (!ctable_val)
-        {
-            printf("Error : %s(%d) Table %s does not exit\n", __FUNCTION__, __LINE__, table_name_out);
+        tindex = sql_get_qep_table_index  (qep, table_name_out);
+
+        if (tindex < 0) {
+            printf("Error : %s(%d) Table %s does not exit\n", 
+                __FUNCTION__, __LINE__, table_name_out);
             return false;
         }
-        for (i = 0; i < qep->join.table_cnt; i++)
-        {
-            if (ctable_val != qep->join.tables[i].ctable_val)
-                continue;
-            tindex = i;
-            bpkey.key = lone_col_name;
-            bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
-            schema_rec = (schema_rec_t *)BPlusTree_Query_Key(ctable_val->schema_table, &bpkey);
-            break;
-        }
+
+        ctable_val = qep->join.tables[tindex].ctable_val;
+
+        bpkey.key = lone_col_name;
+        bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
+        schema_rec = (schema_rec_t *)BPlusTree_Query_Key(ctable_val->schema_table, &bpkey);
 
         if (!schema_rec) {
             printf("Error : %s(%d) : Column %s could not be found in table %s\n", 
@@ -299,6 +296,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
                 sql_get_opnd_variable_name(node).c_str(), ctable_val->table_name);
             return false;
         }
+        
         data_src = (exp_tree_data_src_t *)calloc(1, sizeof(exp_tree_data_src_t)); 
         qep->data_src_lst->push_back (data_src);
         data_src->table_index = tindex;
