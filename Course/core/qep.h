@@ -21,6 +21,7 @@ typedef struct qep_struct_
         struct
         {
             ctable_val_t *ctable_val;
+            char alias_name[SQL_ALIAS_NAME_LEN];
             char table_name[SQL_TABLE_NAME_MAX_SIZE];
 
         } tables[SQL_MAX_TABLES_IN_JOIN_LIST];

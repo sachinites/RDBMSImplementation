@@ -17,13 +17,45 @@ select_query_parser -> select COLLIST from TABS
 
 COLLIST -> COL | COL , COLLIST
 
-COL -> < sql_create_exp_tree_compute () >
+COL -> < sql_create_exp_tree_compute () ALIAS >  
 
-TABS -> <ident> | <ident> , TABS
+TABS -> <ident> ALIAS | <ident> ALIAS , TABS 
 
+ALIAS -> as <identifier> | $ 
 */
 
-//TABS -> <ident> | <ident> , TABS
+static char *alias_name = NULL;
+
+
+//ALIAS -> as <identifier> | $ 
+static parse_rc_t
+ALIAS () {
+
+    parse_init();
+
+    alias_name[0] = '\0';
+    
+    token_code = cyylex();
+
+    if (token_code != SQL_AS) {
+        yyrewind(1);
+        RETURN_PARSE_SUCCESS;
+    }
+
+    token_code = cyylex();
+
+    if (token_code != SQL_IDENTIFIER) {
+        yyrewind(2);
+        RETURN_PARSE_SUCCESS;
+    }
+
+    strncpy (alias_name, lex_curr_token, SQL_ALIAS_NAME_LEN);
+
+    RETURN_PARSE_SUCCESS;
+}
+
+
+//TABS -> <ident> ALIAS | <ident> ALIAS , TABS 
 static parse_rc_t
 TABS() {
 
@@ -32,7 +64,7 @@ TABS() {
 
     CHECKPOINT(initial_chkp);
 
-    //TABS -> <ident> , TABS
+    //TABS ->  <ident> ALIAS , TABS 
     do {
 
         token_code = cyylex();
@@ -42,9 +74,15 @@ TABS() {
         strncpy (qep.join.tables[qep.join.table_cnt].table_name, 
             lex_curr_token, SQL_TABLE_NAME_MAX_SIZE);
 
+        alias_name = qep.join.tables[qep.join.table_cnt].alias_name;
+        err = ALIAS();
+
         token_code = cyylex();
 
-        if (token_code != SQL_COMMA) break;
+        if (token_code != SQL_COMMA) {
+            alias_name[0] = '\0';
+            break;
+        }
 
         qep.join.table_cnt++;
 
@@ -58,7 +96,7 @@ TABS() {
 
     RESTORE_CHKP(initial_chkp);
 
-    //TABS -> <ident>
+   //TABS -> <ident> ALIAS
     token_code = cyylex();
 
     if (token_code != SQL_IDENTIFIER) {
@@ -68,13 +106,16 @@ TABS() {
     
     strncpy (qep.join.tables[qep.join.table_cnt].table_name, 
             lex_curr_token, SQL_TABLE_NAME_MAX_SIZE);
+
+    alias_name = qep.join.tables[qep.join.table_cnt].alias_name;
+    err = ALIAS();
     qep.join.table_cnt++;
 
     RETURN_PARSE_SUCCESS;
 }
 
 
-// COL -> < sql_create_exp_tree_compute () >
+// COL -> < sql_create_exp_tree_compute () ALIAS >  
 static parse_rc_t 
 COL() {
 
@@ -92,6 +133,12 @@ COL() {
         qep.select.n--;
         qep.select.sel_colmns[qep.select.n] = NULL;
         RETURN_PARSE_ERROR;   
+    }
+
+    alias_name = qp_col->alias_name;
+    err = ALIAS();
+    if (qp_col->alias_name[0] != '\0') {
+        qp_col->alias_provided_by_user = true;
     }
     
     RETURN_PARSE_SUCCESS;

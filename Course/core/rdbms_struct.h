@@ -1,6 +1,8 @@
 #ifndef __RDBMS_STRUCT__
 #define __RDBMS_STRUCT__
 
+#include "sql_const.h"
+
 typedef struct sql_exptree_ sql_exptree_t;
 typedef struct BPluskey BPluskey_t;
 typedef struct schema_rec_ schema_rec_t;
@@ -11,6 +13,8 @@ typedef struct qp_col_ {
 
     sql_exptree_t *sql_tree;
     Dtype *computed_value;
+    bool alias_provided_by_user;
+    char alias_name[SQL_ALIAS_NAME_LEN];
 
 } qp_col_t ;
 
