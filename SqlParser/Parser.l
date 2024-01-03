@@ -18,20 +18,29 @@ int lex_curr_token_len;
 stack_t undo_stack = {-1, {0, 0, 0}};
 
 static void 
-lex_push(lex_data_t lex_data) {
-    assert (undo_stack.top < MAX_MEXPR_LEN -1);
+lex_push (lex_data_t lex_data) {
+
+    assert (undo_stack.top < MAX_MEXPR_LEN - 1);
     undo_stack.data[++undo_stack.top] = lex_data;
     lex_curr_token = (char *)lex_data.token_val;
     lex_curr_token_len = lex_data.token_len;
 }
 
 static lex_data_t
-lex_pop() {
+lex_pop () {
+
     assert (undo_stack.top > -1);
-    lex_data_t res = undo_stack.data[undo_stack.top] ;
+    lex_data_t res = undo_stack.data[undo_stack.top];
     undo_stack.top--;
-    lex_curr_token = ( char *)res.token_val;
-    lex_curr_token_len = res.token_len;
+    if (undo_stack.top > -1) {
+        lex_data_t stck_top_lexd = undo_stack.data[undo_stack.top];
+        lex_curr_token = (char *)stck_top_lexd.token_val;
+        lex_curr_token_len = stck_top_lexd.token_len;
+    }
+    else {
+        lex_curr_token = NULL;
+        lex_curr_token_len = 0;
+    }
     return res;
 }
 
@@ -57,12 +66,7 @@ yyrewind (int n) {
         }
     }
     curr_ptr -= data_len;
-    yy_scan_string(curr_ptr);
-    if (undo_stack.top >= 0) {
-        lex_data = undo_stack.data[undo_stack.top];
-        lex_curr_token = lex_data.token_val;
-        lex_curr_token_len = lex_data.token_len;
-    }    
+    yy_scan_string(curr_ptr);    
 }
 
 void
@@ -83,11 +87,6 @@ RESTORE_CHKP(int a) {
     }
     curr_ptr -= data_len;
     yy_scan_string(curr_ptr);
-    if (undo_stack.top >= 0) {
-        lex_data = undo_stack.data[undo_stack.top];
-        lex_curr_token = lex_data.token_val;
-        lex_curr_token_len = lex_data.token_len;
-    }
 }
 
 
@@ -110,7 +109,6 @@ cyylex () {
     lex_data.token_len = yyleng;
     lex_data.token_val = parser_alloc_token_value_default  (token_code);
     lex_push(lex_data);
-    //printf ("code = %d, token = %s\n", token_code, lex_curr_token);
     return token_code;
 }
 
