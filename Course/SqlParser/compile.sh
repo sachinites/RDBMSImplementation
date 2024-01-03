@@ -40,12 +40,12 @@ g++ -g lex.yy.o \
             ../BPlusTreeLib/BPlusTree.o \
             ../core/BPlusTreeCompFn.o \
             ../core/Catalog.o \
-             ../core/sql_delete.o \
-             ../core/sql_insert_into.o \
-             SqlToMexprEnumMapper.o \
-             ../core/SqlMexprIntf.o \
-             ../core/qep.o \
-             ../core/sql_select.o \
-             ../core/sql_join.o \
-             ../core/sql_io.o \
+            ../core/sql_delete.o \
+            ../core/sql_insert_into.o \
+            SqlToMexprEnumMapper.o \
+            ../core/SqlMexprIntf.o \
+            ../core/qep.o \
+            ../core/sql_select.o \
+            ../core/sql_join.o \
+            ../core/sql_io.o \
             -o dbms.exe -lfl -L ../../../MathExpressionParser/Course/ -lMexpr

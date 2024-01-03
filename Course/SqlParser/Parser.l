@@ -66,6 +66,9 @@ yyrewind (int n) {
     while (n)  {
         lex_data = lex_pop();
         data_len += lex_data.token_len;
+        if (lex_data.token_code == PARSER_WHITE_SPACE) {
+            continue;
+        }
         n--;
         lex_data.token_code = 0;
         lex_data.token_len = 0;
@@ -76,6 +79,36 @@ yyrewind (int n) {
     }
     curr_ptr -= data_len;
     yy_scan_string(curr_ptr);
+    if (undo_stack.top >= 0) {
+        lex_data = undo_stack.data[undo_stack.top];
+        lex_curr_token = lex_data.token_val;
+        lex_curr_token_len = lex_data.token_len;
+    }    
+}
+
+void
+RESTORE_CHKP(int a) {
+
+    lex_data_t lex_data;
+    int data_len = 0;
+
+    while (undo_stack.top > a) {
+        
+        lex_data =  lex_pop();
+        data_len += lex_data.token_len;
+
+        if (lex_data.token_val) { 
+            free (lex_data.token_val);
+            lex_data.token_val = NULL;
+        }
+    }
+    curr_ptr -= data_len;
+    yy_scan_string(curr_ptr);
+    if (undo_stack.top >= 0) {
+        lex_data = undo_stack.data[undo_stack.top];
+        lex_curr_token = lex_data.token_val;
+        lex_curr_token_len = lex_data.token_len;
+    }
 }
 
 void 
@@ -104,7 +137,6 @@ lex_set_scan_buffer (const char *buffer) {
 
     yy_scan_string (buffer);
 }
-
 
 /* Dont change anything above this line in this file */
 

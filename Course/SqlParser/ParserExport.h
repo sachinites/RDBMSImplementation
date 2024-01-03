@@ -52,18 +52,16 @@ extern char *lex_curr_token;
 extern int lex_curr_token_len;
 extern void  Parser_stack_reset ();
 extern void lex_set_scan_buffer (const char *buffer);
+extern void RESTORE_CHKP(int a);
 
 #define CHECKPOINT(a)    \
     a = undo_stack.top
-
-#define RESTORE_CHKP(a) \
-    yyrewind(undo_stack.top - a)
 
 #define RETURN_PARSE_SUCCESS    \
     return PARSE_SUCCESS
 
 #define RETURN_PARSE_ERROR  \
-    {yyrewind(undo_stack.top - _lchkp);     \
+    {RESTORE_CHKP(_lchkp);     \
     return PARSE_ERR;}
 
 #define parse_init()             \

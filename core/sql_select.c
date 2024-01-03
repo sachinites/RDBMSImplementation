@@ -103,7 +103,7 @@ sql_query_initialize_select_column_list (qep_struct_t *qep, BPlusTree_t *tcatalo
                         qep->select.sel_colmns[i]->alias_name);
             return false;
         }
-    }    
+    }
 
     return true;
 }
