@@ -24,6 +24,59 @@ print_line(int num_columns, int column_width) {
     putchar('\n');
 }
 
+void 
+sql_print_hdr (qep_struct_t *qep, qp_col_t **col_list, int n_cols ) {
+
+/*
+    If select column is single-operand resolution tree, then Hdr would be :
+        Alias if available
+        FQCN 
+
+    If select column is multi-operand resolution tree, then Hdr would be : 
+        Alias if available
+        Leave blank
+    */
+
+    int i;
+    qp_col_t *qp_col;
+
+   int column_width = SCREEN_WIDTH / n_cols;
+
+   print_line (n_cols, column_width);
+
+    for (i = 0; i < n_cols; i++) {
+
+        qp_col = col_list[i];
+
+        if (sql_is_single_operand_expression_tree (qp_col->sql_tree)) {
+
+            if (qp_col->alias_provided_by_user) {
+
+                 printf("%-*s|", column_width, qp_col->alias_name);
+            }
+            else {
+
+                printf("%-*s|", column_width, 
+                    sql_get_opnd_variable_name(sql_tree_get_root(qp_col->sql_tree)).c_str());
+            }
+        }
+
+        else {
+
+            if (qp_col->alias_provided_by_user) {
+
+                    printf("%-*s|", column_width, qp_col->alias_name);
+                }
+            else {
+
+                printf("%-*s|", column_width, "");
+            }
+        }
+    }
+    printf("\n");
+    print_line (n_cols, column_width);
+}
+
 void sql_emit_select_output(qep_struct_t *qep,
                                                int n_col,
                                                qp_col_t **col_list_head) {
@@ -33,13 +86,7 @@ void sql_emit_select_output(qep_struct_t *qep,
     qp_col_t *qp_col;
     int num_columns = n_col;
 
-    int column_width = COLUMN_WIDTH; // Default column width
-
-    if (num_columns > 0) {
-        column_width = SCREEN_WIDTH / num_columns; // Adjust column width based on available space
-    }
-
-    print_line(num_columns, column_width);
+    int column_width =  SCREEN_WIDTH / num_columns;
 
     dtype_value_t dtype_value;
 
@@ -70,4 +117,5 @@ void sql_emit_select_output(qep_struct_t *qep,
         }
     }
     printf("\n");
+    print_line(num_columns, column_width);
 }

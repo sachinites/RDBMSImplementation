@@ -32,6 +32,12 @@ sql_opnd_node_is_resolved (MexprNode *opnd_node);
 std::string 
 sql_get_opnd_variable_name (MexprNode *opnd_node);
 
+MexprNode *
+sql_tree_get_root (sql_exptree_t *tree) ;
+
+int
+sql_tree_expand_all_aliases (qep_struct_t *qep, sql_exptree_t *sql_tree);
+
 mexprcpp_dtypes_t
 sql_to_mexpr_dtype_converter (sql_dtype_t sql_dtype) ;
 
@@ -69,5 +75,19 @@ typedef struct dtype_value_ {
 
 dtype_value_t 
 DTYPE_GET_VALUE(Dtype *dtype) ;
+
+bool 
+sql_is_single_operand_expression_tree (sql_exptree_t *sql_exptree);
+
+bool 
+sql_concatenate_expr_trees (sql_exptree_t *parent_tree, 
+                                                MexprNode *opnd_node,
+                                                sql_exptree_t *child_tree);
+
+sql_exptree_t *
+sql_clone_expression_tree (sql_exptree_t *src_tree) ;
+
+void 
+sql_tree_operand_names_to_fqcn (qep_struct_t *qep, sql_exptree_t *sql_tree);
 
 #endif 

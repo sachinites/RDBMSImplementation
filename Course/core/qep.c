@@ -9,17 +9,30 @@
 
 extern BPlusTree_t TableCatalogDef;
 
+static void 
+qep_create_alias_to_table_name_mapping (qep_struct_t *qep) {
+
+    int i;
+
+    qep->join.table_alias = new std::unordered_map<std::string, std::string>();
+
+    for (i = 0; i < qep->join.table_cnt; i++) {
+
+        if (qep->join.tables[i].alias_name[0] != '\0') {
+            qep->join.table_alias->insert (
+                {  std::string (qep->join.tables[i].alias_name),   
+                    std::string (qep->join.tables[i].table_name)} );
+        }
+    }
+}
+
+
 static bool 
 sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
     int i;
     bool rc;
-
-    if (qep->join.table_cnt > 1) {
-        printf ("Error : Join is not supported yet\n");
-        return false;
-    }
-    
+   
     qep->data_src_lst = new std::list<exp_tree_data_src_t *>();
     
      /* Initialize Joined Row*/
@@ -29,6 +42,8 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     joined_row_tmplate->key_array = (BPluskey_t **) calloc (qep->join.table_cnt, sizeof (BPluskey_t *));
     joined_row_tmplate->rec_array = (void **) calloc (qep->join.table_cnt, sizeof (void *));
 
+    qep_create_alias_to_table_name_mapping (qep);
+    
     rc = sql_query_initialize_join_clause (qep, tcatalog) ;
     if (!rc) return rc;
 
@@ -67,10 +82,19 @@ qep_deinit (qep_struct_t *qep) {
         for (i = 0; i < qep->select.n; i++) {
 
             qp_col = qep->select.sel_colmns[i];
+
             if (qp_col->sql_tree) {
-                 sql_destroy_exp_tree (qp_col->sql_tree);
+
+                sql_destroy_exp_tree (qp_col->sql_tree);
                 qp_col->sql_tree = NULL;
-            }           
+            }
+
+            if (qp_col->computed_value) {
+
+                sql_destroy_Dtype_value_holder(qp_col->computed_value);
+                qp_col->computed_value = NULL;
+            }
+
         }
     }
 
@@ -94,6 +118,14 @@ qep_deinit (qep_struct_t *qep) {
         }
         delete qep->data_src_lst;
         qep->data_src_lst = NULL;
+    }
+
+        /* Free Alias Hashmap*/
+    if (qep->join.table_alias) {
+
+        qep->join.table_alias->clear();
+        delete qep->join.table_alias;
+        qep->join.table_alias = NULL;
     }
 
 }

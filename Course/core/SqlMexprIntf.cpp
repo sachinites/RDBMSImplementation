@@ -6,11 +6,13 @@
 #include "SqlMexprIntf.h"
 #include "rdbms_struct.h"
 #include "Catalog.h"
+#include "sql_utils.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "../../SqlParser/ParserExport.h"
 #include "../../../MathExpressionParser/Course/MexprTree.h"
 #include "../../../MathExpressionParser/Course/Dtype.h"
 #include "qep.h"
+#include "sql_name.h"
 
 parse_rc_t E (); 
 extern lex_data_t **
@@ -149,15 +151,28 @@ sql_column_value_resolution_fn (
 }
 
 static int 
-sql_get_table_index (char *sql_column_name) {
+sql_get_table_index_from_table_column (BPlusTree_t *tcatalog,
+                                                                qep_struct_t *qep, 
+                                                                char *table_column_name) {
 
-    /* until we support the join operaration fully, we assume all
-    sql column names used by used in select query belong to only
-    one table ( and the only table ) specified in from clause */
+    int i;
+    BPluskey_t bpkey;
 
-    // For now, just return table index of the only table in from clause
-    // which is 0
-    return 0;
+    char table_name[SQL_TABLE_NAME_MAX_SIZE];
+    char column_name[SQL_COLUMN_NAME_MAX_SIZE];
+
+    sql_get_column_table_names (qep, table_column_name, table_name, column_name);
+
+    bpkey.key = (void *) table_name;
+    bpkey.key_size = SQL_TABLE_NAME_MAX_SIZE;
+
+    ctable_val_t *ctable_val = (ctable_val_t *)BPlusTree_Query_Key (tcatalog, &bpkey);
+
+    for (i = 0; i < qep->join.table_cnt; i++) {
+        if (qep->join.tables[i].ctable_val == ctable_val) return i;
+    }
+
+    return -1;
 }
 
 bool 
@@ -173,24 +188,31 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
     ctable_val_t *ctable_val;
     schema_rec_t *schema_rec = NULL;
     exp_tree_data_src_t *data_src = NULL;
+    char table_name_out[SQL_TABLE_NAME_MAX_SIZE];
+    char column_name_out[SQL_COLUMN_NAME_MAX_SIZE];
 
     MexprTree_Iterator_Operands_Begin (sql_exptree->tree, node) {
 
         if (sql_opnd_node_is_resolved (node)) continue;
 
         opnd_name = sql_get_opnd_variable_name(node).c_str();
-        table_index = sql_get_table_index ( (char *)opnd_name);
+        table_index = sql_get_table_index_from_table_column (
+                                     tcatalog, qep, (char *)opnd_name);
+        if (table_index < 0) return false;
         /* Assuming that Join is not supported on select SQL query yet*/
         ctable_val = qep->join.tables[table_index].ctable_val;
-        bpkey.key = (void *)sql_get_opnd_variable_name(node).c_str();
+
+        sql_get_column_table_names (qep, (char *)opnd_name, 
+                                        table_name_out, column_name_out);
+
+        bpkey.key = (void *)column_name_out;
         bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
         schema_rec =  (schema_rec_t *) BPlusTree_Query_Key (
                                 ctable_val->schema_table, &bpkey);
 
         if (!schema_rec) {
             printf("Error : %s(%d) : Column %s could not be found in table %s\n", 
-                __FUNCTION__, __LINE__,
-                sql_get_opnd_variable_name(node).c_str(), ctable_val->table_name);
+                __FUNCTION__, __LINE__, table_name_out, column_name_out);
             return false;
         }
 
@@ -211,6 +233,12 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
      }
 
    return true;
+}
+
+bool 
+sql_is_single_operand_expression_tree (sql_exptree_t *sql_exptree) {
+
+    return sql_exptree->tree->IsLoneVariableOperandNode();
 }
 
 void 
@@ -240,6 +268,14 @@ sql_get_opnd_variable_name (MexprNode *opnd_node) {
     Dtype_VARIABLE *dtype = dynamic_cast <Dtype_VARIABLE *> (opnd_node);
     return dtype->dtype.variable_name;
 }
+
+MexprNode *
+sql_tree_get_root (sql_exptree_t *tree) {
+    
+    if (!tree->tree || !tree->tree->root) return NULL;
+    return tree->tree->root;
+}
+
 
 mexprcpp_dtypes_t
 sql_to_mexpr_dtype_converter (sql_dtype_t sql_dtype) {
@@ -298,4 +334,101 @@ DTYPE_GET_VALUE(Dtype *dtype)   {
             assert(0);
     }
     return dtype_value;
+}
+
+MexprNode *
+sql_tree_get_first_operand (sql_exptree_t *tree) {
+
+    if (!tree->tree) return NULL;
+    return tree->tree->lst_head;
+}
+
+MexprNode *
+sql_tree_get_next_operand (MexprNode *node) {
+
+    if (!node) return node;
+    assert (dynamic_cast <Dtype_VARIABLE *> (node) ); 
+    return node->lst_right;
+}
+
+int
+sql_tree_expand_all_aliases (qep_struct_t *qep, sql_exptree_t *sql_tree) {
+
+    int count = 0;
+    qp_col_t *sqp_col;
+    std::string opnd_name;
+    MexprNode *opnd_node;
+    bool all_alias_expanded = false;
+
+    while (!all_alias_expanded) {
+        
+        all_alias_expanded = true;
+
+        MexprTree_Iterator_Operands_Begin  (sql_tree->tree, opnd_node) {
+
+            opnd_name = sql_get_opnd_variable_name (opnd_node);
+
+            sqp_col = sql_get_qp_col_by_name (
+                                             qep->select.sel_colmns,
+                                             qep->select.n, 
+                                             (char *)opnd_name.c_str(), true);
+
+            if (!sqp_col ) continue;
+
+            all_alias_expanded = false;
+
+            sql_concatenate_expr_trees (sql_tree, 
+                                                          opnd_node, 
+                                                          sql_clone_expression_tree( sqp_col->sql_tree ));
+
+            count++;
+            break;
+        } MexprTree_Iterator_Operands_End;
+    }
+    return count;
+}
+
+sql_exptree_t *
+sql_clone_expression_tree (sql_exptree_t *src_tree) {
+
+    if (!src_tree) return NULL;
+    sql_exptree_t * sql_exptree = (sql_exptree_t *) calloc (1, sizeof (sql_exptree_t));
+    if (src_tree->tree == NULL) return sql_exptree;
+    sql_exptree->tree = src_tree->tree->clone(src_tree->tree->root);
+    return sql_exptree;
+}
+
+
+bool 
+sql_concatenate_expr_trees (sql_exptree_t *parent_tree, 
+                                                MexprNode *opnd_node,
+                                                sql_exptree_t *child_tree) {
+
+    bool rc = parent_tree->tree->concatenate (opnd_node, child_tree->tree);
+    free (child_tree);
+    return rc;
+}
+
+void 
+sql_tree_operand_names_to_fqcn (qep_struct_t *qep, sql_exptree_t *sql_tree) {
+
+    char *old_name;
+    MexprNode *node;
+    Dtype_VARIABLE *dvar;
+    char new_name [SQL_FQCN_SIZE];
+    char table_name[SQL_TABLE_NAME_MAX_SIZE];
+    char column_name[SQL_COLUMN_NAME_MAX_SIZE];
+
+     MexprTree_Iterator_Operands_Begin (sql_tree->tree, node) {
+
+        dvar = dynamic_cast<Dtype_VARIABLE *> (node); 
+        old_name = (char *)dvar->dtype.variable_name.c_str();
+        memset (new_name, 0, sizeof (new_name));
+        memset (table_name, 0, sizeof (table_name));
+        memset (column_name, 0, sizeof (column_name));
+        sql_get_column_table_names (qep, old_name, table_name, column_name);
+        snprintf (new_name, sizeof(new_name), "%s.%s", table_name, column_name);
+        dvar->dtype.variable_name.assign(std::string(new_name));
+
+     } MexprTree_Iterator_Operands_End;
 }

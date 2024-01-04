@@ -5,6 +5,7 @@
 #include <list>
 #include <vector>
 #include "sql_const.h"
+#include <unordered_map>
 
 typedef struct catalog_table_value ctable_val_t ;
 typedef struct qp_col_  qp_col_t;
@@ -25,6 +26,9 @@ typedef struct qep_struct_
             char table_name[SQL_TABLE_NAME_MAX_SIZE];
 
         } tables[SQL_MAX_TABLES_IN_JOIN_LIST];
+
+        /* Hash Map to store mapping from alias -> table name*/
+        std::unordered_map<std::string, std::string> *table_alias;
 
     } join;
 
