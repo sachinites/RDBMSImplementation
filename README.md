@@ -24,18 +24,36 @@ SQLite Database System: Design and Implementation (First Edition)
 To Compile and build :
 =====================
 
-Download :  git clone https://github.com/sachinites/RDBMSImplementation and switched to branch 'DCB'
+To Compile and build :
+
+Download : git clone https://github.com/sachinites/RDBMSImplementation and switched to branch 'DCB' 
+
+cd RDBMSImplementation 
+
+git checkout DCB 
+
 Download : git clone https://github.com/sachinites/MathExpressionParser and switch to branch 'Oops'
 
 cd MathExpressionParser 
-git checkout Oops
+
+git checkout Oops 
+
+
+Now Compile MathExpreesion Parser first
+
 sh compile.sh
 
-cd RDBMSImplementation
-git checkout DCB
-cd SqlParser
-sh compile.sh
-./dbms.exe 
+Compile RDBMS Project now
+
+cd SqlParser 
+
+sh compile.sh 
+
+Run RDBMS project now
+
+./dbms.exe
+
+
 
 
 ===== Thanks ================
