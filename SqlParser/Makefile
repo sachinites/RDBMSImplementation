@@ -3,16 +3,17 @@ CFLAGS=-g -Wall -std=c++11
 
 TARGET_DBMS_EXE=dbms.exe
 TARGET_LIBDBMS=libdbms.a
+TARGET_SQL_ULIB=libsqlapi.a
 SQL_UAPI_TEST_EXE=../uapi/sql_uapi_test.exe
 
-TARGET=${TARGET_DBMS_EXE} ${TARGET_LIBDBMS} ${SQL_UAPI_TEST_EXE}
+TARGET=${TARGET_DBMS_EXE} ${TARGET_LIBDBMS} ${TARGET_SQL_ULIB} ${SQL_UAPI_TEST_EXE}
 
 EXTERNAL_LIBS=-L ../../MathExpressionParser/ -lMexpr
 DBMS_LIB=-L . -ldbms
+SQL_ULIB=-L . -lsqlapi
 STDLIBS=-lfl -lm
 
-OBJS=../uapi/sql_api.o \
-			../core/qep.o \
+OBJS=../core/qep.o \
 			../core/sql_name.o \
 			lex.yy.o \
 			SqlSelectParserCFG.o \
@@ -46,16 +47,20 @@ lex.yy.o:Parser.l
 	flex Parser.l
 	${GCC} ${CFLAGS} -c lex.yy.c
 
-${TARGET_LIBDBMS}:${OBJS}
-	ar rcs ${TARGET_LIBDBMS} ${OBJS}
+${TARGET_LIBDBMS}:${OBJS} ../uapi/sql_api.o
+	ar rcs ${TARGET_LIBDBMS} ${OBJS} ../uapi/sql_api.o
 	@echo ${TARGET_LIBDBMS} is created successfully
 
 ${TARGET_DBMS_EXE}:SqlParserMain.o SqlToMexprEnumMapper.o ${TARGET_LIBDBMS}
 	${GCC} ${CFLAGS} SqlParserMain.o SqlToMexprEnumMapper.o -o ${TARGET_DBMS_EXE} ${DBMS_LIB} ${EXTERNAL_LIBS} ${STDLIBS}
 	@echo ${TARGET_DBMS_EXE} is created successfully
 
-${SQL_UAPI_TEST_EXE}:../uapi/sql_uapi_test.o SqlToMexprEnumMapper.o ${TARGET_LIBDBMS}
-	${GCC} ${CFLAGS} ../uapi/sql_uapi_test.o SqlToMexprEnumMapper.o -o ${SQL_UAPI_TEST_EXE} ${DBMS_LIB} ${EXTERNAL_LIBS} ${STDLIBS}
+${TARGET_SQL_ULIB}:../uapi/sql_api.o
+	ar rcs ${TARGET_SQL_ULIB} ../uapi/sql_api.o
+	@echo ${TARGET_SQL_ULIB} is created successfully
+
+${SQL_UAPI_TEST_EXE}:../uapi/sql_uapi_test.o SqlToMexprEnumMapper.o ${TARGET_SQL_ULIB} ${TARGET_LIBDBMS}
+	${GCC} ${CFLAGS} ../uapi/sql_uapi_test.o SqlToMexprEnumMapper.o -o ${SQL_UAPI_TEST_EXE} ${SQL_ULIB} ${DBMS_LIB} ${EXTERNAL_LIBS} ${STDLIBS}
 	@echo ${SQL_UAPI_TEST_EXE} is created successfully
 
 clean:

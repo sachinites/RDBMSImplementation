@@ -193,9 +193,9 @@ void
  }
 
 void
- sql_process_insert_query (sql_insert_into_data_t *idata) {
+ sql_process_insert_query (BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
 
-     sql_insert_new_record (&TableCatalogDef, idata);
+     sql_insert_new_record (tcatalog ? tcatalog : &TableCatalogDef , idata);
      sql_insert_into_data_destroy(idata);
  }
 

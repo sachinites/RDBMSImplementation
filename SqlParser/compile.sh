@@ -49,4 +49,4 @@ g++ -g ../BPlusTreeLib/BPlusTree.o ../BPlusTreeLib/main.o -o ../BPlusTreeLib/mai
 ar rcs libdbms.a ../core/qep.o ../core/sql_name.o lex.yy.o SqlSelectParserCFG.o SqlDeleteParserCFG.o SqlUpdateParserCFG.o SqlCreateParserCFG.o ../BPlusTreeLib/BPlusTree.o ../core/BPlusTreeCompFn.o ../core/sql_utils.o ../core/sql_create.o ../core/sql_select.o ../core/sql_where.o ../core/Catalog.o ../gluethread/glthread.o SqlInsertIntoParserCFG.o ../core/sql_insert_into.o ../core/sql_delete.o ../core/sql_update.o  ../core/sql_join.o ../c-hashtable/hashtable.o ../c-hashtable/hashtable_itr.o ../core/sql_io.o ../core/SqlMexprIntf.o ../core/sql_group_by.o ../core/sql_order_by.o SqlParserMain.o SqlToMexprEnumMapper.o
 
 # ../uapi/sql_uapi_test.exe and link with with Mexpr library and dbml lib
-g++ -g ../uapi/sql_uapi_test.o -o ../uapi/sql_uapi_test.exe -lfl -lm -L ../../MathExpressionParser/ -lMexpr -L . -ldbms
+g++ -g -o ../uapi/sql_uapi_test.exe ../uapi/sql_uapi_test.o SqlToMexprEnumMapper.o ../uapi/sql_api.o -L ../../MathExpressionParser/ -lMexpr -L . -ldbms -lfl -lm

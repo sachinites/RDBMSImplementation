@@ -16,8 +16,6 @@ BPlusTree_t TableCatalogDef;
 extern  int 
 rdbms_key_comp_fn (BPluskey_t *key_1, BPluskey_t *key_2, key_mdata_t *key_mdata, int size);
 
-static bool initialized = false;
-
 /* A fn used to free the 'value' of catalog table*/
 static void 
 catalog_table_free_fn (void *ptr) {
@@ -90,7 +88,9 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) 
                 {SQL_STRING, 32} ,
             };
 
-    if (!initialized) {
+    /* If BPlus Tree is not initialized */
+    if (catalog_table->Root == NULL) {
+
         /* If this is the first table we are creating in a default DB, then initialize the catalog table. Catalog table is the collection of all tables in single DB along with their schema details*/
         BPlusTree_init(catalog_table,
                        rdbms_key_comp_fn,
@@ -99,8 +99,6 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) 
                        SQL_BTREE_MAX_CHILDREN_CATALOG_TABLE, 
                        catalog_table_free_fn,
                        key_mdata1, sizeof(key_mdata1) / sizeof (key_mdata1[0]));
-
-        initialized = true;
     }
 
     /* Prepare the key to be inserted in the catalog table*/

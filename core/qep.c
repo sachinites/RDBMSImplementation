@@ -109,9 +109,11 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
 
 void 
-sql_execute_qep (qep_struct_t *qep) {
+sql_execute_qep (BPlusTree_t *tcatalog, qep_struct_t *qep) {
 
-    if (!sql_query_init_execution_plan (qep, &TableCatalogDef)) {
+    BPlusTree_t *catalog = tcatalog ? tcatalog : &TableCatalogDef;
+
+    if (!sql_query_init_execution_plan (qep, catalog)) {
 
         printf ("Error : Failed to initialize Query Execution Plan\n");
         return;
@@ -132,6 +134,52 @@ sql_execute_qep (qep_struct_t *qep) {
             printf ("Error : Could not identify Query type\n");
             break;
     }
+}
+
+void 
+memset0_qep (qep_struct_t *qep) {
+
+    qep->query_type = SQL_UNSUPPORTED_Q;
+
+    qep->join.table_cnt = 0;
+    memset (qep->join.tables, 0, sizeof (qep->join.tables));
+    qep->join.table_alias = NULL;
+
+    qep->where.gexptree = NULL;
+    memset (qep->where.exptree_per_table, 0, sizeof (qep->where.exptree_per_table));
+
+    qep->groupby.n = 0;
+    memset (qep->groupby.col_list, 0, sizeof (qep->groupby.col_list));
+    qep->groupby.ht = NULL;
+    qep->groupby.ht_key_size = 0;
+
+    qep->having.gexptree_phase1 = NULL;
+    qep->having.gexptree_phase2 = NULL;
+
+    qep->select.n = 0;
+    memset (qep->select.sel_colmns, 0, sizeof (qep->select.sel_colmns));
+    qep->select.sql_record_reader = NULL;
+    qep->select.app_data = NULL;
+
+    qep->update.n = 0;
+    memset (qep->update.upd_colmns, 0, sizeof (qep->update.upd_colmns));
+
+    qep->distinct.distinct = false;
+    qep->distinct.col = NULL;
+
+    qep->orderby.asc = false;
+    qep->orderby.column_name[0] = '\0';
+    qep->orderby.orderby_col_select_index = 0;
+    qep->orderby.pVector.clear();
+    qep->orderby.iterator_index = 0;
+
+    qep->limit = 0;
+
+    qep->is_join_started = false;
+    qep->is_join_finished = false;
+    qep->titer = NULL;
+    qep->joined_row_tmplate = NULL;
+    qep->data_src_lst = NULL;
 }
 
 void 

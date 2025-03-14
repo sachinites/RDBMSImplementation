@@ -11,12 +11,14 @@
 extern BPlusTree_t TableCatalogDef;
 
 void
-sql_drop_table (char *table_name) {
+sql_drop_table (BPlusTree_t *tcatalog, char *table_name) {
 
     BPluskey_t bkey;
     catalog_table_key_t catalog_table_key;
 
-    if (!sql_catalog_table_lookup_by_table_name (&TableCatalogDef, table_name)) {
+    BPlusTree_t *catalog = tcatalog ? tcatalog : &TableCatalogDef;
+
+    if (!sql_catalog_table_lookup_by_table_name (catalog, table_name)) {
         printf ("Error : Table does not exist\n");
         return;
     }
@@ -29,7 +31,7 @@ sql_drop_table (char *table_name) {
      strncpy (catalog_table_key.owner, "postgres", sizeof (catalog_table_key.owner));
      bkey.key = (void *)&catalog_table_key;
      bkey.key_size = sizeof (catalog_table_key_t);
-     if (BPlusTree_Delete (&TableCatalogDef, &bkey)) {
+     if (BPlusTree_Delete (catalog, &bkey)) {
         printf ("DROP TABLE\n");
      }
 }

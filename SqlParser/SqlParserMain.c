@@ -54,7 +54,7 @@ main (int argc, char **argv) {
                 yyrewind(1);
                 err = select_query_parser ();
                 if (err == PARSE_SUCCESS) {
-                    sql_execute_qep (&qep);
+                    sql_execute_qep (0, &qep);
                 }
                 qep_deinit (&qep);
                 break;
@@ -64,7 +64,7 @@ main (int argc, char **argv) {
                 yyrewind(1);
                 err = create_query_parser ();
                 if (err == PARSE_SUCCESS) {
-                    sql_process_create_query (&cdata);
+                    sql_process_create_query (0, &cdata);
                 }
                 sql_create_data_destroy(&cdata);
                 break;
@@ -74,7 +74,7 @@ main (int argc, char **argv) {
                 yyrewind(1);
                 err = insert_into_query_parser();
                 if (err == PARSE_SUCCESS) {
-                    sql_process_insert_query (&idata);
+                    sql_process_insert_query (0, &idata);
                 }
                 sql_insert_into_data_destroy(&idata);
                 break; 
@@ -99,7 +99,7 @@ main (int argc, char **argv) {
                         printf ("Error : Unrecognized Input\n");
                         break;
                     }
-                    sql_drop_table (table_name);
+                    sql_drop_table (0, table_name);
                     break;
                 }
 
@@ -107,7 +107,7 @@ main (int argc, char **argv) {
                 yyrewind(1);
                 err = delete_query_parser();
                 if (err == PARSE_SUCCESS) {
-                    sql_execute_qep (&qep);
+                    sql_execute_qep (0, &qep);
                 }
                 qep_deinit (&qep);
             break;
@@ -116,7 +116,7 @@ main (int argc, char **argv) {
                 yyrewind(1);
                 err = update_query_parser();
                 if (err == PARSE_SUCCESS) {
-                    sql_execute_qep (&qep);
+                    sql_execute_qep (0, &qep);
                 }
                 qep_deinit (&qep);
                 break;

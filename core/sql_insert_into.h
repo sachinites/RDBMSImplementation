@@ -5,6 +5,8 @@
 #include "sql_const.h"
 #include "../SqlParser/SqlEnums.h"
 
+typedef struct BPlusTree BPlusTree_t;
+
 typedef struct sql_value_ {
 
     sql_dtype_t dtype;
@@ -33,7 +35,7 @@ typedef struct sql_insert_into_data_ {
 
 
 void
- sql_process_insert_query (sql_insert_into_data_t *idata);
+ sql_process_insert_query (BPlusTree_t *tcatalog, sql_insert_into_data_t *idata);
 
 void
  sql_insert_into_data_destroy(sql_insert_into_data_t *idata);

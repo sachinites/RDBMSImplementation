@@ -7,11 +7,16 @@
 #include <string>
 #include <vector>
 
+typedef struct BPlusTree BPlusTree_t;
+
 class Dtype;
 
 typedef void (*sql_record_reader_fn_ptr)(void *, std::vector<Dtype *> *); 
 
-void
-sql_query_exec (char * sql_query); 
+int
+sql_query_exec (BPlusTree_t *sql_db, char * sql_query, char *err_msg); 
+
+void 
+sql_init_db (BPlusTree_t **db);
 
 #endif 

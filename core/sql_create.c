@@ -42,8 +42,9 @@ sql_construct_table_key_mdata (sql_create_data_t *cdata, int *key_mdata_size) {
 }
 
  void 
- sql_process_create_query (sql_create_data_t *cdata) {
+ sql_process_create_query (BPlusTree_t *tcatalog, sql_create_data_t *cdata) {
 
-    Catalog_insert_new_table (&TableCatalogDef, cdata);
+    BPlusTree_t *catalog = tcatalog ? tcatalog : &TableCatalogDef;
+    Catalog_insert_new_table (catalog, cdata);
     sql_create_data_destroy(cdata);
  }

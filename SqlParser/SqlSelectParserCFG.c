@@ -409,7 +409,7 @@ select_query_parser () {
 
     parse_init();
 
-    memset (&qep, 0, sizeof (qep));
+    memset0_qep (&qep);
     qep.query_type = SQL_SELECT_Q;
     
     /* consume 'select' keyword */

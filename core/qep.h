@@ -135,9 +135,11 @@ typedef struct qep_struct_ {
 
 } qep_struct_t;
 
-
 void
-sql_process_select_query (qep_struct_t *qep);
+sql_process_select_query (BPlusTree_t *tcatalog, qep_struct_t *qep);
+
+void 
+memset0_qep (qep_struct_t *qep);
 
 void 
 qep_deinit (qep_struct_t *qep);
@@ -146,7 +148,6 @@ bool
 qep_struct_record_table (qep_struct_t *qep,  char *table_name);
 
 void 
-sql_execute_qep (qep_struct_t *qep) ;
-
+sql_execute_qep (BPlusTree_t *tcatalog, qep_struct_t *qep) ;
 
 #endif 

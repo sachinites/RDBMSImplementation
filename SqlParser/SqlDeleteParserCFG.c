@@ -113,7 +113,7 @@ delete_query_parser () {
 
     parse_init();
 
-    memset (&qep, 0, sizeof (qep));
+    memset0_qep (&qep);
     qep.query_type = SQL_DELETE_Q;
 
     token_code = cyylex();

@@ -159,7 +159,7 @@ update_query_parser() {
 
     parse_init();
 
-    memset (&qep, 0, sizeof (qep_struct_t));
+    memset0_qep (&qep);
 
     token_code = cyylex();
 
