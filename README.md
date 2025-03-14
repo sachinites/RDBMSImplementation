@@ -28,26 +28,24 @@ To Compile and build :
 
 Download : git clone https://github.com/sachinites/RDBMSImplementation and switched to branch 'DCB' 
 
-cd RDBMSImplementation 
-
-git checkout DCB 
+`cd RDBMSImplementation
+git checkout DCB`
 
 Download : git clone https://github.com/sachinites/MathExpressionParser and switch to branch 'Oops'
 
-cd MathExpressionParser 
-
-git checkout Oops 
+`cd MathExpressionParser
+git checkout Oops`
 
 
 Now Compile MathExpreesion Parser first
 
-sh compile.sh
+`cd MathExpressionParser 
+sh compile.sh`
 
 Compile RDBMS Project now
 
-cd SqlParser 
-
-sh compile.sh 
+`cd RDBMSImplementation/SqlParser
+sh compile.sh`
 
 Run RDBMS project now
 
