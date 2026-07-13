@@ -1,164 +1,179 @@
-GCC=g++
-CFLAGS=-g -Wall -std=c++11
+# RDBMS / SQL parser build (mirrors compile.sh)
 
-TARGET_DBMS_EXE=dbms.exe
-TARGET_LIBDBMS=libdbms.a
-TARGET_SQL_ULIB=libsqlapi.a
-SQL_UAPI_TEST_EXE=../uapi/sql_uapi_test.exe
+CXX      := g++
+FLEX     := flex
+CXXFLAGS := -g
+PERM     := -fpermissive
+MEXPR_DIR := ../../MathExpressionParser
+MEXPR_LIB := -L $(MEXPR_DIR) -lMexpr
+STDLIBS  := -lm
 
-TARGET=${TARGET_DBMS_EXE} ${TARGET_LIBDBMS} ${TARGET_SQL_ULIB} ${SQL_UAPI_TEST_EXE}
+TARGET_DBMS       := dbms.exe
+TARGET_LIBDBMS    := libdbms.a
+TARGET_BPTREE     := ../BPlusTreeLib/main.exe
+TARGET_UAPI_TEST  := ../uapi/sql_uapi_test.exe
 
-EXTERNAL_LIBS=-L ../../MathExpressionParser/ -lMexpr
-DBMS_LIB=-L . -ldbms
-SQL_ULIB=-L . -lsqlapi
-STDLIBS=-lfl -lm
+LEX_SRC := lex.yy.c
+PARSER_L := Parser.l
 
-OBJS=../core/qep.o \
-			../core/sql_name.o \
-			lex.yy.o \
-			SqlSelectParserCFG.o \
-			SqlDeleteParserCFG.o \
-			SqlUpdateParserCFG.o \
-			SqlCreateParserCFG.o \
-			SqlInsertIntoParserCFG.o \
-			../BPlusTreeLib/BPlusTree.o \
-			../core/BPlusTreeCompFn.o \
-			../core/sql_utils.o \
-			../core/sql_create.o \
-			../core/sql_select.o \
-			../core/sql_where.o \
-			../core/Catalog.o \
-			../gluethread/glthread.o \
-			../core/sql_insert_into.o \
-			../core/sql_delete.o \
-			../core/sql_update.o  \
-			../core/sql_join.o \
-			../c-hashtable/hashtable.o \
-			../c-hashtable/hashtable_itr.o \
-			../core/sql_io.o \
-			../core/SqlMexprIntf.o \
-			../core/sql_group_by.o \
-			../core/sql_order_by.o
+DBMS_OBJS := \
+	../uapi/sql_api.o \
+	../core/qep.o \
+	../core/sql_name.o \
+	lex.yy.o \
+	SqlSelectParserCFG.o \
+	SqlDeleteParserCFG.o \
+	SqlUpdateParserCFG.o \
+	SqlCreateParserCFG.o \
+	SqlInsertIntoParserCFG.o \
+	../BPlusTreeLib/BPlusTree.o \
+	../core/BPlusTreeCompFn.o \
+	../core/sql_utils.o \
+	../core/sql_create.o \
+	../core/sql_select.o \
+	../core/sql_where.o \
+	../core/Catalog.o \
+	../gluethread/glthread.o \
+	../core/sql_insert_into.o \
+	../core/sql_delete.o \
+	../core/sql_update.o \
+	../core/sql_join.o \
+	../c-hashtable/hashtable.o \
+	../c-hashtable/hashtable_itr.o \
+	../core/sql_io.o \
+	../core/SqlMexprIntf.o \
+	../core/sql_group_by.o \
+	../core/sql_order_by.o \
+	SqlParserMain.o \
+	SqlToMexprEnumMapper.o
 
-all: ${TARGET}
-	@echo DBMS lib Build Finished Successfully.
+LIBDBMS_OBJS := $(filter-out ../uapi/sql_api.o,$(DBMS_OBJS))
 
-lex.yy.o:Parser.l 
-	flex Parser.l
-	${GCC} ${CFLAGS} -c lex.yy.c
+.PHONY: all clean lib dbms test bptree
 
-${TARGET_LIBDBMS}:${OBJS} ../uapi/sql_api.o
-	ar rcs ${TARGET_LIBDBMS} ${OBJS} ../uapi/sql_api.o
-	@echo ${TARGET_LIBDBMS} is created successfully
+all: $(TARGET_LIBDBMS) $(TARGET_DBMS) $(TARGET_BPTREE) $(TARGET_UAPI_TEST)
 
-${TARGET_DBMS_EXE}:SqlParserMain.o SqlToMexprEnumMapper.o ${TARGET_LIBDBMS}
-	${GCC} ${CFLAGS} SqlParserMain.o SqlToMexprEnumMapper.o -o ${TARGET_DBMS_EXE} ${DBMS_LIB} ${EXTERNAL_LIBS} ${STDLIBS}
-	@echo ${TARGET_DBMS_EXE} is created successfully
+lib: $(TARGET_LIBDBMS)
 
-${TARGET_SQL_ULIB}:../uapi/sql_api.o
-	ar rcs ${TARGET_SQL_ULIB} ../uapi/sql_api.o
-	@echo ${TARGET_SQL_ULIB} is created successfully
+dbms: $(TARGET_DBMS)
 
-${SQL_UAPI_TEST_EXE}:../uapi/sql_uapi_test.o SqlToMexprEnumMapper.o ${TARGET_SQL_ULIB} ${TARGET_LIBDBMS}
-	${GCC} ${CFLAGS} ../uapi/sql_uapi_test.o SqlToMexprEnumMapper.o -o ${SQL_UAPI_TEST_EXE} ${SQL_ULIB} ${DBMS_LIB} ${EXTERNAL_LIBS} ${STDLIBS}
-	@echo ${SQL_UAPI_TEST_EXE} is created successfully
+test: $(TARGET_UAPI_TEST)
+
+bptree: $(TARGET_BPTREE)
+
+$(TARGET_LIBDBMS): $(LIBDBMS_OBJS)
+	ar rcs $@ $^
+
+$(TARGET_DBMS): $(DBMS_OBJS)
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(MEXPR_LIB) $(STDLIBS)
+
+$(TARGET_BPTREE): ../BPlusTreeLib/BPlusTree.o ../BPlusTreeLib/main.o
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+$(TARGET_UAPI_TEST): ../uapi/sql_uapi_test.o SqlToMexprEnumMapper.o ../uapi/sql_api.o $(TARGET_LIBDBMS)
+	$(CXX) $(CXXFLAGS) ../uapi/sql_uapi_test.o SqlToMexprEnumMapper.o ../uapi/sql_api.o \
+		-o $@ -L . -ldbms $(MEXPR_LIB) $(STDLIBS)
+
+$(LEX_SRC): $(PARSER_L)
+	$(FLEX) $(PARSER_L)
+
+lex.yy.o: $(LEX_SRC) ParserExport.h
+	$(CXX) $(CXXFLAGS) -c $(LEX_SRC) -o $@
+
+SqlParserMain.o: SqlParserMain.c
+	$(CXX) $(CXXFLAGS) -c SqlParserMain.c -o $@
+
+SqlSelectParserCFG.o: SqlSelectParserCFG.c ParserExport.h sql_parser_bind.h SqlEnums.h
+	$(CXX) $(CXXFLAGS) -c SqlSelectParserCFG.c -o $@
+
+SqlCreateParserCFG.o: SqlCreateParserCFG.c ParserExport.h sql_parser_bind.h SqlEnums.h
+	$(CXX) $(CXXFLAGS) -c SqlCreateParserCFG.c -o $@
+
+SqlInsertIntoParserCFG.o: SqlInsertIntoParserCFG.c ParserExport.h sql_parser_bind.h SqlEnums.h
+	$(CXX) $(CXXFLAGS) -c SqlInsertIntoParserCFG.c -o $@
+
+SqlDeleteParserCFG.o: SqlDeleteParserCFG.c ParserExport.h sql_parser_bind.h SqlEnums.h
+	$(CXX) $(CXXFLAGS) -c SqlDeleteParserCFG.c -o $@
+
+SqlUpdateParserCFG.o: SqlUpdateParserCFG.c ParserExport.h sql_parser_bind.h SqlEnums.h
+	$(CXX) $(CXXFLAGS) -c SqlUpdateParserCFG.c -o $@
+
+SqlToMexprEnumMapper.o: SqlToMexprEnumMapper.c SqlEnums.h
+	$(CXX) $(CXXFLAGS) -c SqlToMexprEnumMapper.c -o $@
+
+../core/qep.o: ../core/qep.c
+	$(CXX) $(CXXFLAGS) -c ../core/qep.c -o $@
+
+../core/sql_create.o: ../core/sql_create.c
+	$(CXX) $(CXXFLAGS) -c ../core/sql_create.c -o $@
+
+../core/sql_update.o: ../core/sql_update.c
+	$(CXX) $(CXXFLAGS) -c ../core/sql_update.c -o $@
+
+../core/sql_insert_into.o: ../core/sql_insert_into.c
+	$(CXX) $(CXXFLAGS) -c ../core/sql_insert_into.c -o $@
+
+../core/sql_select.o: ../core/sql_select.c
+	$(CXX) $(CXXFLAGS) -c ../core/sql_select.c -o $@
+
+../core/sql_utils.o: ../core/sql_utils.c
+	$(CXX) $(CXXFLAGS) -c ../core/sql_utils.c -o $@
+
+../core/sql_io.o: ../core/sql_io.c
+	$(CXX) $(CXXFLAGS) -c ../core/sql_io.c -o $@
+
+../core/sql_group_by.o: ../core/sql_group_by.c
+	$(CXX) $(CXXFLAGS) -c ../core/sql_group_by.c -o $@
+
+../core/sql_order_by.o: ../core/sql_order_by.c
+	$(CXX) $(CXXFLAGS) -c ../core/sql_order_by.c -o $@
+
+../core/sql_where.o: ../core/sql_where.c
+	$(CXX) $(CXXFLAGS) -c ../core/sql_where.c -o $@
+
+../core/sql_join.o: ../core/sql_join.c
+	$(CXX) $(CXXFLAGS) -c ../core/sql_join.c -o $@
+
+../core/sql_name.o: ../core/sql_name.c
+	$(CXX) $(CXXFLAGS) -c ../core/sql_name.c -o $@
+
+../core/sql_delete.o: ../core/sql_delete.c
+	$(CXX) $(CXXFLAGS) -c ../core/sql_delete.c -o $@
+
+../BPlusTreeLib/BPlusTree.o: ../BPlusTreeLib/BPlusTree.c
+	$(CXX) $(CXXFLAGS) -c $(PERM) ../BPlusTreeLib/BPlusTree.c -o $@
+
+../core/BPlusTreeCompFn.o: ../core/BPlusTreeCompFn.c
+	$(CXX) $(CXXFLAGS) -c $(PERM) ../core/BPlusTreeCompFn.c -o $@
+
+../BPlusTreeLib/main.o: ../BPlusTreeLib/main.c
+	$(CXX) $(CXXFLAGS) -c $(PERM) ../BPlusTreeLib/main.c -o $@
+
+../core/Catalog.o: ../core/Catalog.c
+	$(CXX) $(CXXFLAGS) -c ../core/Catalog.c -o $@
+
+../gluethread/glthread.o: ../gluethread/glthread.c
+	$(CXX) $(CXXFLAGS) -c ../gluethread/glthread.c -o $@
+
+../c-hashtable/hashtable.o: ../c-hashtable/hashtable.c
+	$(CXX) $(CXXFLAGS) -c ../c-hashtable/hashtable.c -o $@
+
+../c-hashtable/hashtable_itr.o: ../c-hashtable/hashtable_itr.c
+	$(CXX) $(CXXFLAGS) -c ../c-hashtable/hashtable_itr.c -o $@
+
+../core/SqlMexprIntf.o: ../core/SqlMexprIntf.cpp
+	$(CXX) $(CXXFLAGS) -c ../core/SqlMexprIntf.cpp -o $@
+
+../uapi/sql_api.o: ../uapi/sql_api.cpp
+	$(CXX) $(CXXFLAGS) -c ../uapi/sql_api.cpp -o $@
+
+../uapi/sql_uapi_test.o: ../uapi/sql_uapi_test.cpp
+	$(CXX) $(CXXFLAGS) -c ../uapi/sql_uapi_test.cpp -o $@
 
 clean:
-	rm -f *.exe
-	rm -f *.a
+	rm -f $(TARGET_DBMS) $(TARGET_LIBDBMS) $(TARGET_BPTREE) $(TARGET_UAPI_TEST)
+	rm -f $(LEX_SRC)
 	rm -f *.o
 	rm -f ../core/*.o
 	rm -f ../BPlusTreeLib/*.o
 	rm -f ../uapi/*.o
-	rm -f ../uapi/*.exe
-
-#Compilation Rules for Individial files
-SqlParserMain.o:SqlParserMain.c
-	${GCC} ${CFLAGS} -c SqlParserMain.c -o SqlParserMain.o
-
-SqlSelectParserCFG.o:SqlSelectParserCFG.c
-	${GCC} ${CFLAGS} -c SqlSelectParserCFG.c -o SqlSelectParserCFG.o
-
-SqlCreateParserCFG.o:SqlCreateParserCFG.c
-	${GCC} ${CFLAGS} -c SqlCreateParserCFG.c -o SqlCreateParserCFG.o
-
-SqlInsertIntoParserCFG.o:SqlInsertIntoParserCFG.c
-	${GCC} ${CFLAGS} -c SqlInsertIntoParserCFG.c -o SqlInsertIntoParserCFG.o
-
-SqlDeleteParserCFG.o:SqlDeleteParserCFG.c
-	${GCC} ${CFLAGS} -c SqlDeleteParserCFG.c -o SqlDeleteParserCFG.o
-
-SqlUpdateParserCFG.o:SqlUpdateParserCFG.c
-	${GCC} ${CFLAGS} -c SqlUpdateParserCFG.c -o SqlUpdateParserCFG.o
-
-SqlToMexprEnumMapper.o:SqlToMexprEnumMapper.c
-	${GCC} ${CFLAGS} -c SqlToMexprEnumMapper.c -o SqlToMexprEnumMapper.o
-
-../core/qep.o:../core/qep.c
-	${GCC} ${CFLAGS} -c ../core/qep.c	-o ../core/qep.o
-
-../core/sql_create.o:../core/sql_create.c
-	${GCC} ${CFLAGS} -c ../core/sql_create.c -o ../core/sql_create.o
-
-../core/sql_update.o:../core/sql_update.c	
-	${GCC} ${CFLAGS} -c ../core/sql_update.c -o ../core/sql_update.o
-
-../core/sql_insert_into.o:../core/sql_insert_into.c
-	${GCC} ${CFLAGS} -c ../core/sql_insert_into.c -o ../core/sql_insert_into.o
-
-../core/sql_select.o:../core/sql_select.c
-	${GCC} ${CFLAGS} -c ../core/sql_select.c -o ../core/sql_select.o
-
-../core/sql_utils.o:../core/sql_utils.c
-	${GCC} ${CFLAGS} -c ../core/sql_utils.c -o ../core/sql_utils.o
-
-../core/sql_io.o:../core/sql_io.c
-	${GCC} ${CFLAGS} -c ../core/sql_io.c  -o ../core/sql_io.o
-
-../core/sql_group_by.o:../core/sql_group_by.c
-	${GCC} ${CFLAGS} -c ../core/sql_group_by.c -o ../core/sql_group_by.o
-
-../core/sql_order_by.o:../core/sql_order_by.c
-	${GCC} ${CFLAGS} -c ../core/sql_order_by.c -o ../core/sql_order_by.o
-
-../core/sql_where.o:../core/sql_where.c
-	${GCC} ${CFLAGS} -c ../core/sql_where.c -o ../core/sql_where.o
-
-../core/sql_join.o:../core/sql_join.c
-	${GCC} ${CFLAGS} -c ../core/sql_join.c -o ../core/sql_join.o
-
-../core/sql_name.o:../core/sql_name.c
-	${GCC} ${CFLAGS} -c ../core/sql_name.c -o ../core/sql_name.o
-
-../BPlusTreeLib/BPlusTree.o:../BPlusTreeLib/BPlusTree.c
-	${GCC} ${CFLAGS} -c -fpermissive ../BPlusTreeLib/BPlusTree.c -o ../BPlusTreeLib/BPlusTree.o
-
-../core/BPlusTreeCompFn.o:../core/BPlusTreeCompFn.c
-	${GCC} ${CFLAGS} -c -fpermissive ../core/BPlusTreeCompFn.c -o ../core/BPlusTreeCompFn.o
-
-../BPlusTreeLib/main.o:../BPlusTreeLib/main.c
-	${GCC} ${CFLAGS} -c ../BPlusTreeLib/main.c -o ../BPlusTreeLib/main.o
-
-../core/Catalog.o:../core/Catalog.c
-	${GCC} ${CFLAGS} -c ../core/Catalog.c -o ../core/Catalog.o
-
-../gluethread/glthread.o:../gluethread/glthread.c
-	${GCC} ${CFLAGS} -c ../gluethread/glthread.c -o ../gluethread/glthread.o
-
-../c-hashtable/hashtable.o:../c-hashtable/hashtable.c
-	${GCC} ${CFLAGS} -c ../c-hashtable/hashtable.c -o ../c-hashtable/hashtable.o
-
-../c-hashtable/hashtable_itr.o:../c-hashtable/hashtable_itr.c
-	${GCC} ${CFLAGS} -c ../c-hashtable/hashtable_itr.c -o ../c-hashtable/hashtable_itr.o
-
-../core/SqlMexprIntf.o:../core/SqlMexprIntf.cpp
-	${GCC} ${CFLAGS} -c ../core/SqlMexprIntf.cpp	-o ../core/SqlMexprIntf.o
-
-../uapi/sql_api.o:../uapi/sql_api.cpp
-	${GCC} ${CFLAGS} -c ../uapi/sql_api.cpp -o ../uapi/sql_api.o 
-
-../uapi/sql_uapi_test.o:../uapi/sql_uapi_test.cpp
-	${GCC} ${CFLAGS} -c ../uapi/sql_uapi_test.cpp -o ../uapi/sql_uapi_test.o
-
-../core/sql_delete.o:../core/sql_delete.c
-	${GCC} ${CFLAGS} -c ../core/sql_delete.c -o ../core/sql_delete.o
