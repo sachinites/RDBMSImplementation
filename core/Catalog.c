@@ -180,11 +180,10 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) 
 void 
 sql_show_table_catalog (BPlusTree_t *TableCatalog) {
 
-    int i;
     int rows = 0;
     void *rec_ptr;
     BPluskey_t *key_ptr;
-    unsigned char table_name[SQL_TABLE_NAME_MAX_SIZE];
+    ctable_val_t *ctable_val;
     
     assert (TableCatalog);
 
@@ -192,10 +191,16 @@ sql_show_table_catalog (BPlusTree_t *TableCatalog) {
     printf (" Schema    |           Name           | Type  | Owner  \n");
     printf ("-----------+--------------------------+-------+--------------\n");
 
+    if (!TableCatalog->Root) {
+        printf ("(0 rows)\n");
+        return;
+    }
+
     BPTREE_ITERATE_ALL_RECORDS_BEGIN(TableCatalog, key_ptr, rec_ptr) {
 
-        TableCatalog->key_fmt_fn (key_ptr, table_name, SQL_TABLE_NAME_MAX_SIZE);
-        printf (" public    | %-23s  | table | postgres  \n", table_name);
+        (void) key_ptr;
+        ctable_val = (ctable_val_t *)rec_ptr;
+        printf (" public    | %-23s  | table | postgres  \n", ctable_val->table_name);
         rows++;
 
     } BPTREE_ITERATE_ALL_RECORDS_END(TableCatalog, key_ptr, rec_ptr)
