@@ -61,7 +61,7 @@ parse_rc_t
 LMT (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     token_code = cyylex();
 
@@ -89,7 +89,7 @@ parse_rc_t
 ORDER_BY (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     token_code = cyylex();
 
@@ -127,7 +127,7 @@ parse_rc_t
 HAVING (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     token_code = cyylex();
 
@@ -153,7 +153,7 @@ parse_rc_t
 INDTF_LST (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
     qp_col_t *qp_col;
 
     sql_exptree_t *exp_tree = sql_create_exp_tree_compute (p);
@@ -188,7 +188,7 @@ parse_rc_t
 GROUP_BY (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     token_code = cyylex();
 
@@ -209,7 +209,7 @@ parse_rc_t
 WHERE (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init ();
+    parse_init(p);
 
     token_code = cyylex();
 
@@ -234,7 +234,7 @@ parse_rc_t
 TABS (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     token_code = cyylex();
 
@@ -276,7 +276,7 @@ parse_rc_t
 L (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     token_code = cyylex();
 
@@ -303,7 +303,7 @@ parse_rc_t
 COL (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     qp_col_t *qp_col = (qp_col_t *)calloc (1, sizeof (qp_col_t));
     qp_col->agg_fn = SQL_AGG_FN_NONE;
@@ -383,7 +383,7 @@ parse_rc_t
 COLLIST (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init ();
+    parse_init(p);
 
     token_code = cyylex();
 
@@ -416,7 +416,7 @@ parse_rc_t
 select_query_parser (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     memset0_qep (&rdbms->qep);
     rdbms->qep.query_type = SQL_SELECT_Q;

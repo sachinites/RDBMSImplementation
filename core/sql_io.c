@@ -17,9 +17,6 @@
 #define SCREEN_WIDTH    80
 #define COLUMN_WIDTH   20
 
-extern BPlusTree_t TableCatalogDef;
-
-
 static void 
 print_line(int num_columns, int column_width) {
     for (int i = 0; i < num_columns; i++) {

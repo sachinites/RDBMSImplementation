@@ -10,9 +10,6 @@
 #include "sql_create.h"
 #include "Catalog.h"
 
-/* Global Default Catalog Table, one per Database */
-BPlusTree_t TableCatalogDef;
-
 extern  int 
 rdbms_key_comp_fn (BPluskey_t *key_1, BPluskey_t *key_2, key_mdata_t *key_mdata, int size);
 
@@ -77,9 +74,7 @@ Catalog_insert_new_table (BPlusTree_t *catalog_table, sql_create_data_t *cdata) 
     int i;
     BPluskey_t bkey;
 
-    if (!catalog_table) {
-        catalog_table = &TableCatalogDef;
-    }
+    assert (catalog_table);
 
     static key_mdata_t key_mdata1[] = {  
                 {SQL_INT,  4},
@@ -191,19 +186,19 @@ sql_show_table_catalog (BPlusTree_t *TableCatalog) {
     BPluskey_t *key_ptr;
     unsigned char table_name[SQL_TABLE_NAME_MAX_SIZE];
     
-    BPlusTree_t *tcatalog = TableCatalog ? TableCatalog : &TableCatalogDef;
+    assert (TableCatalog);
 
     printf ("           List of relations\n");
     printf (" Schema    |           Name           | Type  | Owner  \n");
     printf ("-----------+--------------------------+-------+--------------\n");
 
-    BPTREE_ITERATE_ALL_RECORDS_BEGIN(tcatalog, key_ptr, rec_ptr) {
+    BPTREE_ITERATE_ALL_RECORDS_BEGIN(TableCatalog, key_ptr, rec_ptr) {
 
-        tcatalog->key_fmt_fn (key_ptr, table_name, SQL_TABLE_NAME_MAX_SIZE);
+        TableCatalog->key_fmt_fn (key_ptr, table_name, SQL_TABLE_NAME_MAX_SIZE);
         printf (" public    | %-23s  | table | postgres  \n", table_name);
         rows++;
 
-    } BPTREE_ITERATE_ALL_RECORDS_END(tcatalog, key_ptr, rec_ptr)
+    } BPTREE_ITERATE_ALL_RECORDS_END(TableCatalog, key_ptr, rec_ptr)
 
     printf ("(%d rows)\n", rows);
 }

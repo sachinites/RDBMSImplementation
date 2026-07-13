@@ -6,8 +6,6 @@
 #include "qep.h"
 #include "Catalog.h"
 
-extern BPlusTree_t TableCatalogDef;
-
 sql_col_name_type_t
 sql_col_get_name_type ( qep_struct_t *qep, 
                                          char *col_name) {
@@ -29,7 +27,7 @@ sql_col_get_name_type ( qep_struct_t *qep,
     if (it !=  qep->join.table_alias->end()) return SQL_COL_NAME_ACN;
 
     ctable_val_t *ctable_val = sql_catalog_table_lookup_by_table_name (
-                                catalog ? catalog : &TableCatalogDef, str1);
+                                catalog, str1);
     
     if (ctable_val) {
         return SQL_COL_NAME_FQCN;

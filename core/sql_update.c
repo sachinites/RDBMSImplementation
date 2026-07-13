@@ -7,8 +7,6 @@
 #include "qep.h"
 #include "sql_join.h"
 
-extern BPlusTree_t TableCatalogDef;
-
 bool
  sql_query_initialize_update_query (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 

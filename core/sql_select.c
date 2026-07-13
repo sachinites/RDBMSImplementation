@@ -15,8 +15,6 @@
 #include "sql_join.h"
 #include "sql_name.h"
 
-extern BPlusTree_t TableCatalogDef;
-
 bool 
 qep_resolve_select_asterisk (qep_struct_t *qep) {
 

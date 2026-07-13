@@ -40,7 +40,7 @@ parse_rc_t
 VALUE (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     token_code = cyylex();
 
@@ -87,7 +87,7 @@ parse_rc_t
 VALUES (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     err = VALUE (rdbms);
 
@@ -115,7 +115,7 @@ parse_rc_t
 insert_into_query_parser (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     memset (&rdbms->idata, 0, sizeof (rdbms->idata));
 

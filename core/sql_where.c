@@ -3,8 +3,6 @@
 #include "rdbms_struct.h"
 #include "SqlMexprIntf.h"
 
-extern BPlusTree_t TableCatalogDef;
-
 bool
 qep_execute_join_predicate (qep_struct_t *qep_struct, joined_row_t *joined_row) {
 

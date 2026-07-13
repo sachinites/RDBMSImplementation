@@ -76,7 +76,7 @@ sql_query_exec (rdbms_t *rdbms, char *sql_query, char *err_msg)
     lex_set_scan_buffer ((char *)p->lex_buffer);
     Parser_stack_reset ();
 
-    parse_init ();
+    parse_init (p);
 
     token_code = cyylex ();
 

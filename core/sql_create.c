@@ -1,8 +1,7 @@
+#include <assert.h>
 #include "sql_create.h"
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "Catalog.h"
-
-extern BPlusTree_t TableCatalogDef;
 
 void 
 sql_create_data_destroy (sql_create_data_t *cdata) {
@@ -44,7 +43,7 @@ sql_construct_table_key_mdata (sql_create_data_t *cdata, int *key_mdata_size) {
  void 
  sql_process_create_query (BPlusTree_t *tcatalog, sql_create_data_t *cdata) {
 
-    BPlusTree_t *catalog = tcatalog ? tcatalog : &TableCatalogDef;
-    Catalog_insert_new_table (catalog, cdata);
+    assert (tcatalog);
+    Catalog_insert_new_table (tcatalog, cdata);
     sql_create_data_destroy(cdata);
  }

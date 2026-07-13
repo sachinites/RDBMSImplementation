@@ -14,8 +14,6 @@
 #include "sql_create.h"
 #include "SqlMexprIntf.h"
 
-extern BPlusTree_t TableCatalogDef;
-
 qp_col_t *
 sql_get_qp_col_by_name (   qp_col_t **qp_col_array, 
                                                         int n, 
@@ -123,7 +121,7 @@ sql_get_qep_table_index (qep_struct_t *qep, char *table_name) {
 
     ctable_val_t *ctable_val = 
             sql_catalog_table_lookup_by_table_name (
-                catalog ? catalog : &TableCatalogDef, table_name);
+                catalog, table_name);
     
     if (!ctable_val) return -1;
 

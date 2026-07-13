@@ -23,8 +23,6 @@
 #include "../c-hashtable/hashtable.h"
 #include "../c-hashtable/hashtable_itr.h"
 
-extern BPlusTree_t TableCatalogDef;
-
 bool 
 qep_struct_record_table (qep_struct_t *qep_struct, char *table_name) {
 
@@ -113,9 +111,9 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 void 
 sql_execute_qep (BPlusTree_t *tcatalog, qep_struct_t *qep) {
 
-    BPlusTree_t *catalog = tcatalog ? tcatalog : &TableCatalogDef;
+    assert (tcatalog);
 
-    if (!sql_query_init_execution_plan (qep, catalog)) {
+    if (!sql_query_init_execution_plan (qep, tcatalog)) {
 
         printf ("Error : Failed to initialize Query Execution Plan\n");
         return;

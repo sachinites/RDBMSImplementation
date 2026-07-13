@@ -11,8 +11,6 @@
 #include "../BPlusTreeLib/BPlusTree.h"
 #include "Catalog.h"
 
-extern BPlusTree_t TableCatalogDef;
-
 static bool 
 sql_validate_insert_query_data ( BPlusTree_t *TableCatalog, sql_insert_into_data_t *idata) {
 
@@ -195,7 +193,8 @@ void
 void
  sql_process_insert_query (BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
 
-     sql_insert_new_record (tcatalog ? tcatalog : &TableCatalogDef , idata);
+     assert (tcatalog);
+     sql_insert_new_record (tcatalog, idata);
      sql_insert_into_data_destroy(idata);
  }
 

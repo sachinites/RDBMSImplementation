@@ -28,7 +28,7 @@ parse_rc_t
 WHERE (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init ();
+    parse_init(p);
 
     token_code = cyylex();
 
@@ -52,7 +52,7 @@ parse_rc_t
 TAB (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     token_code = cyylex();
 
@@ -78,7 +78,7 @@ parse_rc_t
 COL_ASSIGN (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     token_code = cyylex();
 
@@ -108,10 +108,10 @@ parse_rc_t
 COL_ASSIGN_LIST (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     int initial_chkp;
-    CHECKPOINT(initial_chkp);
+    CHECKPOINT(p, initial_chkp);
 
     // COL_ASSIGN_LIST -> COL_ASSIGN , COL_ASSIGN_LIST
     do {
@@ -134,7 +134,7 @@ COL_ASSIGN_LIST (rdbms_t *rdbms) {
 
     } while (0);
 
-    RESTORE_CHKP(initial_chkp);
+    RESTORE_CHKP(p, initial_chkp);
 
     // COL_ASSIGN_LIST -> COL_ASSIGN
 
@@ -161,7 +161,7 @@ parse_rc_t
 update_query_parser (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     memset0_qep (&rdbms->qep);
 

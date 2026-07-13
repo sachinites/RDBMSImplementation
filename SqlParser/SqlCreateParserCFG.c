@@ -27,7 +27,7 @@ parse_rc_t
 DTYPE (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     do {
 
@@ -96,7 +96,7 @@ parse_rc_t
 COL (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init ();
+    parse_init(p);
 
     token_code = cyylex();
 
@@ -128,7 +128,7 @@ parse_rc_t
 COLSLIST (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     err = COL(rdbms);
 
@@ -154,7 +154,7 @@ parse_rc_t
 create_query_parser (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     memset (&rdbms->cdata, 0, sizeof (rdbms->cdata));
 

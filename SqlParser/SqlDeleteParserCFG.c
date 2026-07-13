@@ -26,7 +26,7 @@ parse_rc_t
 WHERE (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init ();
+    parse_init(p);
 
     token_code = cyylex();
 
@@ -50,7 +50,7 @@ parse_rc_t
 L (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
      rdbms->parse_alias_name[0] = '\0';
 
@@ -77,7 +77,7 @@ parse_rc_t
 TABS (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     token_code = cyylex();
 
@@ -113,7 +113,7 @@ parse_rc_t
 delete_query_parser (rdbms_t *rdbms) {
     RDBMS_PARSER_BIND (rdbms);
 
-    parse_init();
+    parse_init(p);
 
     memset0_qep (&rdbms->qep);
     rdbms->qep.query_type = SQL_DELETE_Q;
