@@ -3,6 +3,7 @@
 #include <memory.h>
 #include <assert.h>
 #include "ParserExport.h"
+#include "sql_parser_bind.h"
 #include "SqlEnums.h"
 #include "../core/SqlMexprIntf.h"
 #include "../core/sql_create.h"
@@ -22,10 +23,9 @@
 
 */
 
-sql_create_data_t cdata; 
-
 parse_rc_t
-DTYPE() {
+DTYPE (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
@@ -38,7 +38,7 @@ DTYPE() {
             yyrewind(1);
             break;
         }
-        cdata.column_data[cdata.n_cols].dtype = SQL_STRING;
+        rdbms->cdata.column_data[rdbms->cdata.n_cols].dtype = SQL_STRING;
 
         token_code = cyylex();
 
@@ -56,7 +56,7 @@ DTYPE() {
             yyrewind(3);
             break;
         }
-        cdata.column_data[cdata.n_cols].dtype_len = atoi (lex_curr_token);
+        rdbms->cdata.column_data[rdbms->cdata.n_cols].dtype_len = atoi (lex_curr_token);
 
         token_code = cyylex();
 
@@ -79,8 +79,8 @@ DTYPE() {
         case SQL_DOUBLE:
         case SQL_IPV4_ADDR:
         case SQL_INTERVAL:
-            cdata.column_data[cdata.n_cols].dtype = (sql_dtype_t )token_code;
-            cdata.column_data[cdata.n_cols].dtype_len = sql_dtype_size ((sql_dtype_t )token_code);
+            rdbms->cdata.column_data[rdbms->cdata.n_cols].dtype = (sql_dtype_t )token_code;
+            rdbms->cdata.column_data[rdbms->cdata.n_cols].dtype_len = sql_dtype_size ((sql_dtype_t )token_code);
             RETURN_PARSE_SUCCESS;
         default:
             PARSER_LOG_ERR (token_code, SQL_INT);
@@ -93,7 +93,8 @@ DTYPE() {
 }
 
 parse_rc_t
-COL() {
+COL (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init ();
 
@@ -104,10 +105,10 @@ COL() {
         RETURN_PARSE_ERROR;
     }
 
-    strncpy (cdata.column_data[cdata.n_cols].col_name,
+    strncpy (rdbms->cdata.column_data[rdbms->cdata.n_cols].col_name,
                     lex_curr_token, SQL_COLUMN_NAME_MAX_SIZE);
 
-    err = DTYPE();
+    err = DTYPE(rdbms);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -118,21 +119,22 @@ COL() {
         RETURN_PARSE_SUCCESS;
     }
 
-    cdata.column_data[cdata.n_cols].is_primary_key = true;
+    rdbms->cdata.column_data[rdbms->cdata.n_cols].is_primary_key = true;
 
     RETURN_PARSE_SUCCESS;
 }
 
 parse_rc_t
-COLSLIST() {
+COLSLIST (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
-    err = COL();
+    err = COL(rdbms);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
-    cdata.n_cols++;
+    rdbms->cdata.n_cols++;
 
     token_code = cyylex();
 
@@ -141,7 +143,7 @@ COLSLIST() {
         RETURN_PARSE_SUCCESS;
     }
 
-    err = COLSLIST();
+    err = COLSLIST (rdbms);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -149,11 +151,12 @@ COLSLIST() {
 }
 
 parse_rc_t
-create_query_parser () {
+create_query_parser (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
-    memset (&cdata, 0, sizeof (cdata));
+    memset (&rdbms->cdata, 0, sizeof (rdbms->cdata));
 
     token_code = cyylex();
     assert (token_code == SQL_CREATE_Q);
@@ -173,7 +176,7 @@ create_query_parser () {
         RETURN_PARSE_ERROR;
     }
 
-    strncpy(cdata.table_name, lex_curr_token, SQL_TABLE_NAME_MAX_SIZE);
+    strncpy(rdbms->cdata.table_name, lex_curr_token, SQL_TABLE_NAME_MAX_SIZE);
 
     token_code = cyylex();
 
@@ -183,7 +186,7 @@ create_query_parser () {
         RETURN_PARSE_ERROR;
     }
 
-    err = COLSLIST();
+    err = COLSLIST (rdbms);
 
     if (err == PARSE_ERR) {
         printf ("Failed\n");

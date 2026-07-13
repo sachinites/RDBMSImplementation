@@ -13,10 +13,10 @@
 #include "qep.h"
 #include "sql_name.h"
 
-/* Imports from ExpressionParser*/
-parse_rc_t S (); 
-parse_rc_t Q (); 
-parse_rc_t E (); 
+/* Imports from ExpressionParser (libMexpr) */
+parse_rc_t S (mexpr_parser_t *p); 
+parse_rc_t Q (mexpr_parser_t *p); 
+parse_rc_t E (mexpr_parser_t *p);  
 
 extern lex_data_t **
 mexpr_convert_infix_to_postfix (lex_data_t *infix, int sizein, int *size_out) ;
@@ -62,15 +62,15 @@ postfix_lex_data_array_destroy (lex_data_t **postfix, int size) {
 }
 
 static MexprTree *
-Parser_Mexpr_build_math_expression_tree () {
+Parser_Mexpr_build_math_expression_tree (mexpr_parser_t *parser) {
 
     int i;
     std::string *string_ptr;
     MexprTree *tree = NULL; 
 
-    int stack_chkp = undo_stack.top + 1;
+    int stack_chkp = parser->undo_stack.top + 1;
 
-    parse_rc_t err = PARSER_CALL(E);
+    parse_rc_t err = E(parser);
 
     if (err == PARSE_ERR) {
         return NULL;
@@ -78,7 +78,7 @@ Parser_Mexpr_build_math_expression_tree () {
 
     int size_out = 0;
     lex_data_t **postfix = mexpr_convert_infix_to_postfix (
-                                            &undo_stack.data[stack_chkp], undo_stack.top + 1 - stack_chkp, &size_out);
+                                            &parser->undo_stack.data[stack_chkp], parser->undo_stack.top + 1 - stack_chkp, &size_out);
     
    tree = new MexprTree (postfix, size_out);
     postfix_lex_data_array_destroy (postfix, size_out);
@@ -87,26 +87,26 @@ Parser_Mexpr_build_math_expression_tree () {
 
 
 static MexprTree *
-Parser_Mexpr_Condition_build_expression_tree () {
+Parser_Mexpr_Condition_build_expression_tree (mexpr_parser_t *parser) {
 
     int i;
     MexprTree *tree = NULL; 
 
-    int stack_chkp = undo_stack.top + 1;
+    int stack_chkp = parser->undo_stack.top + 1;
 
-    parse_rc_t err = PARSER_CALL(S);
+    parse_rc_t err = S(parser);
 
     do {
 
         if (err == PARSE_SUCCESS) break;
-        err = PARSER_CALL(Q);
+        err = Q(parser);
         if (err == PARSE_ERR) return NULL;
 
     } while (0);
 
     int size_out = 0;
     lex_data_t **postfix = mexpr_convert_infix_to_postfix (
-                                            &undo_stack.data[stack_chkp], undo_stack.top + 1 - stack_chkp, &size_out);
+                                            &parser->undo_stack.data[stack_chkp], parser->undo_stack.top + 1 - stack_chkp, &size_out);
 
     tree = new MexprTree(postfix, size_out);
     postfix_lex_data_array_destroy (postfix, size_out);
@@ -114,10 +114,10 @@ Parser_Mexpr_Condition_build_expression_tree () {
 }
 
 sql_exptree_t *
-sql_create_exp_tree_compute ()  {
+sql_create_exp_tree_compute (mexpr_parser_t *parser)  {
 
     sql_exptree_t *sql_exptree = (sql_exptree_t *) calloc (1, sizeof (sql_exptree_t ));
-    sql_exptree->tree = Parser_Mexpr_build_math_expression_tree ();
+    sql_exptree->tree = Parser_Mexpr_build_math_expression_tree (parser);
 
     if (!sql_exptree->tree) {
         //printf ("Info : %s(%d) Expression Parsing Failed\n",   __FUNCTION__, __LINE__);
@@ -138,10 +138,10 @@ sql_create_exp_tree_compute ()  {
 }
 
 sql_exptree_t *
-sql_create_exp_tree_conditional () {
+sql_create_exp_tree_conditional (mexpr_parser_t *parser) {
 
     sql_exptree_t *sql_exptree = (sql_exptree_t *) calloc (1, sizeof (sql_exptree_t ));
-    sql_exptree->tree = Parser_Mexpr_Condition_build_expression_tree ();
+    sql_exptree->tree = Parser_Mexpr_Condition_build_expression_tree (parser);
 
     if (!sql_exptree->tree) {
         free (sql_exptree) ;

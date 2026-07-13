@@ -8,6 +8,7 @@
 #include "../core/sql_const.h"
 #include "../core/SqlMexprIntf.h"
 #include "../core/qep.h"
+#include "sql_parser_bind.h"
 
  /* CFG : 
     update_query_parser -> update TAB set COL_ASSIGN_LIST WHERE LEXPR
@@ -16,17 +17,16 @@
     COL_ASSIGN -> <ident> = LEXPR
  */
 
-extern qep_struct_t qep;
-
-static parse_rc_t WHERE() ;
-static parse_rc_t TAB() ;
-static parse_rc_t COL_ASSIGN_LIST() ;
-static parse_rc_t COL_ASSIGN() ;
+static parse_rc_t WHERE (rdbms_t *rdbms) ;
+static parse_rc_t TAB (rdbms_t *rdbms) ;
+static parse_rc_t COL_ASSIGN_LIST (rdbms_t *rdbms) ;
+static parse_rc_t COL_ASSIGN (rdbms_t *rdbms) ;
 
 
 /* WHERE -> $ | where LEXPR */
 parse_rc_t
-WHERE() {
+WHERE (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init ();
 
@@ -37,9 +37,9 @@ WHERE() {
         RETURN_PARSE_SUCCESS;
     }
 
-    qep.where.gexptree = sql_create_exp_tree_conditional();
+    rdbms->qep.where.gexptree = sql_create_exp_tree_conditional(p);
 
-    if (!qep.where.gexptree) {
+    if (!rdbms->qep.where.gexptree) {
         printf ("Error : Could not build Where Logical Expression Tree\n");
         RETURN_PARSE_ERROR;
     }
@@ -49,7 +49,8 @@ WHERE() {
 
 // TABS -> <ident>
 parse_rc_t
-TAB() {
+TAB (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
@@ -61,20 +62,21 @@ TAB() {
     }
 
     /* Store a Table name */
-    if (!qep_struct_record_table (&qep, lex_curr_token)) {
+    if (!qep_struct_record_table (&rdbms->qep, lex_curr_token)) {
 
         printf ("Error : Table %s Do not Exist\n", lex_curr_token);
         RETURN_PARSE_ERROR;
     }
 
-    qep.join.table_cnt++;
+    rdbms->qep.join.table_cnt++;
 
     RETURN_PARSE_SUCCESS;
 }
 
 // COL_ASSIGN -> <ident> = LEXPR
 parse_rc_t
-COL_ASSIGN() {
+COL_ASSIGN (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
@@ -86,7 +88,7 @@ COL_ASSIGN() {
     }
 
     /* Store a Column name */
-    strncpy (qep.update.upd_colmns[qep.update.n].col_name, 
+    strncpy (rdbms->qep.update.upd_colmns[rdbms->qep.update.n].col_name, 
                     lex_curr_token, lex_curr_token_len);
 
     token_code = cyylex();
@@ -96,14 +98,15 @@ COL_ASSIGN() {
         RETURN_PARSE_ERROR;
     }
 
-    qep.update.upd_colmns[qep.update.n].value_exptree = sql_create_exp_tree_compute();
+    rdbms->qep.update.upd_colmns[rdbms->qep.update.n].value_exptree = sql_create_exp_tree_compute(p);
 
     RETURN_PARSE_SUCCESS;
 }
 
 // COL_ASSIGN_LIST -> COL_ASSIGN | COL_ASSIGN , COL_ASSIGN_LIST
 parse_rc_t
-COL_ASSIGN_LIST() {
+COL_ASSIGN_LIST (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
@@ -113,7 +116,7 @@ COL_ASSIGN_LIST() {
     // COL_ASSIGN_LIST -> COL_ASSIGN , COL_ASSIGN_LIST
     do {
 
-        err = COL_ASSIGN();
+        err = COL_ASSIGN(rdbms);
 
         if (err == PARSE_ERR) break;
 
@@ -121,9 +124,9 @@ COL_ASSIGN_LIST() {
 
         if (token_code != SQL_COMMA) break;
 
-        qep.update.n++;
+        rdbms->qep.update.n++;
 
-        err = COL_ASSIGN_LIST();
+        err = COL_ASSIGN_LIST(rdbms);
 
         if (err == PARSE_ERR) break;
 
@@ -135,31 +138,32 @@ COL_ASSIGN_LIST() {
 
     // COL_ASSIGN_LIST -> COL_ASSIGN
 
-    err = COL_ASSIGN();
+    err = COL_ASSIGN(rdbms);
 
     if (err == PARSE_ERR) {
 
-        if (!qep.update.upd_colmns[qep.update.n].value_exptree) {
+        if (!rdbms->qep.update.upd_colmns[rdbms->qep.update.n].value_exptree) {
             
             printf ("Error : Could not build Update Column Value Expression Tree for Column %s\n", 
-                        qep.update.upd_colmns[qep.update.n].col_name);
+                        rdbms->qep.update.upd_colmns[rdbms->qep.update.n].col_name);
             RETURN_PARSE_ERROR;
         }
 
     }
 
-    qep.update.n++;
+    rdbms->qep.update.n++;
     
     RETURN_PARSE_SUCCESS;
 }
 
 // update_query_parser -> update TAB set COL_ASSIGN_LIST WHERE LEXPR
 parse_rc_t
-update_query_parser() {
+update_query_parser (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
-    memset0_qep (&qep);
+    memset0_qep (&rdbms->qep);
 
     token_code = cyylex();
 
@@ -168,9 +172,9 @@ update_query_parser() {
         RETURN_PARSE_ERROR;
     }
 
-    qep.query_type = SQL_UPDATE_Q;
+    rdbms->qep.query_type = SQL_UPDATE_Q;
 
-    err = TAB();
+    err = TAB(rdbms);
 
     if (err == PARSE_ERR) {
         RETURN_PARSE_ERROR;
@@ -183,13 +187,13 @@ update_query_parser() {
         RETURN_PARSE_ERROR;
     }
 
-    err = COL_ASSIGN_LIST();
+    err = COL_ASSIGN_LIST(rdbms);
 
     if (err == PARSE_ERR) {
         RETURN_PARSE_ERROR;
     }
 
-    err = WHERE();
+    err = WHERE(rdbms);
 
     if (err == PARSE_ERR) {
         RETURN_PARSE_ERROR;

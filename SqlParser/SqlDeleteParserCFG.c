@@ -5,6 +5,7 @@
 #include "ParserExport.h"
 #include "SqlEnums.h"
 #include "../core/qep.h"
+#include "sql_parser_bind.h"
 #include "../core/SqlMexprIntf.h"
 #include "../core/sql_delete.h"
 #include "../core/sql_const.h"
@@ -16,16 +17,14 @@
     WHERE -> $ | where LEXPR 
  */
 
-extern qep_struct_t qep;
-static char *L_alias_name = NULL;
-
-static parse_rc_t WHERE() ;
-static parse_rc_t L() ;
-static parse_rc_t TABS() ;
+static parse_rc_t WHERE (rdbms_t *rdbms) ;
+static parse_rc_t L (rdbms_t *rdbms) ;
+static parse_rc_t TABS (rdbms_t *rdbms) ;
 
 /* WHERE -> $ | where LEXPR */
 parse_rc_t
-WHERE() {
+WHERE (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init ();
 
@@ -36,9 +35,9 @@ WHERE() {
         RETURN_PARSE_SUCCESS;
     }
 
-    qep.where.gexptree = sql_create_exp_tree_conditional();
+    rdbms->qep.where.gexptree = sql_create_exp_tree_conditional(p);
 
-    if (!qep.where.gexptree) {
+    if (!rdbms->qep.where.gexptree) {
         printf ("Error : Could not build Where Logical Expression Tree\n");
         RETURN_PARSE_ERROR;
     }
@@ -48,11 +47,12 @@ WHERE() {
 
 // L -> $ | as <identifier>
 parse_rc_t
-L() {
+L (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
-     L_alias_name[0] = '\0';
+     rdbms->parse_alias_name[0] = '\0';
 
     token_code = cyylex();
 
@@ -68,13 +68,14 @@ L() {
         RETURN_PARSE_SUCCESS;
     }
 
-    strncpy (L_alias_name,  lex_curr_token, lex_curr_token_len);
+    strncpy (rdbms->parse_alias_name,  lex_curr_token, lex_curr_token_len);
     RETURN_PARSE_SUCCESS;
 }
 
 // TABS -> <ident> L
 parse_rc_t
-TABS() {
+TABS (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
@@ -86,15 +87,15 @@ TABS() {
     }
 
     /* Store a Table name */
-    if (!qep_struct_record_table (&qep, lex_curr_token)) {
+    if (!qep_struct_record_table (&rdbms->qep, lex_curr_token)) {
 
         printf ("Error : Table %s Do not Exist\n", lex_curr_token);
         RETURN_PARSE_ERROR;
     }
 
-    L_alias_name = qep.join.tables[qep.join.table_cnt].alias_name;
+    rdbms->parse_alias_name = rdbms->qep.join.tables[rdbms->qep.join.table_cnt].alias_name;
 
-    err = L();
+    err = L(rdbms);
 
     if (err == PARSE_ERR ) {
 
@@ -102,19 +103,20 @@ TABS() {
         RETURN_PARSE_ERROR;
     }
 
-    qep.join.table_cnt++;
+    rdbms->qep.join.table_cnt++;
 
     RETURN_PARSE_SUCCESS;
 }
 
 
 parse_rc_t 
-delete_query_parser () {
+delete_query_parser (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
-    memset0_qep (&qep);
-    qep.query_type = SQL_DELETE_Q;
+    memset0_qep (&rdbms->qep);
+    rdbms->qep.query_type = SQL_DELETE_Q;
 
     token_code = cyylex();
 
@@ -127,7 +129,7 @@ delete_query_parser () {
         RETURN_PARSE_ERROR;
     }
 
-    err = TABS();
+    err = TABS(rdbms);
 
     if (err == PARSE_ERR) {
 
@@ -135,7 +137,7 @@ delete_query_parser () {
         RETURN_PARSE_ERROR;        
     }
 
-    err = WHERE();
+    err = WHERE(rdbms);
 
     if (err == PARSE_ERR) {
 

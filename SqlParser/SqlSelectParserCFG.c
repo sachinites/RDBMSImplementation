@@ -8,6 +8,7 @@
 #include "../core/sql_const.h"
 #include "../core/SqlMexprIntf.h"
 #include "../core/qep.h"
+#include "sql_parser_bind.h"
 
 
 /* CFG 
@@ -42,25 +43,23 @@ LMT  -> $  |  limit <integer>
 */
 
 
-qep_struct_t qep;
-static char *L_alias_name = NULL;
-
-static parse_rc_t LMT();
-static parse_rc_t ORDER_BY();
-static parse_rc_t HAVING();
-static parse_rc_t INDTF_LST();
-static parse_rc_t GROUP_BY ();
-static parse_rc_t WHERE() ;
-static parse_rc_t TABS() ;
-static parse_rc_t L() ;
-static parse_rc_t COL();
-static parse_rc_t COLLIST();
+static parse_rc_t LMT (rdbms_t *rdbms);
+static parse_rc_t ORDER_BY (rdbms_t *rdbms);
+static parse_rc_t HAVING (rdbms_t *rdbms);
+static parse_rc_t INDTF_LST (rdbms_t *rdbms);
+static parse_rc_t GROUP_BY (rdbms_t *rdbms);
+static parse_rc_t WHERE (rdbms_t *rdbms) ;
+static parse_rc_t TABS (rdbms_t *rdbms) ;
+static parse_rc_t L (rdbms_t *rdbms) ;
+static parse_rc_t COL (rdbms_t *rdbms);
+static parse_rc_t COLLIST (rdbms_t *rdbms);
 
 
 
 // LMT  -> $  |  limit <integer>
 parse_rc_t
-LMT () {
+LMT (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
@@ -79,7 +78,7 @@ LMT () {
         RETURN_PARSE_SUCCESS;
     }
 
-    qep.limit = atoi(lex_curr_token);
+    rdbms->qep.limit = atoi(lex_curr_token);
 
     RETURN_PARSE_SUCCESS;
 }
@@ -87,7 +86,8 @@ LMT () {
 
 // ORDERBY  -> $  |  order by IDENT C
 parse_rc_t
-ORDER_BY() {
+ORDER_BY (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
@@ -107,7 +107,7 @@ ORDER_BY() {
         RETURN_PARSE_SUCCESS;
     }
 
-    strncpy (qep.orderby.column_name, lex_curr_token, sizeof (qep.orderby.column_name));
+    strncpy (rdbms->qep.orderby.column_name, lex_curr_token, sizeof (rdbms->qep.orderby.column_name));
 
     token_code = cyylex();
 
@@ -118,13 +118,14 @@ ORDER_BY() {
         RETURN_PARSE_SUCCESS;
     }
 
-    qep.orderby.asc = (token_code == SQL_ORDERBY_ASC);
+    rdbms->qep.orderby.asc = (token_code == SQL_ORDERBY_ASC);
     RETURN_PARSE_SUCCESS;
 }
 
 /* HAVING  ->  $  |  having LEXPR */
 parse_rc_t
-HAVING() {
+HAVING (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
@@ -135,9 +136,9 @@ HAVING() {
         RETURN_PARSE_SUCCESS;
     }
 
-    qep.having.gexptree_phase1 = sql_create_exp_tree_conditional ();
+    rdbms->qep.having.gexptree_phase1 = sql_create_exp_tree_conditional (p);
 
-    if (!qep.having.gexptree_phase1) {
+    if (!rdbms->qep.having.gexptree_phase1) {
 
         printf ("Error : Could not build Having clause expression tree\n");
         RETURN_PARSE_SUCCESS;
@@ -149,12 +150,13 @@ HAVING() {
 
 /* INDTF_LST -> IDENT | IDENT , INDTF_LST */
 parse_rc_t
-INDTF_LST() {
+INDTF_LST (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
     qp_col_t *qp_col;
 
-    sql_exptree_t *exp_tree = sql_create_exp_tree_compute ();
+    sql_exptree_t *exp_tree = sql_create_exp_tree_compute (p);
 
     if (!exp_tree) RETURN_PARSE_ERROR;
 
@@ -164,7 +166,7 @@ INDTF_LST() {
     qp_col->alias_provided_by_user = false;
     qp_col->computed_value = NULL;
     qp_col->sql_tree = exp_tree;
-    qep.groupby.col_list[qep.groupby.n++] = qp_col;
+    rdbms->qep.groupby.col_list[rdbms->qep.groupby.n++] = qp_col;
 
     token_code = cyylex();
 
@@ -173,7 +175,7 @@ INDTF_LST() {
         RETURN_PARSE_SUCCESS;
     }
 
-    err = INDTF_LST() ;
+    err = INDTF_LST(rdbms) ;
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -183,7 +185,8 @@ INDTF_LST() {
 
 /* GRPBY ->  $  |  group by INDTF_LST HAVING */
 parse_rc_t
-GROUP_BY () {
+GROUP_BY (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
@@ -194,7 +197,7 @@ GROUP_BY () {
         RETURN_PARSE_SUCCESS;
     }
 
-    err = INDTF_LST();
+    err = INDTF_LST(rdbms);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -203,7 +206,8 @@ GROUP_BY () {
 
 /* WHERE -> $ | where LEXPR */
 parse_rc_t
-WHERE() {
+WHERE (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init ();
 
@@ -214,9 +218,9 @@ WHERE() {
         RETURN_PARSE_SUCCESS;
     }
 
-    qep.where.gexptree = sql_create_exp_tree_conditional();
+    rdbms->qep.where.gexptree = sql_create_exp_tree_conditional(p);
 
-    if (!qep.where.gexptree) {
+    if (!rdbms->qep.where.gexptree) {
         printf ("Error : Could not build Where Logical Expression Tree\n");
         RETURN_PARSE_ERROR;
     }
@@ -227,7 +231,8 @@ WHERE() {
 
 /* TABS -> <ident> L | <ident> L , TABS */
 parse_rc_t
-TABS() {
+TABS (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
@@ -239,18 +244,18 @@ TABS() {
     }
 
     /* Store a Table name */
-    if (!qep_struct_record_table (&qep, lex_curr_token)) {
+    if (!qep_struct_record_table (&rdbms->qep, lex_curr_token)) {
 
         printf ("Error : Table %s Do not Exist\n", lex_curr_token);
         RETURN_PARSE_ERROR;
     }
 
-    L_alias_name = qep.join.tables[qep.join.table_cnt].alias_name;
+    rdbms->parse_alias_name = rdbms->qep.join.tables[rdbms->qep.join.table_cnt].alias_name;
 
-    err = L();
+    err = L(rdbms);
     assert (err == PARSE_SUCCESS);
 
-    qep.join.table_cnt++;
+    rdbms->qep.join.table_cnt++;
 
     token_code = cyylex();
 
@@ -259,7 +264,7 @@ TABS() {
         RETURN_PARSE_SUCCESS;
     }
 
-    err = TABS();
+    err = TABS(rdbms);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -268,7 +273,8 @@ TABS() {
 
 /* L -> $ | as <identifer> */
 parse_rc_t
-L() {
+L (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
@@ -276,7 +282,7 @@ L() {
 
     if (token_code != SQL_AS) {
         yyrewind(1);
-        L_alias_name[0] = '\0';
+        rdbms->parse_alias_name[0] = '\0';
        RETURN_PARSE_SUCCESS;
     }
 
@@ -284,35 +290,36 @@ L() {
 
     if (token_code != SQL_IDENTIFIER) {
         yyrewind(2);
-        L_alias_name[0] = '\0';
+        rdbms->parse_alias_name[0] = '\0';
         RETURN_PARSE_SUCCESS;
     }
 
-    strncpy (L_alias_name,  lex_curr_token, lex_curr_token_len);
+    strncpy (rdbms->parse_alias_name,  lex_curr_token, lex_curr_token_len);
     RETURN_PARSE_SUCCESS;
 }
 
 /* COL -> MEXPR | MEXPR as L | AGG_FN(MEXPR) | AGG_FN(MEXPR) as L */
 parse_rc_t
-COL() {
+COL (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
     qp_col_t *qp_col = (qp_col_t *)calloc (1, sizeof (qp_col_t));
     qp_col->agg_fn = SQL_AGG_FN_NONE;
     qp_col->alias_provided_by_user = false;
-    qep.select.sel_colmns[qep.select.n++] = qp_col;
+    rdbms->qep.select.sel_colmns[rdbms->qep.select.n++] = qp_col;
 
     do {
 
         /* COL -> MEXPR */
-        qp_col->sql_tree = sql_create_exp_tree_compute ();
+        qp_col->sql_tree = sql_create_exp_tree_compute (p);
 
         if (!qp_col->sql_tree) break;
         
         /* COL ->MEXPR as L */
-        L_alias_name = qp_col->alias_name;
-        err = L();
+        rdbms->parse_alias_name = qp_col->alias_name;
+        err = L(rdbms);
         assert (err == PARSE_SUCCESS);
         
         if (qp_col->alias_name[0] != '\0') {
@@ -348,7 +355,7 @@ COL() {
 
         if (token_code != SQL_BRACKET_START) RETURN_PARSE_ERROR;
 
-        qp_col->sql_tree = sql_create_exp_tree_compute ();
+        qp_col->sql_tree = sql_create_exp_tree_compute (p);
 
         if (!qp_col->sql_tree) RETURN_PARSE_ERROR;
 
@@ -357,8 +364,8 @@ COL() {
          if (token_code != SQL_BRACKET_END) RETURN_PARSE_ERROR;
 
          /* COL -> AGG_FN(MEXPR) as L */
-         L_alias_name = qp_col->alias_name;
-         err = L();
+         rdbms->parse_alias_name = qp_col->alias_name;
+         err = L(rdbms);
          assert (err == PARSE_SUCCESS);      
 
         if (qp_col->alias_name[0] != '\0') {
@@ -373,20 +380,21 @@ COL() {
 
 /* COLLIST -> * | COL | COL , COLLIST */
 parse_rc_t
-COLLIST() {
+COLLIST (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init ();
 
     token_code = cyylex();
 
     if (token_code == SQL_MATH_MUL) {
-        qep.select.n = 0;
+        rdbms->qep.select.n = 0;
         RETURN_PARSE_SUCCESS;
     }
 
     yyrewind(1);
 
-    err = COL();
+    err = COL(rdbms);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
 
@@ -397,7 +405,7 @@ COLLIST() {
         RETURN_PARSE_SUCCESS;
     }
 
-    err = COLLIST();
+    err = COLLIST(rdbms);
 
     if (err == PARSE_ERR) RETURN_PARSE_ERROR;
     RETURN_PARSE_SUCCESS;
@@ -405,19 +413,20 @@ COLLIST() {
 
 /* select_query_parser -> select COLS from TABS WHERE GRPBY ORDERBY LMT */
 parse_rc_t
-select_query_parser () {
+select_query_parser (rdbms_t *rdbms) {
+    RDBMS_PARSER_BIND (rdbms);
 
     parse_init();
 
-    memset0_qep (&qep);
-    qep.query_type = SQL_SELECT_Q;
+    memset0_qep (&rdbms->qep);
+    rdbms->qep.query_type = SQL_SELECT_Q;
     
     /* consume 'select' keyword */
     token_code = cyylex ();
     assert (token_code == SQL_SELECT_Q);
 
     /* Now parse list of Columns*/
-    err = COLLIST();
+    err = COLLIST(rdbms);
 
     if (err == PARSE_ERR) {
 
@@ -433,7 +442,7 @@ select_query_parser () {
         RETURN_PARSE_ERROR;
     }
 
-    err = TABS();
+    err = TABS(rdbms);
 
     if (err == PARSE_ERR) {
 
@@ -441,7 +450,7 @@ select_query_parser () {
         RETURN_PARSE_ERROR;        
     }
 
-    err = WHERE();
+    err = WHERE(rdbms);
 
     if (err == PARSE_ERR) {
 
@@ -449,7 +458,7 @@ select_query_parser () {
         RETURN_PARSE_ERROR;        
     }
 
-    err = GROUP_BY();
+    err = GROUP_BY(rdbms);
 
     if (err == PARSE_ERR) {
 
@@ -457,7 +466,7 @@ select_query_parser () {
         RETURN_PARSE_ERROR;        
     }    
 
-    err = HAVING ();
+    err = HAVING(rdbms);
 
     if (err == PARSE_ERR) {
 
@@ -465,7 +474,7 @@ select_query_parser () {
         RETURN_PARSE_ERROR;        
     }    
 
-    err = ORDER_BY();
+    err = ORDER_BY(rdbms);
 
     if (err == PARSE_ERR) {
 
@@ -473,7 +482,7 @@ select_query_parser () {
         RETURN_PARSE_ERROR;        
     }    
 
-    err = LMT();
+    err = LMT(rdbms);
 
     if (err == PARSE_ERR) {
 

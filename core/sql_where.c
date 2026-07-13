@@ -54,7 +54,7 @@ sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     }
 
 
-    if (!sql_resolve_exptree(&TableCatalogDef,
+    if (!sql_resolve_exptree(tcatalog,
                              qep->where.gexptree,
                              qep, &qep->joined_row_tmplate)) {
 

@@ -8,7 +8,11 @@
 #include "../SqlParser/SqlEnums.h"
 #include "sql_const.h"
 #include "rdbms_struct.h"
-#include "../uapi/sql_api.h"
+#include "../c-hashtable/hashtable.h"
+
+class Dtype;
+
+typedef void (*sql_record_reader_fn_ptr)(void *, std::vector<Dtype *> *);
 
 typedef struct catalog_table_value ctable_val_t ;
 typedef struct schema_rec_ schema_rec_t ;
@@ -132,6 +136,8 @@ typedef struct qep_struct_ {
     /* Remember, C objects cannot have STL C++ containers, but
         can have pointers to them as members */
     std::list<exp_tree_data_src_t *> *data_src_lst;
+
+    BPlusTree_t *catalog;
 
 } qep_struct_t;
 

@@ -14,6 +14,7 @@ sql_col_get_name_type ( qep_struct_t *qep,
 
     const char del[2] = ".";
     char fqcn[SQL_FQCN_SIZE] = {0};
+    BPlusTree_t *catalog = qep->catalog;
 
     strncpy (fqcn, col_name, SQL_FQCN_SIZE);
 
@@ -28,7 +29,7 @@ sql_col_get_name_type ( qep_struct_t *qep,
     if (it !=  qep->join.table_alias->end()) return SQL_COL_NAME_ACN;
 
     ctable_val_t *ctable_val = sql_catalog_table_lookup_by_table_name (
-                                &TableCatalogDef, str1);
+                                catalog ? catalog : &TableCatalogDef, str1);
     
     if (ctable_val) {
         return SQL_COL_NAME_FQCN;

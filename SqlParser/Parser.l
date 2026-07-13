@@ -1,3 +1,13 @@
+%top{
+#define PARSER_LEX_IMPL 1
+#include "ParserExport.h"
+#undef PARSER_LEX_IMPL
+}
+
+%option reentrant
+%option noyywrap
+%option extra-type="mexpr_parser_t *"
+
 %{
 
 #include <stdio.h>
@@ -8,51 +18,42 @@
 #include <assert.h>
 #include <arpa/inet.h>
 
-#include "ParserExport.h"
+void 
+lex_push (mexpr_parser_t *parser_inst, lex_data_t lex_data) {
 
-char lex_buffer[MAX_STRING_SIZE] = {0};
-char *curr_ptr = lex_buffer;
-char *lex_curr_token;
-int lex_curr_token_len;
-
-stack_t undo_stack = {-1, {0, 0, 0}};
-
-static void 
-lex_push (lex_data_t lex_data) {
-
-    assert (undo_stack.top < MAX_MEXPR_LEN - 1);
-    undo_stack.data[++undo_stack.top] = lex_data;
-    lex_curr_token = (char *)lex_data.token_val;
-    lex_curr_token_len = lex_data.token_len;
+    assert (parser_inst->undo_stack.top < MAX_MEXPR_LEN - 1);
+    parser_inst->undo_stack.data[++parser_inst->undo_stack.top] = lex_data;
+    parser_inst->lex_curr_token = (char *)lex_data.token_val;
+    parser_inst->lex_curr_token_len = lex_data.token_len;
 }
 
 static lex_data_t
-lex_pop () {
+lex_pop (mexpr_parser_t *parser_inst) {
 
-    assert (undo_stack.top > -1);
-    lex_data_t res = undo_stack.data[undo_stack.top];
-    undo_stack.top--;
-    if (undo_stack.top > -1) {
-        lex_data_t stck_top_lexd = undo_stack.data[undo_stack.top];
-        lex_curr_token = (char *)stck_top_lexd.token_val;
-        lex_curr_token_len = stck_top_lexd.token_len;
+    assert (parser_inst->undo_stack.top > -1);
+    lex_data_t res = parser_inst->undo_stack.data[parser_inst->undo_stack.top];
+    parser_inst->undo_stack.top--;
+    if (parser_inst->undo_stack.top > -1) {
+        lex_data_t stck_top_lexd = parser_inst->undo_stack.data[parser_inst->undo_stack.top];
+        parser_inst->lex_curr_token = (char *)stck_top_lexd.token_val;
+        parser_inst->lex_curr_token_len = stck_top_lexd.token_len;
     }
     else {
-        lex_curr_token = NULL;
-        lex_curr_token_len = 0;
+        parser_inst->lex_curr_token = NULL;
+        parser_inst->lex_curr_token_len = 0;
     }
     return res;
 }
 
 void 
-yyrewind (int n) {
+yyrewind (mexpr_parser_t *parser_inst, int n) {
 
     if (n <= 0) return;
-    if (curr_ptr == lex_buffer) return;
+    if (parser_inst->curr_ptr == parser_inst->lex_buffer) return;
     int data_len = 0;
     lex_data_t lex_data;
     while (n)  {
-        lex_data = lex_pop();
+        lex_data = lex_pop(parser_inst);
         data_len += lex_data.token_len;
         if (lex_data.token_code == PARSER_WHITE_SPACE) {
             continue;
@@ -65,19 +66,22 @@ yyrewind (int n) {
             lex_data.token_val = NULL;
         }
     }
-    curr_ptr -= data_len;
-    yy_scan_string(curr_ptr);    
+    parser_inst->curr_ptr -= data_len;
+    if (parser_inst->buf_state) {
+        yy_delete_buffer ((YY_BUFFER_STATE)parser_inst->buf_state, parser_inst->scanner);
+    }
+    parser_inst->buf_state = (void *) yy_scan_string(parser_inst->curr_ptr, parser_inst->scanner);
 }
 
 void
-RESTORE_CHKP(int a) {
+RESTORE_CHKP (mexpr_parser_t *parser_inst, int a) {
 
     lex_data_t lex_data;
     int data_len = 0;
 
-    while (undo_stack.top > a) {
+    while (parser_inst->undo_stack.top > a) {
         
-        lex_data =  lex_pop();
+        lex_data = lex_pop(parser_inst);
         data_len += lex_data.token_len;
 
         if (lex_data.token_val) { 
@@ -85,67 +89,71 @@ RESTORE_CHKP(int a) {
             lex_data.token_val = NULL;
         }
     }
-    curr_ptr -= data_len;
-    yy_scan_string(curr_ptr);
+    parser_inst->curr_ptr -= data_len;
+    if (parser_inst->buf_state) {
+        yy_delete_buffer ((YY_BUFFER_STATE)parser_inst->buf_state, parser_inst->scanner);
+    }
+    parser_inst->buf_state = (void *) yy_scan_string(parser_inst->curr_ptr, parser_inst->scanner);
 }
 
+unsigned char *
+parser_alloc_token_value_default (mexpr_parser_t *parser_inst, uint16_t token_id) {
 
-char *
-parser_alloc_token_value_default (uint16_t token_id) {
-
-    char *ptr = (char *)(calloc (1, yyleng + 1));
-    strncpy (ptr, yytext, yyleng);
-    ptr [yyleng] = '\0';
+    int leng = yyget_leng (parser_inst->scanner);
+    char *text = yyget_text (parser_inst->scanner);
+    unsigned char *ptr = (unsigned char *)(calloc (1, leng + 1));
+    strncpy ((char *)ptr, text, leng);
+    ptr [leng] = '\0';
     return ptr;
 }
 
 int 
-cyylex () {
+cyylex (mexpr_parser_t *parser_inst) {
 
-    int token_code =  yylex();
-    curr_ptr += yyleng;
+    int token_code = yylex(parser_inst->scanner);
+    parser_inst->curr_ptr += yyget_leng (parser_inst->scanner);
     lex_data_t lex_data;
     lex_data.token_code = token_code;
-    lex_data.token_len = yyleng;
-    lex_data.token_val = parser_alloc_token_value_default  (token_code);
-    lex_push(lex_data);
+    lex_data.token_len = yyget_leng (parser_inst->scanner);
+    lex_data.token_val = parser_alloc_token_value_default (parser_inst, token_code);
+    lex_push(parser_inst, lex_data);
     return token_code;
 }
 
 void 
-process_white_space(int n) {
+process_white_space (mexpr_parser_t *parser_inst, int n) {
 
     lex_data_t lex_data;
-    curr_ptr += n;
+    parser_inst->curr_ptr += n;
     lex_data.token_code = PARSER_WHITE_SPACE;
     lex_data.token_len = n;
     lex_data.token_val = NULL;
-    lex_push(lex_data);
+    lex_push(parser_inst, lex_data);
 }
 
-int cyylexlh() {
+int cyylexlh (mexpr_parser_t *parser_inst) {
 
-    int token_code = cyylex();
-    yyrewind(1);
+    int token_code = cyylex(parser_inst);
+    yyrewind(parser_inst, 1);
     return token_code;
 }
 
-int cyylexlb() {
+int cyylexlb (mexpr_parser_t *parser_inst) {
 
-    yyrewind(1);
-    int token_code = cyylex();
-    yyrewind(1);
+    yyrewind(parser_inst, 1);
+    int token_code = cyylex(parser_inst);
+    yyrewind(parser_inst, 1);
     return token_code;
 }
 
 void 
-Parser_stack_reset () {
+Parser_stack_reset (mexpr_parser_t *parser_inst) {
 
     int i;
     lex_data_t *lex_data;
 
-    for (i = 0; i < undo_stack.top; i++) {
-        lex_data = &undo_stack.data[i];
+    for (i = 0; i <= parser_inst->undo_stack.top; i++) {
+        lex_data = &parser_inst->undo_stack.data[i];
         lex_data->token_code = 0;
         lex_data->token_len = 0;
         if (lex_data->token_val) {
@@ -153,21 +161,25 @@ Parser_stack_reset () {
             lex_data->token_val = NULL;
         }
     }
-    undo_stack.top = -1;
-    curr_ptr = lex_buffer;
-    lex_curr_token = NULL;
-    lex_curr_token_len = 0;
+    parser_inst->undo_stack.top = -1;
+    parser_inst->curr_ptr = parser_inst->lex_buffer;
+    parser_inst->lex_curr_token = NULL;
+    parser_inst->lex_curr_token_len = 0;
 }
 
 int 
-Parser_get_current_stack_index () {
-    return undo_stack.top;
+Parser_get_current_stack_index (mexpr_parser_t *parser_inst) {
+    return parser_inst->undo_stack.top;
 }
 
 void 
-lex_set_scan_buffer (const char *buffer) {
+lex_set_scan_buffer (mexpr_parser_t *parser_inst, const char *buffer) {
 
-    yy_scan_string (buffer);
+    if (parser_inst->buf_state) {
+        yy_delete_buffer ((YY_BUFFER_STATE)parser_inst->buf_state, parser_inst->scanner);
+    }
+    parser_inst->buf_state = (void *) yy_scan_string (buffer, parser_inst->scanner);
+    parser_inst->curr_ptr = parser_inst->lex_buffer;
 }
 
 /* ========================================
@@ -175,15 +187,8 @@ lex_set_scan_buffer (const char *buffer) {
     ======================================= */
             /* User specific parsing logic starts below */
 
-
-
-
-
 /* User specific header files */
 #include "SqlEnums.h"
-
-
-
 
 %}
 
@@ -411,12 +416,12 @@ decimal|double {
 
 [ ] { 
     /* Ignore */
-    process_white_space(1);
+    process_white_space(yyextra, 1);
 }
 
 [\t] {
     /*ignore*/
-    process_white_space(4);
+    process_white_space(yyextra, 4);
 }
 
 "\\q" {
@@ -459,3 +464,38 @@ decimal|double {
 }
 
 %%
+
+mexpr_parser_t *
+mexpr_parser_create (void) {
+
+    mexpr_parser_t *inst = (mexpr_parser_t *) calloc (1, sizeof (mexpr_parser_t));
+    if (!inst) return NULL;
+
+    if (yylex_init_extra (inst, (yyscan_t *)&inst->scanner) != 0) {
+        free (inst);
+        return NULL;
+    }
+
+    inst->buf_state = NULL;
+    inst->curr_ptr = inst->lex_buffer;
+    inst->lex_curr_token = NULL;
+    inst->lex_curr_token_len = 0;
+    inst->undo_stack.top = -1;
+    return inst;
+}
+
+void
+mexpr_parser_destroy (mexpr_parser_t *inst) {
+
+    if (!inst) return;
+
+    Parser_stack_reset (inst);
+
+    if (inst->buf_state) {
+        yy_delete_buffer ((YY_BUFFER_STATE)inst->buf_state, inst->scanner);
+        inst->buf_state = NULL;
+    }
+
+    yylex_destroy (inst->scanner);
+    free (inst);
+}

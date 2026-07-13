@@ -62,6 +62,8 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     qep->joined_row_tmplate = (joined_row_t *)calloc (1, sizeof (joined_row_t));
     qep->data_src_lst = new std::list<exp_tree_data_src_t *>();
 
+    qep->catalog = tcatalog;
+
     qep_create_alias_to_table_name_mapping (qep);
     
     rc = sql_query_initialize_join_clause (qep, tcatalog);

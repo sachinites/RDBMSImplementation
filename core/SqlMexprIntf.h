@@ -9,6 +9,8 @@
 #include "../SqlParser/SqlEnums.h"
 #include "../../MathExpressionParser/MExprcppEnums.h"
 
+typedef struct mexpr_parser_ mexpr_parser_t;
+
 class MexprTree;
 class Dtype;
 class MexprNode;
@@ -28,10 +30,10 @@ typedef struct sql_exptree_ {
 } sql_exptree_t;
 
 sql_exptree_t *
-sql_create_exp_tree_compute () ;
+sql_create_exp_tree_compute (mexpr_parser_t *parser) ;
 
 sql_exptree_t *
-sql_create_exp_tree_conditional () ;
+sql_create_exp_tree_conditional (mexpr_parser_t *parser) ;
 
 bool 
 sql_resolve_exptree (BPlusTree_t *tcatalog,
