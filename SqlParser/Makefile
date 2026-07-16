@@ -51,7 +51,7 @@ DBMS_OBJS := \
 	SqlParserMain.o \
 	SqlToMexprEnumMapper.o
 
-LIBDBMS_OBJS := $(filter-out ../uapi/sql_api.o,$(DBMS_OBJS))
+LIBDBMS_OBJS := $(DBMS_OBJS)
 
 .PHONY: all clean lib dbms test test-list bptree
 
