@@ -16,7 +16,7 @@ typedef void (*sql_record_reader_fn_ptr)(void *, std::vector<Dtype *> *);
 
 typedef struct catalog_table_value ctable_val_t ;
 typedef struct schema_rec_ schema_rec_t ;
-typedef struct BPlusTree BPlusTree_t;
+typedef struct catalog_ catalog_t;
 typedef  struct hashtable hashtable_t;
 typedef struct stack Stack_t;
 typedef struct sql_exptree_ sql_exptree_t;
@@ -137,12 +137,12 @@ typedef struct qep_struct_ {
         can have pointers to them as members */
     std::list<exp_tree_data_src_t *> *data_src_lst;
 
-    BPlusTree_t *catalog;
+    catalog_t *catalog;
 
 } qep_struct_t;
 
 void
-sql_process_select_query (BPlusTree_t *tcatalog, qep_struct_t *qep);
+sql_process_select_query (catalog_t *tcatalog, qep_struct_t *qep);
 
 void 
 memset0_qep (qep_struct_t *qep);
@@ -154,6 +154,6 @@ bool
 qep_struct_record_table (qep_struct_t *qep,  char *table_name);
 
 void 
-sql_execute_qep (BPlusTree_t *tcatalog, qep_struct_t *qep) ;
+sql_execute_qep (catalog_t *tcatalog, qep_struct_t *qep) ;
 
 #endif 

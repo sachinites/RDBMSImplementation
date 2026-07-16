@@ -11,7 +11,8 @@ STDLIBS  := -lm
 TARGET_DBMS       := dbms.exe
 TARGET_LIBDBMS    := libdbms.a
 TARGET_BPTREE     := ../BPlusTreeLib/main.exe
-TARGET_UAPI_TEST  := ../uapi/sql_uapi_test.exe
+TARGET_UAPI_TEST      := ../uapi/sql_uapi_test.exe
+TARGET_UAPI_LIST_TEST := ../uapi/sql_uapi_list_test.exe
 
 LEX_SRC := lex.yy.c
 PARSER_L := Parser.l
@@ -28,6 +29,9 @@ DBMS_OBJS := \
 	SqlInsertIntoParserCFG.o \
 	../BPlusTreeLib/BPlusTree.o \
 	../core/BPlusTreeCompFn.o \
+	../core/rdbms_ds.o \
+	../core/ds_bplus_adapter.o \
+	../core/ds_list_adapter.o \
 	../core/sql_utils.o \
 	../core/sql_create.o \
 	../core/sql_select.o \
@@ -49,7 +53,7 @@ DBMS_OBJS := \
 
 LIBDBMS_OBJS := $(filter-out ../uapi/sql_api.o,$(DBMS_OBJS))
 
-.PHONY: all clean lib dbms test bptree
+.PHONY: all clean lib dbms test test-list bptree
 
 all: $(TARGET_LIBDBMS) $(TARGET_DBMS) $(TARGET_BPTREE) $(TARGET_UAPI_TEST)
 
@@ -58,6 +62,8 @@ lib: $(TARGET_LIBDBMS)
 dbms: $(TARGET_DBMS)
 
 test: $(TARGET_UAPI_TEST)
+
+test-list: $(TARGET_UAPI_LIST_TEST)
 
 bptree: $(TARGET_BPTREE)
 
@@ -72,6 +78,10 @@ $(TARGET_BPTREE): ../BPlusTreeLib/BPlusTree.o ../BPlusTreeLib/main.o
 
 $(TARGET_UAPI_TEST): ../uapi/sql_uapi_test.o SqlToMexprEnumMapper.o ../uapi/sql_api.o $(TARGET_LIBDBMS)
 	$(CXX) $(CXXFLAGS) ../uapi/sql_uapi_test.o SqlToMexprEnumMapper.o ../uapi/sql_api.o \
+		-o $@ -L . -ldbms $(MEXPR_LIB) $(STDLIBS)
+
+$(TARGET_UAPI_LIST_TEST): ../uapi/sql_uapi_list_test.o SqlToMexprEnumMapper.o ../uapi/sql_api.o $(TARGET_LIBDBMS)
+	$(CXX) $(CXXFLAGS) ../uapi/sql_uapi_list_test.o SqlToMexprEnumMapper.o ../uapi/sql_api.o \
 		-o $@ -L . -ldbms $(MEXPR_LIB) $(STDLIBS)
 
 $(LEX_SRC): $(PARSER_L)
@@ -146,6 +156,15 @@ SqlToMexprEnumMapper.o: SqlToMexprEnumMapper.c SqlEnums.h
 ../core/BPlusTreeCompFn.o: ../core/BPlusTreeCompFn.c
 	$(CXX) $(CXXFLAGS) -c $(PERM) ../core/BPlusTreeCompFn.c -o $@
 
+../core/rdbms_ds.o: ../core/rdbms_ds.c
+	$(CXX) $(CXXFLAGS) -c ../core/rdbms_ds.c -o $@
+
+../core/ds_bplus_adapter.o: ../core/ds_bplus_adapter.c
+	$(CXX) $(CXXFLAGS) -c $(PERM) ../core/ds_bplus_adapter.c -o $@
+
+../core/ds_list_adapter.o: ../core/ds_list_adapter.c
+	$(CXX) $(CXXFLAGS) -c ../core/ds_list_adapter.c -o $@
+
 ../BPlusTreeLib/main.o: ../BPlusTreeLib/main.c
 	$(CXX) $(CXXFLAGS) -c $(PERM) ../BPlusTreeLib/main.c -o $@
 
@@ -170,8 +189,11 @@ SqlToMexprEnumMapper.o: SqlToMexprEnumMapper.c SqlEnums.h
 ../uapi/sql_uapi_test.o: ../uapi/sql_uapi_test.cpp
 	$(CXX) $(CXXFLAGS) -c ../uapi/sql_uapi_test.cpp -o $@
 
+../uapi/sql_uapi_list_test.o: ../uapi/sql_uapi_list_test.cpp
+	$(CXX) $(CXXFLAGS) -c ../uapi/sql_uapi_list_test.cpp -o $@
+
 clean:
-	rm -f $(TARGET_DBMS) $(TARGET_LIBDBMS) $(TARGET_BPTREE) $(TARGET_UAPI_TEST)
+	rm -f $(TARGET_DBMS) $(TARGET_LIBDBMS) $(TARGET_BPTREE) $(TARGET_UAPI_TEST) $(TARGET_UAPI_LIST_TEST)
 	rm -f $(LEX_SRC)
 	rm -f *.o
 	rm -f ../core/*.o

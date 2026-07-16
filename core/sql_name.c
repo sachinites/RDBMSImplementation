@@ -12,7 +12,7 @@ sql_col_get_name_type ( qep_struct_t *qep,
 
     const char del[2] = ".";
     char fqcn[SQL_FQCN_SIZE] = {0};
-    BPlusTree_t *catalog = qep->catalog;
+    catalog_t *catalog = qep->catalog;
 
     strncpy (fqcn, col_name, SQL_FQCN_SIZE);
 

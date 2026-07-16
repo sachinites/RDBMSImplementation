@@ -29,6 +29,9 @@ g++ -g -c  ../core/sql_join.c -o ../core/sql_join.o
 g++ -g -c  ../core/sql_name.c -o ../core/sql_name.o
 g++ -g -c  -fpermissive ../BPlusTreeLib/BPlusTree.c -o ../BPlusTreeLib/BPlusTree.o
 g++ -g -c  -fpermissive ../core/BPlusTreeCompFn.c -o ../core/BPlusTreeCompFn.o
+g++ -g -c  ../core/rdbms_ds.c -o ../core/rdbms_ds.o
+g++ -g -c  -fpermissive ../core/ds_bplus_adapter.c -o ../core/ds_bplus_adapter.o
+g++ -g -c  ../core/ds_list_adapter.c -o ../core/ds_list_adapter.o
 g++ -g -c  -fpermissive ../BPlusTreeLib/main.c -o ../BPlusTreeLib/main.o
 g++ -g -c  ../core/Catalog.c -o ../core/Catalog.o
 g++ -g -c  ../gluethread/glthread.c -o ../gluethread/glthread.o
@@ -37,16 +40,20 @@ g++ -g -c   ../c-hashtable/hashtable_itr.c -o ../c-hashtable/hashtable_itr.o
 g++ -g -c  ../core/SqlMexprIntf.cpp -o ../core/SqlMexprIntf.o
 g++ -g -c ../uapi/sql_api.cpp -o ../uapi/sql_api.o
 g++ -g -c ../uapi/sql_uapi_test.cpp -o ../uapi/sql_uapi_test.o
+g++ -g -c ../uapi/sql_uapi_list_test.cpp -o ../uapi/sql_uapi_list_test.o
 g++ -g -c ../core/sql_delete.c -o ../core/sql_delete.o
 
 #create dbms.exe executable
-g++ -g ../uapi/sql_api.o ../core/qep.o ../core/sql_name.o lex.yy.o SqlSelectParserCFG.o SqlDeleteParserCFG.o SqlUpdateParserCFG.o SqlCreateParserCFG.o ../BPlusTreeLib/BPlusTree.o ../core/BPlusTreeCompFn.o ../core/sql_utils.o ../core/sql_create.o ../core/sql_select.o ../core/sql_where.o ../core/Catalog.o ../gluethread/glthread.o SqlInsertIntoParserCFG.o ../core/sql_insert_into.o ../core/sql_delete.o ../core/sql_update.o  ../core/sql_join.o ../c-hashtable/hashtable.o ../c-hashtable/hashtable_itr.o ../core/sql_io.o ../core/SqlMexprIntf.o ../core/sql_group_by.o ../core/sql_order_by.o SqlParserMain.o SqlToMexprEnumMapper.o -o dbms.exe -lm -L ../../MathExpressionParser/ -lMexpr
+g++ -g ../uapi/sql_api.o ../core/qep.o ../core/sql_name.o lex.yy.o SqlSelectParserCFG.o SqlDeleteParserCFG.o SqlUpdateParserCFG.o SqlCreateParserCFG.o ../BPlusTreeLib/BPlusTree.o ../core/BPlusTreeCompFn.o ../core/rdbms_ds.o ../core/ds_bplus_adapter.o ../core/ds_list_adapter.o ../core/sql_utils.o ../core/sql_create.o ../core/sql_select.o ../core/sql_where.o ../core/Catalog.o ../gluethread/glthread.o SqlInsertIntoParserCFG.o ../core/sql_insert_into.o ../core/sql_delete.o ../core/sql_update.o  ../core/sql_join.o ../c-hashtable/hashtable.o ../c-hashtable/hashtable_itr.o ../core/sql_io.o ../core/SqlMexprIntf.o ../core/sql_group_by.o ../core/sql_order_by.o SqlParserMain.o SqlToMexprEnumMapper.o -o dbms.exe -lm -L ../../MathExpressionParser/ -lMexpr
 
 #create main.exe executable to test B+ Tree Implementation
 g++ -g ../BPlusTreeLib/BPlusTree.o ../BPlusTreeLib/main.o -o ../BPlusTreeLib/main.exe
 
 # Create dbml library to be used by other applications (libdbms)
-ar rcs libdbms.a ../core/qep.o ../core/sql_name.o lex.yy.o SqlSelectParserCFG.o SqlDeleteParserCFG.o SqlUpdateParserCFG.o SqlCreateParserCFG.o ../BPlusTreeLib/BPlusTree.o ../core/BPlusTreeCompFn.o ../core/sql_utils.o ../core/sql_create.o ../core/sql_select.o ../core/sql_where.o ../core/Catalog.o ../gluethread/glthread.o SqlInsertIntoParserCFG.o ../core/sql_insert_into.o ../core/sql_delete.o ../core/sql_update.o  ../core/sql_join.o ../c-hashtable/hashtable.o ../c-hashtable/hashtable_itr.o ../core/sql_io.o ../core/SqlMexprIntf.o ../core/sql_group_by.o ../core/sql_order_by.o SqlParserMain.o SqlToMexprEnumMapper.o
+ar rcs libdbms.a ../core/qep.o ../core/sql_name.o lex.yy.o SqlSelectParserCFG.o SqlDeleteParserCFG.o SqlUpdateParserCFG.o SqlCreateParserCFG.o ../BPlusTreeLib/BPlusTree.o ../core/BPlusTreeCompFn.o ../core/rdbms_ds.o ../core/ds_bplus_adapter.o ../core/ds_list_adapter.o ../core/sql_utils.o ../core/sql_create.o ../core/sql_select.o ../core/sql_where.o ../core/Catalog.o ../gluethread/glthread.o SqlInsertIntoParserCFG.o ../core/sql_insert_into.o ../core/sql_delete.o ../core/sql_update.o  ../core/sql_join.o ../c-hashtable/hashtable.o ../c-hashtable/hashtable_itr.o ../core/sql_io.o ../core/SqlMexprIntf.o ../core/sql_group_by.o ../core/sql_order_by.o SqlParserMain.o SqlToMexprEnumMapper.o
 
 # ../uapi/sql_uapi_test.exe and link with with Mexpr library and dbml lib
 g++ -g -o ../uapi/sql_uapi_test.exe ../uapi/sql_uapi_test.o SqlToMexprEnumMapper.o ../uapi/sql_api.o -L . -ldbms -L ../../MathExpressionParser/ -lMexpr -lm
+
+# list-engine UAPI demo
+g++ -g -o ../uapi/sql_uapi_list_test.exe ../uapi/sql_uapi_list_test.o SqlToMexprEnumMapper.o ../uapi/sql_api.o -L . -ldbms -L ../../MathExpressionParser/ -lMexpr -lm

@@ -3,7 +3,7 @@
 #include <list>
 
 typedef struct qep_struct_ qep_struct_t;
-typedef struct BPlusTree BPlusTree_t;
+typedef struct catalog_ catalog_t;
 
 /* C Wrapper object over C++ object because we cannot insert 
     C++ objects into HT. If you want you can use C++ hashmap etc.
@@ -21,9 +21,9 @@ void
 sql_group_by_clause_process_grouped_records_phase2 (qep_struct_t *qep) ;
 
 bool
-sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) ;
+sql_query_initialize_groupby_clause (qep_struct_t *qep, catalog_t *tcatalog) ;
 
 bool
-sql_query_initialize_having_clause (qep_struct_t *qep, BPlusTree_t *tcatalog);
+sql_query_initialize_having_clause (qep_struct_t *qep, catalog_t *tcatalog);
 
 #endif 

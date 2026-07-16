@@ -124,7 +124,7 @@ qep_order_by_reassign_select_columns (qep_struct_t *qep) {
 }   
 
 bool
-sql_query_initialize_orderby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+sql_query_initialize_orderby_clause (qep_struct_t *qep, catalog_t *tcatalog) {
 
     int i;
     qp_col_t *sqp_col;

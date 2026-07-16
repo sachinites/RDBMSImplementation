@@ -10,15 +10,19 @@
 #include "../core/sql_insert_into.h"
 #include "../core/sql_delete.h"
 #include "../core/Catalog.h"
-#include "../BPlusTreeLib/BPlusTree.h"
+#include "../core/rdbms_ds.h"
 
 rdbms_t *
 rdbms_create (void) {
 
+    /* Register the built-in storage engines (idempotent). The record/schema
+       stores default to the B+tree engine. */
+    rdbms_ds_register_builtins ();
+
     rdbms_t *rdbms = (rdbms_t *) calloc (1, sizeof (rdbms_t));
     if (!rdbms) return NULL;
 
-    rdbms->catalog = (BPlusTree_t *) calloc (1, sizeof (BPlusTree_t));
+    rdbms->catalog = catalog_create ();
     if (!rdbms->catalog) {
         free (rdbms);
         return NULL;
@@ -26,7 +30,7 @@ rdbms_create (void) {
 
     rdbms->parser = mexpr_parser_create ();
     if (!rdbms->parser) {
-        free (rdbms->catalog);
+        catalog_destroy (rdbms->catalog);
         free (rdbms);
         return NULL;
     }
@@ -45,10 +49,7 @@ rdbms_destroy (rdbms_t *rdbms) {
     }
 
     if (rdbms->catalog) {
-        if (rdbms->catalog->Root) {
-            BPlusTree_Destroy (rdbms->catalog);
-        }
-        free (rdbms->catalog);
+        catalog_destroy (rdbms->catalog);
         rdbms->catalog = NULL;
     }
 

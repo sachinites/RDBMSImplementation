@@ -8,17 +8,17 @@
 #include <assert.h>
 #include "sql_utils.h"
 #include "sql_insert_into.h"
-#include "../BPlusTreeLib/BPlusTree.h"
+#include "rdbms_ds.h"
 #include "Catalog.h"
 
 static bool 
-sql_validate_insert_query_data ( BPlusTree_t *TableCatalog, sql_insert_into_data_t *idata) {
+sql_validate_insert_query_data ( catalog_t *TableCatalog, sql_insert_into_data_t *idata) {
 
     return true;
 }
 
 static bool
-sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
+sql_insert_new_record ( catalog_t *tcatalog, sql_insert_into_data_t *idata) {
 
     int i;
     BPluskey_t *bpkey_ptr;
@@ -38,17 +38,15 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
         return false;
     }
 
-    BPlusTree_t *schema_table = ctable_val->schema_table;
-    BPlusTree_t *data_table = ctable_val->record_table;
+    rdbms_ds_t *schema_table = ctable_val->schema_table;
+    rdbms_ds_t *data_table = ctable_val->record_table;
 
     void *_rec;
     int key_size = 0;
     int rec_size = 0;
     schema_rec_t *rec;
 
-    BPlusTreeNode *bnode;
-
-    BPTREE_ITERATE_ALL_RECORDS_BEGIN(schema_table, bpkey_ptr, _rec) {
+    RDBMS_DS_ITERATE_BEGIN(schema_table, bpkey_ptr, _rec) {
     
         rec = (schema_rec_t *)_rec;
 
@@ -57,7 +55,7 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
         }
         rec_size += rec->dtype_size;
 
-    } BPTREE_ITERATE_ALL_RECORDS_END(schema_table, bpkey_ptr, _rec);
+    } RDBMS_DS_ITERATE_END;
 
     new_bpkey.key = calloc (1, key_size);
     new_bpkey.key_size = key_size;
@@ -73,7 +71,7 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
 
         bpkey.key = (void *)ctable_val->column_lst[i];
         bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
-        rec = (schema_rec_t *) BPlusTree_Query_Key (schema_table, &bpkey);
+        rec = (schema_rec_t *) rdbms_ds_query (schema_table, &bpkey);
 
         if (!sql_is_dtype_compatible (rec->dtype, idata->sql_values[i].dtype)) {
 
@@ -164,7 +162,7 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
     } 
 
     /* Check for Duplication */
-    if (BPlusTree_Query_Key (data_table, &new_bpkey)) {
+    if (rdbms_ds_query (data_table, &new_bpkey)) {
         free (new_bpkey.key);
         free(record);
         printf ("ERROR:  duplicate key value violates unique constraint \"%s_pkey\"\n", table_name);
@@ -172,7 +170,7 @@ sql_insert_new_record ( BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
     }
 
     /* Now key and records are ready, insert it into data table*/
-    bool rc =  (BPlusTree_Insert (data_table, &new_bpkey, record));
+    bool rc =  (rdbms_ds_insert (data_table, &new_bpkey, record));
 
     if (!rc) {
         free (new_bpkey.key);
@@ -191,7 +189,7 @@ void
  }
 
 void
- sql_process_insert_query (BPlusTree_t *tcatalog, sql_insert_into_data_t *idata) {
+ sql_process_insert_query (catalog_t *tcatalog, sql_insert_into_data_t *idata) {
 
      assert (tcatalog);
      sql_insert_new_record (tcatalog, idata);

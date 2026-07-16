@@ -1,6 +1,6 @@
 #include <assert.h>
 #include "sql_create.h"
-#include "../BPlusTreeLib/BPlusTree.h"
+#include "rdbms_ds.h"
 #include "Catalog.h"
 
 void 
@@ -41,7 +41,7 @@ sql_construct_table_key_mdata (sql_create_data_t *cdata, int *key_mdata_size) {
 }
 
  void 
- sql_process_create_query (BPlusTree_t *tcatalog, sql_create_data_t *cdata) {
+ sql_process_create_query (catalog_t *tcatalog, sql_create_data_t *cdata) {
 
     assert (tcatalog);
     Catalog_insert_new_table (tcatalog, cdata);

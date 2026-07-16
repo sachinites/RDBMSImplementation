@@ -14,7 +14,7 @@
 #include "sql_name.h"
 
 bool
-sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+sql_query_initialize_groupby_clause (qep_struct_t *qep, catalog_t *tcatalog) {
 
     bool rc;
     int i, j;
@@ -125,7 +125,7 @@ sql_query_initialize_groupby_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
     to the evaluation of having condition in phase 1. Reformed the expression tree by
     getting rid of such variables */
 static bool
-sql_query_initialize_having_clause_phase1 (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+sql_query_initialize_having_clause_phase1 (qep_struct_t *qep, catalog_t *tcatalog) {
 
     qp_col_t *sqp_col;
     std::string opnd_name;
@@ -277,7 +277,7 @@ sql_query_initialize_having_clause_phase2 (qep_struct_t *qep) {
 }
 
 bool
-sql_query_initialize_having_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+sql_query_initialize_having_clause (qep_struct_t *qep, catalog_t *tcatalog) {
 
     if (qep->having.gexptree_phase1 == NULL) return true;
 

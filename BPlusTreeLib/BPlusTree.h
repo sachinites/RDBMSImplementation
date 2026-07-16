@@ -9,19 +9,9 @@
 * This is downloaded from https://github.com/parachvte/B-Plus-Tree
 */
 
-typedef struct  key_mdata_ {
-
-    int dtype;
-    int size;
-    
-} key_mdata_t ;
-
-typedef struct BPluskey {
-
-	uint16_t key_size;
-	void *key;
-
-} BPluskey_t;
+/* key_mdata_t and BPluskey_t now live in the shared storage-engine header so
+ * that engines do not have to depend on the B+tree. */
+#include "../core/rdbms_ds.h"
 
 typedef struct BPlusTreeNode {
 	bool isRoot, isLeaf;

@@ -2,16 +2,15 @@
 #define __SQL_JOIN__
 
 #include <stdbool.h>
+#include "rdbms_ds.h"
 
 typedef struct qep_struct_ qep_struct_t;
-typedef struct BPlusTree BPlusTree_t;
-typedef struct BPlusTreeNode BPlusTreeNode;
+typedef struct catalog_ catalog_t;
 typedef struct catalog_table_value ctable_val_t ;
 
 typedef struct table_iter_data_ {
 
-    BPlusTreeNode *bpnode;
-    int index;
+    rdbms_ds_cursor_t cursor;
     ctable_val_t *ctable_val;
 } table_iter_data_t;
 
@@ -24,7 +23,7 @@ typedef struct table_iterators_ {
 
 
 bool 
-sql_query_initialize_join_clause  (qep_struct_t *qep, BPlusTree_t *tcatalog);
+sql_query_initialize_join_clause  (qep_struct_t *qep, catalog_t *tcatalog);
 
 void 
 table_iterators_init (qep_struct_t *qep,

@@ -11,7 +11,7 @@ qep_execute_join_predicate (qep_struct_t *qep_struct, joined_row_t *joined_row) 
 }
 
 bool
-sql_query_initialize_where_clause (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+sql_query_initialize_where_clause (qep_struct_t *qep, catalog_t *tcatalog) {
 
     int i;
 

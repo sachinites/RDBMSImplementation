@@ -6,12 +6,12 @@
 #include "../core/sql_insert_into.h"
 
 typedef struct mexpr_parser_ mexpr_parser_t;
-typedef struct BPlusTree BPlusTree_t;
+typedef struct catalog_ catalog_t;
 
 /* Thread-safe session: all per-connection state lives here (no parser globals). */
 typedef struct rdbms_instance_ {
 
-    BPlusTree_t *catalog;
+    catalog_t *catalog;
     mexpr_parser_t *parser;
 
     qep_struct_t qep;

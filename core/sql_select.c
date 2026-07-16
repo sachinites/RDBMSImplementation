@@ -52,7 +52,7 @@ qep_resolve_select_asterisk (qep_struct_t *qep) {
  }
 
 bool
-sql_query_initialize_select_column_list (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+sql_query_initialize_select_column_list (qep_struct_t *qep, catalog_t *tcatalog) {
 
     int i;
     qp_col_t *qp_col;

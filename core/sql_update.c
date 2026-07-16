@@ -1,6 +1,6 @@
 #include <string.h>
 #include "Catalog.h"
-#include "../BPlusTreeLib/BPlusTree.h"
+#include "rdbms_ds.h"
 #include "rdbms_struct.h"
 #include "SqlMexprIntf.h"
 #include "sql_utils.h"
@@ -8,7 +8,7 @@
 #include "sql_join.h"
 
 bool
- sql_query_initialize_update_query (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+ sql_query_initialize_update_query (qep_struct_t *qep, catalog_t *tcatalog) {
 
     int i;
     bool rc;
@@ -27,7 +27,7 @@ bool
     for (i = 0; i < qep->update.n; i++) {
 
         bpkey.key = (void *)qep->update.upd_colmns[i].col_name;
-        schema_rec = (schema_rec_t *)BPlusTree_Query_Key (ctable_val->schema_table, &bpkey);
+        schema_rec = (schema_rec_t *)rdbms_ds_query (ctable_val->schema_table, &bpkey);
         
         if (!schema_rec) {
             printf ("Error : Column %s does not exist in table %s\n",

@@ -49,7 +49,7 @@ qep_create_alias_to_table_name_mapping (qep_struct_t *qep) {
 }
 
 static bool
-sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+sql_query_init_execution_plan (qep_struct_t *qep, catalog_t *tcatalog) {
 
     int i;
     bool rc;
@@ -109,7 +109,7 @@ sql_query_init_execution_plan (qep_struct_t *qep, BPlusTree_t *tcatalog) {
 
 
 void 
-sql_execute_qep (BPlusTree_t *tcatalog, qep_struct_t *qep) {
+sql_execute_qep (catalog_t *tcatalog, qep_struct_t *qep) {
 
     assert (tcatalog);
 

@@ -2,17 +2,14 @@
 #include <list>
 #include "sql_delete.h"
 #include "Catalog.h"
-#include "../BPlusTreeLib/BPlusTree.h"
+#include "rdbms_ds.h"
 #include "rdbms_struct.h"
 #include "SqlMexprIntf.h"
 #include "qep.h"
 #include "sql_join.h"
 
 void
-sql_drop_table (BPlusTree_t *tcatalog, char *table_name) {
-
-    BPluskey_t bkey;
-    catalog_table_key_t catalog_table_key;
+sql_drop_table (catalog_t *tcatalog, char *table_name) {
 
     assert (tcatalog);
 
@@ -21,17 +18,9 @@ sql_drop_table (BPlusTree_t *tcatalog, char *table_name) {
         return;
     }
 
-     catalog_table_key.scope = PUBLIC;
-     strncpy (catalog_table_key.entity_name,
-                  table_name,
-                  sizeof (catalog_table_key.entity_name));
-     catalog_table_key.type = TABLE;
-     strncpy (catalog_table_key.owner, "postgres", sizeof (catalog_table_key.owner));
-     bkey.key = (void *)&catalog_table_key;
-     bkey.key_size = sizeof (catalog_table_key_t);
-     if (BPlusTree_Delete (tcatalog, &bkey)) {
+    if (catalog_remove (tcatalog, table_name)) {
         printf ("DROP TABLE\n");
-     }
+    }
 }
 
 #if 0
@@ -128,7 +117,7 @@ sql_process_delete_query (qep_struct_t *qep) {
 
             bpkey = key_lst.front();
             key_lst.pop_front();
-            if (BPlusTree_Delete (qep->join.tables[0].ctable_val->record_table, bpkey)) {
+            if (rdbms_ds_remove (qep->join.tables[0].ctable_val->record_table, bpkey)) {
                 inc_count++;
             }
             free(bpkey->key);

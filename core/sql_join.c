@@ -1,12 +1,12 @@
 #include <assert.h>
 #include "sql_join.h"
 #include "qep.h"
-#include "../BPlusTreeLib/BPlusTree.h"
+#include "rdbms_ds.h"
 #include "Catalog.h"
 #include "SqlMexprIntf.h"
 
 bool 
-sql_query_initialize_join_clause  (qep_struct_t *qep, BPlusTree_t *tcatalog) {
+sql_query_initialize_join_clause  (qep_struct_t *qep, catalog_t *tcatalog) {
 
     int i;
 
@@ -42,8 +42,8 @@ table_iterators_init (qep_struct_t *qep,
     titer->table_cnt = qep->join.table_cnt;
     
     for (i = 0 ; i < titer->table_cnt ; i++) {
-        titer->table_iter_data[i].bpnode = NULL;
-        titer->table_iter_data[i].index = 0;
+        titer->table_iter_data[i].cursor.node = NULL;
+        titer->table_iter_data[i].cursor.index = 0;
         titer->table_iter_data[i].ctable_val  = qep->join.tables[i].ctable_val;
     }
 }
@@ -63,15 +63,14 @@ table_iterators_first (qep_struct_t *qep_struct,
 
     for (i = 0; i < qep_struct->join.table_cnt; i++) {
 
-        assert (titer->table_iter_data[i].bpnode == NULL);
-        assert(titer->table_iter_data[i].index == 0);
+        assert (titer->table_iter_data[i].cursor.node == NULL);
+        assert(titer->table_iter_data[i].cursor.index == 0);
 
         do {
 
-            rec = BPlusTree_get_next_record(
+            rec = rdbms_ds_cursor_next(
                 titer->table_iter_data[i].ctable_val->record_table,
-                &titer->table_iter_data[i].bpnode,
-                &titer->table_iter_data[i].index,
+                &titer->table_iter_data[i].cursor,
                 &bp_key);
 
             if (!rec) {
@@ -107,10 +106,9 @@ table_iterators_next (qep_struct_t *qep_struct,
 
     do
     {
-        rec = BPlusTree_get_next_record(
+        rec = rdbms_ds_cursor_next(
                     titer->table_iter_data[table_id].ctable_val->record_table,
-                    &titer->table_iter_data[table_id].bpnode,
-                    &titer->table_iter_data[table_id].index,
+                    &titer->table_iter_data[table_id].cursor,
                     &bp_key);
 
         if (!rec) break;
@@ -146,10 +144,9 @@ table_iterators_next (qep_struct_t *qep_struct,
 
         /* It is guaranteed that we will find atleast one qualified record*/
         do {
-            rec = BPlusTree_get_next_record(
+            rec = rdbms_ds_cursor_next(
                             titer->table_iter_data[table_id].ctable_val->record_table,
-                            &titer->table_iter_data[table_id].bpnode,
-                            &titer->table_iter_data[table_id].index,
+                            &titer->table_iter_data[table_id].cursor,
                             &bp_key);
 
             assert(rec);

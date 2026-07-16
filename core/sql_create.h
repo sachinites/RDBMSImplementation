@@ -5,7 +5,7 @@
 #include "sql_const.h"
 #include "../SqlParser/SqlEnums.h"
 
-typedef struct BPlusTree BPlusTree_t;
+typedef struct catalog_ catalog_t;
 typedef struct  key_mdata_ key_mdata_t;
 
 typedef struct sql_create_data_ {
@@ -23,6 +23,9 @@ typedef struct sql_create_data_ {
 
     }  column_data [SQL_MAX_COLUMNS_SUPPORTED_PER_TABLE];
 
+    /* Per-table storage engine; empty string => registry default (bplustree). */
+    char engine_name [SQL_STORAGE_ENGINE_NAME_MAX];
+
 }  sql_create_data_t; 
 
 
@@ -30,7 +33,7 @@ void
 sql_create_data_destroy (sql_create_data_t *cdata) ;
 
  void 
- sql_process_create_query (BPlusTree_t *tcatalog, sql_create_data_t *cdata) ;
+ sql_process_create_query (catalog_t *tcatalog, sql_create_data_t *cdata) ;
 
 key_mdata_t *
 sql_construct_table_key_mdata (sql_create_data_t *cdata, int *key_mdata_size) ;

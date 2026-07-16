@@ -233,7 +233,7 @@ sql_column_value_resolution_fn (void *_data_src) {
 /* Return true if all operands are resolved successfully,
     return false if atleast one operand is unresolved*/
 bool 
-sql_resolve_exptree (BPlusTree_t *tcatalog,
+sql_resolve_exptree (catalog_t *tcatalog,
                                   sql_exptree_t *sql_exptree,
                                   qep_struct_t *qep,
                                   joined_row_t **joined_row) {
@@ -288,7 +288,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
 
         bpkey.key = lone_col_name;
         bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
-        schema_rec = (schema_rec_t *)BPlusTree_Query_Key(ctable_val->schema_table, &bpkey);
+        schema_rec = (schema_rec_t *)rdbms_ds_query(ctable_val->schema_table, &bpkey);
 
         if (!schema_rec) {
             printf("Error : %s(%d) : Column %s could not be found in table %s\n", 
@@ -314,7 +314,7 @@ sql_resolve_exptree (BPlusTree_t *tcatalog,
 
 bool 
 sql_resolve_exptree_against_table ( qep_struct_t *qep,
-                                                           BPlusTree_t *tcatalog,
+                                                           catalog_t *tcatalog,
                                                            sql_exptree_t *sql_exptree, 
                                                            ctable_val_t *ctable_val, 
                                                            int table_id, 
@@ -349,7 +349,7 @@ sql_resolve_exptree_against_table ( qep_struct_t *qep,
         
         bpkey.key = lone_col_name;
         bpkey.key_size = SQL_COLUMN_NAME_MAX_SIZE;
-        schema_rec = (schema_rec_t *)BPlusTree_Query_Key(ctable_val->schema_table, &bpkey);
+        schema_rec = (schema_rec_t *)rdbms_ds_query(ctable_val->schema_table, &bpkey);
 
         if (!schema_rec) {
                 printf("Info (%s) : Operand %s could not be resolved against table %s\n", 

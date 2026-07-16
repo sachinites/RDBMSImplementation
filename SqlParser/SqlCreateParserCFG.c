@@ -11,7 +11,7 @@
 
 /* Grammar for Create Query 
 
-    create_query_parser -> create table IDENTFIER (COLSLIST)
+    create_query_parser -> create table IDENTFIER (COLSLIST) [ using IDENTIFIER ]
 
     IDENTFIER -> <string>
 
@@ -21,6 +21,10 @@
 
     DTYPE -> varchar (<number>) | int | double | ipv4
 
+    Optional per-table storage engine:
+      create table t (...) using list
+      create table t (...) using bplustree
+      create table t (...)            -- registry default (bplustree)
 */
 
 parse_rc_t
@@ -203,6 +207,25 @@ create_query_parser (rdbms_t *rdbms) {
     }
 
     token_code = cyylex ();
+
+    /* Optional: using <engine_name> */
+    if (token_code == SQL_IDENTIFIER &&
+        strcmp (lex_curr_token, "using") == 0) {
+
+        token_code = cyylex ();
+
+        if (token_code != SQL_IDENTIFIER) {
+            PARSER_LOG_ERR (token_code, SQL_IDENTIFIER);
+            printf ("Error : Expected storage engine name after USING\n");
+            RETURN_PARSE_ERROR;
+        }
+
+        strncpy (rdbms->cdata.engine_name,
+                 lex_curr_token,
+                 SQL_STORAGE_ENGINE_NAME_MAX);
+
+        token_code = cyylex ();
+    }
 
     if (token_code !=  PARSER_EOL) {
         PARSER_LOG_ERR (token_code, PARSER_EOL);

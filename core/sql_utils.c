@@ -117,7 +117,7 @@ sql_get_qep_table_index (qep_struct_t *qep, char *table_name) {
 
     int i;
 
-    BPlusTree_t *catalog = qep->catalog;
+    catalog_t *catalog = qep->catalog;
 
     ctable_val_t *ctable_val = 
             sql_catalog_table_lookup_by_table_name (

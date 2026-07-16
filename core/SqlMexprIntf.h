@@ -17,7 +17,7 @@ class MexprNode;
 class Aggregator;
 
 typedef struct catalog_table_value ctable_val_t;
-typedef struct BPlusTree BPlusTree_t ;
+typedef struct catalog_ catalog_t ;
 typedef struct joined_row_ joined_row_t;
 typedef struct qep_struct_ qep_struct_t;
 typedef struct qp_col_ qp_col_t;
@@ -36,14 +36,14 @@ sql_exptree_t *
 sql_create_exp_tree_conditional (mexpr_parser_t *parser) ;
 
 bool 
-sql_resolve_exptree (BPlusTree_t *tcatalog,
+sql_resolve_exptree (catalog_t *tcatalog,
                                   sql_exptree_t *sql_exptree,
                                   qep_struct_t *qep,
                                   joined_row_t **joined_row) ;
 
 bool 
 sql_resolve_exptree_against_table (qep_struct_t *qep,
-                                                         BPlusTree_t *tcatalog,
+                                                         catalog_t *tcatalog,
                                                          sql_exptree_t *sql_exptree, 
                                                          ctable_val_t * ctable_val, 
                                                          int table_id, joined_row_t **joined_row,
