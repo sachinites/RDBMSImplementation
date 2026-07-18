@@ -8,6 +8,9 @@
 #include "qep.h"
 #include "sql_join.h"
 
+extern int cprintf (const char *format, ...);
+#define printf cprintf
+
 void
 sql_drop_table (catalog_t *tcatalog, char *table_name) {
 

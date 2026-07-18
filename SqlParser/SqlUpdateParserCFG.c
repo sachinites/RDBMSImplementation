@@ -10,6 +10,9 @@
 #include "../core/qep.h"
 #include "sql_parser_bind.h"
 
+extern int cprintf (const char* format, ...);
+#define printf cprintf
+
  /* CFG : 
     update_query_parser -> update TAB set COL_ASSIGN_LIST WHERE LEXPR
     TAB -> <ident>

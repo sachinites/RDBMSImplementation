@@ -23,6 +23,9 @@
 #include "../c-hashtable/hashtable.h"
 #include "../c-hashtable/hashtable_itr.h"
 
+extern int cprintf (const char *format, ...);
+#define printf cprintf
+
 bool 
 qep_struct_record_table (qep_struct_t *qep_struct, char *table_name) {
 

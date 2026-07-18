@@ -277,7 +277,6 @@ void Redistribute(BPlusTree_t *tree, BPlusTreeNode* Cur) {
 		Delete(tree, Father, &Cur->key[0]); // delete left child
 		return;
 	}
-	printf("What?! you're the only child???\n"); // this won't happen
 }
 
 /** Delete key from Cur, if no. of children < MaxChildNUmber / 2, resort or merge it with brothers */
@@ -401,8 +400,6 @@ void* BPlusTree_Query_Key(BPlusTree_t *tree,
 			if (0 && QueryAnsNum < 20) {
 				tree->key_fmt_fn (&Leaf->key[i], key_output_buffer, sizeof (key_output_buffer));
 				tree->value_fmt_fn ((void *)Leaf->child[i], value_output_buffer, sizeof(value_output_buffer));
-				printf("[no.%d	key = %s, value = %s]\n", QueryAnsNum, 
-					key_output_buffer, value_output_buffer);
 			}
 			return (void *)Leaf->child[i];
 		}
@@ -478,9 +475,6 @@ bool BPlusTree_Delete(BPlusTree_t *tree,
 	if (0 && tree->key_fmt_fn && tree->value_fmt_fn) {
 		tree->key_fmt_fn (key, key_output_buffer , sizeof (key_output_buffer ));
 		tree->value_fmt_fn ((void *)Leaf->child[i], value_output_buffer, sizeof (value_output_buffer) );
-		printf("Delete: key = %s, original value = %s\n", 
-					key_output_buffer ,
-					value_output_buffer );
 	}
 	void *key_to_free = Leaf->key[i].key;
    	Delete(tree, Leaf, key); 

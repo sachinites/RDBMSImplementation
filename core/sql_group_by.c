@@ -13,6 +13,9 @@
 #include "sql_utils.h"
 #include "sql_name.h"
 
+extern int cprintf (const char *format, ...);
+#define printf cprintf
+
 bool
 sql_query_initialize_groupby_clause (qep_struct_t *qep, catalog_t *tcatalog) {
 

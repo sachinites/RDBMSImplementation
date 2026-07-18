@@ -10,6 +10,9 @@
 #include "../core/sql_utils.h"
 #include "../core/sql_const.h"
 
+extern int cprintf (const char* format, ...);
+#define printf cprintf
+
 /* CFG 
 
 insert_query_parser -> Q1 | Q2 

@@ -5,6 +5,9 @@
 #include "Catalog.h"
 #include "SqlMexprIntf.h"
 
+extern int cprintf (const char *format, ...);
+#define printf cprintf
+
 bool 
 sql_query_initialize_join_clause  (qep_struct_t *qep, catalog_t *tcatalog) {
 

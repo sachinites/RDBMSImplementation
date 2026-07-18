@@ -9,6 +9,9 @@
 #include "../core/sql_create.h"
 #include "../core/sql_const.h"
 
+extern int cprintf (const char* format, ...);
+#define printf cprintf
+
 /* Grammar for Create Query 
 
     create_query_parser -> create table IDENTFIER (COLSLIST) [ using IDENTIFIER ]

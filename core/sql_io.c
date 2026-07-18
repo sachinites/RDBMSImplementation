@@ -14,6 +14,10 @@
 #include "SqlMexprIntf.h"
 #include "sql_name.h"
 
+extern int cprintf (const char *fmt,...);
+#define printf cprintf
+
+
 #define SCREEN_WIDTH    80
 #define COLUMN_WIDTH   20
 
@@ -21,11 +25,11 @@ static void
 print_line(int num_columns, int column_width) {
     for (int i = 0; i < num_columns; i++) {
         for (int j = 0; j < column_width; j++) {
-            putchar('-');
+            printf("-");
         }
-        putchar('+');
+        printf("+");
     }
-    putchar('\n');
+    printf("\n");
 }
 
 void 

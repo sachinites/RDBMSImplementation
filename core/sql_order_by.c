@@ -7,6 +7,9 @@
 #include "sql_utils.h"
 #include "sql_name.h"
 
+extern int cprintf (const char *format, ...);
+#define printf cprintf
+
 bool 
 qep_collect_dtypes_for_sorting (qep_struct_t *qep) {
 

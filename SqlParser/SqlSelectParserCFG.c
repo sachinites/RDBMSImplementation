@@ -10,6 +10,8 @@
 #include "../core/qep.h"
 #include "sql_parser_bind.h"
 
+extern int cprintf (const char* format, ...);
+#define printf cprintf
 
 /* CFG 
 

@@ -11,6 +11,9 @@
 #include "rdbms_ds.h"
 #include "Catalog.h"
 
+extern int cprintf (const char *format, ...);
+#define printf cprintf
+
 static bool 
 sql_validate_insert_query_data ( catalog_t *TableCatalog, sql_insert_into_data_t *idata) {
 

@@ -7,6 +7,9 @@
 #include "qep.h"
 #include "sql_join.h"
 
+extern int cprintf (const char *format, ...);
+#define printf cprintf
+
 bool
  sql_query_initialize_update_query (qep_struct_t *qep, catalog_t *tcatalog) {
 

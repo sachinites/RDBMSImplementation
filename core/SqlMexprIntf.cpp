@@ -13,6 +13,9 @@
 #include "qep.h"
 #include "sql_name.h"
 
+extern int cprintf (const char *format, ...);
+#define printf cprintf
+
 /* Imports from ExpressionParser (libMexpr) */
 parse_rc_t S (mexpr_parser_t *p); 
 parse_rc_t Q (mexpr_parser_t *p); 

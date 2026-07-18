@@ -10,6 +10,9 @@
 #include "rdbms_ds.h"
 #include "Catalog.h"
 
+extern int cprintf (const char *format, ...);
+#define printf cprintf
+
 extern  int 
 rdbms_key_comp_fn (BPluskey_t *key_1, BPluskey_t *key_2, key_mdata_t *key_mdata, int size);
 

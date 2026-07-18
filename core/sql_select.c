@@ -15,6 +15,9 @@
 #include "sql_join.h"
 #include "sql_name.h"
 
+extern int cprintf (const char *format, ...);
+#define printf cprintf
+
 bool 
 qep_resolve_select_asterisk (qep_struct_t *qep) {
 

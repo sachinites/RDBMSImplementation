@@ -10,6 +10,9 @@
 #include "../core/sql_delete.h"
 #include "../core/sql_const.h"
 
+extern int cprintf (const char* format, ...);
+#define printf cprintf
+
  /* CFG : 
     delete_query_parser -> delete from TABS WHERE
     TABS -> <ident> L
